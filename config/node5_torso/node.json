@@ -1,0 +1,203 @@
+{
+  "node": {
+    "id": "node5",
+    "name": "torso_controller",
+    "type": "torso",
+    "hardware": "esp32_devkit_v1",
+    "firmware": "openj5-node5-torso",
+    "version": "1.0.0"
+  },
+  "network": {
+    "wifi": {
+      "ssid_env": "OPENJ5_WIFI_SSID",
+      "password_env": "OPENJ5_WIFI_PASSWORD",
+      "static_ip": null,
+      "hostname": "openj5-torso"
+    },
+    "mqtt": {
+      "host_env": "OPENJ5_MQTT_HOST",
+      "port": 8883,
+      "tls": true,
+      "ca_cert": "certs/ca.crt",
+      "client_cert": "certs/node5.crt",
+      "client_key": "certs/node5.key",
+      "client_id": "openj5-node5-torso",
+      "keepalive": 60,
+      "topic_prefix": "openj5/v1/torso"
+    }
+  },
+  "pca9685": {
+    "i2c_bus": 1,
+    "address": 0x43,
+    "frequency_hz": 50,
+    "oe_pin": 22
+  },
+  "servos": [
+    {
+      "name": "torso_rotation",
+      "channel": 0,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -90.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 30.0,
+      "acceleration_deg_per_sec2": 60.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "torso_pitch",
+      "channel": 1,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -30.0,
+      "max_angle_deg": 30.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 30.0,
+      "acceleration_deg_per_sec2": 60.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "battery_door",
+      "channel": 2,
+      "min_pulse": 200,
+      "max_pulse": 550,
+      "home_pulse": 375,
+      "min_angle_deg": 0.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 45.0,
+      "acceleration_deg_per_sec2": 90.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 350 }
+    },
+    {
+      "name": "expansion",
+      "channel": 3,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -90.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    }
+  ],
+  "leds": {
+    "type": "ws2812",
+    "pin": 48,
+    "count": 24,
+    "brightness": 0.3,
+    "default_pattern": "status_indicator"
+  },
+  "fan": {
+    "pwm_pin": 25,
+    "frequency_hz": 25000,
+    "curve": [
+      { "temp_c": 30, "speed": 0.0 },
+      { "temp_c": 40, "speed": 0.3 },
+      { "temp_c": 50, "speed": 0.6 },
+      { "temp_c": 60, "speed": 0.8 },
+      { "temp_c": 70, "speed": 1.0 }
+    ]
+  },
+  "battery": {
+    "monitor": {
+      "type": "ina219",
+      "i2c_bus": 1,
+      "address": 0x40,
+      "shunt_ohms": 0.01,
+      "max_amps": 10.0
+    },
+    "voltage": {
+      "min_v": 10.5,
+      "max_v": 12.6,
+      "nominal_v": 11.1,
+      "cells": 3
+    },
+    "current": {
+      "max_charge_a": 2.0,
+      "max_discharge_a": 10.0
+    },
+    "temperature": {
+      "type": "ds18b20",
+      "gpio_pin": 26,
+      "min_c": -10.0,
+      "max_c": 60.0,
+      "critical_c": 65.0
+    },
+    "thresholds": {
+      "low_percent": 20,
+      "critical_percent": 10,
+      "low_voltage_v": 10.8,
+      "critical_voltage_v": 10.5
+    }
+  },
+  "sensors": {
+    "imu": {
+      "type": "mpu6050",
+      "i2c_bus": 1,
+      "address": 0x69,
+      "sample_rate_hz": 100
+    },
+    "tof_front": {
+      "type": "vl53l0x",
+      "i2c_bus": 1,
+      "address": 0x30,
+      "xshut_pin": 16
+    },
+    "tof_rear": {
+      "type": "vl53l0x",
+      "i2c_bus": 1,
+      "address": 0x31,
+      "xshut_pin": 17
+    },
+    "proximity": {
+      "type": "ir_array",
+      "pins": [32, 33, 34, 35],
+      "threshold_mm": 200
+    }
+  },
+  "motion_primitives": {
+    "home": {
+      "servos": {
+        "torso_rotation": 0.0,
+        "torso_pitch": 0.0,
+        "battery_door": 0.0,
+        "expansion": 0.0
+      },
+      "duration_sec": 1.5
+    },
+    "rotate": {
+      "description": "Rotate torso to angle",
+      "implementation": "direct_control"
+    },
+    "pitch": {
+      "description": "Pitch torso forward/back",
+      "implementation": "direct_control"
+    },
+    "open_battery_door": {
+      "servos": { "battery_door": 90.0 },
+      "duration_sec": 2.0
+    },
+    "close_battery_door": {
+      "servos": { "battery_door": 0.0 },
+      "duration_sec": 2.0
+    }
+  },
+  "safety": {
+    "max_joint_velocity_deg_per_sec": 60.0,
+    "watchdog_timeout_ms": 5000
+  }
+}

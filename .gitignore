@@ -1,0 +1,81 @@
+# ---------------- Python ----------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.log
+
+# ---------------- Node.js ----------------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ---------------- Docker ----------------
+*.tar
+*.tar.gz
+
+# Secrets - NEVER commit real secrets
+firmware/node1_robot_core/docker/secrets/*.txt
+firmware/node1_robot_core/docker/secrets/*.pem
+firmware/node1_robot_core/docker/certs/*.crt
+firmware/node1_robot_core/docker/certs/*.key
+firmware/node1_robot_core/docker/certs/*.csr
+firmware/node1_robot_core/docker/certs/ca.srl
+# Keep templates and documentation
+!firmware/node1_robot_core/docker/secrets/*.template
+!firmware/node1_robot_core/docker/certs/README.md
+
+# ---------------- ESP-IDF / Firmware ----------------
+firmware/**/build/
+firmware/**/managed_components/
+firmware/**/.pio/
+firmware/**/.espressif/
+sdkconfig.old
+dependencies.lock
+firmware/**/dependencies.lock
+
+# ---------------- CAD (generated files) ----------------
+cad/**/*.step
+cad/**/~*
+cad/**/*.FCStd1
+cad/**/*.bak
+
+# ---------------- Electronics ----------------
+electronics/**/*.kicad_orig
+electronics/**/*-backups/
+electronics/**/fp-info-cache
+electronics/**/*~lock*
+
+# ---------------- Simulation ----------------
+simulation/**/logs/
+simulation/**/.cache/
+simulation/**/*.bag
+simulation/**/build/
+simulation/**/install/
+
+# ---------------- IDE ----------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---------------- Misc ----------------
+*.tmp
+*.bak
+.keep

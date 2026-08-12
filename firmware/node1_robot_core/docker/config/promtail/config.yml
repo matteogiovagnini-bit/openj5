@@ -1,0 +1,38 @@
+# OpenJ5 Promtail Configuration
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: robot-core
+    static_configs:
+      - targets: []
+        labels:
+          job: robot-core
+          node: node1
+          __path__: /var/log/openj5/*.log
+    pipeline_stages:
+      - regex:
+          expression: '^{"level": "(?P<level>\w+)", "logger": "(?P<logger>[\w\.]+)", "message": "(?P<message>[^"]+)"'
+      - json:
+          expressions:
+            level: level
+            logger: logger
+            correlation_id: correlation_id
+            node_id: node_id
+      - labels:
+          level:
+          logger:
+
+  - job_name: system
+    static_configs:
+      - targets: []
+        labels:
+          job: system
+          __path__: /var/log/syslog

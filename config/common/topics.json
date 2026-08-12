@@ -1,0 +1,54 @@
+{
+  "version": "v1",
+  "base_topic": "openj5/v1",
+  "nodes": {
+    "node1": {
+      "cmd": "openj5/v1/core/cmd",
+      "evt": "openj5/v1/core/evt",
+      "telemetry": "openj5/v1/core/telemetry",
+      "state": "openj5/v1/core/state"
+    },
+    "node2": {
+      "cmd": "openj5/v1/head/cmd",
+      "evt": "openj5/v1/head/evt",
+      "telemetry": "openj5/v1/head/telemetry",
+      "state": "openj5/v1/head/state"
+    },
+    "node3": {
+      "cmd": "openj5/v1/right_arm/cmd",
+      "evt": "openj5/v1/right_arm/evt",
+      "telemetry": "openj5/v1/right_arm/telemetry",
+      "state": "openj5/v1/right_arm/state"
+    },
+    "node4": {
+      "cmd": "openj5/v1/left_arm/cmd",
+      "evt": "openj5/v1/left_arm/evt",
+      "telemetry": "openj5/v1/left_arm/telemetry",
+      "state": "openj5/v1/left_arm/state"
+    },
+    "node5": {
+      "cmd": "openj5/v1/torso/cmd",
+      "evt": "openj5/v1/torso/evt",
+      "telemetry": "openj5/v1/torso/telemetry",
+      "state": "openj5/v1/torso/state"
+    },
+    "node6": {
+      "cmd": "openj5/v1/tracks/cmd",
+      "evt": "openj5/v1/tracks/evt",
+      "telemetry": "openj5/v1/tracks/telemetry",
+      "state": "openj5/v1/tracks/state"
+    }
+  },
+  "system": {
+    "emergency_stop": "openj5/v1/system/emergency_stop",
+    "ota": "openj5/v1/system/ota",
+    "config": "openj5/v1/system/config",
+    "discovery": "openj5/v1/system/discovery"
+  },
+  "event_bus": {
+    "commands": "openj5/events/commands",
+    "telemetry": "openj5/events/telemetry",
+    "state": "openj5/events/state",
+    "errors": "openj5/events/errors"
+  }
+}

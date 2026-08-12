@@ -1,0 +1,48 @@
+{
+  "communication": {
+    "default_protocol": "mqtt",
+    "protocols": {
+      "mqtt": {
+        "enabled": true,
+        "broker": "mosquitto",
+        "port": 8883,
+        "tls": true,
+        "qos": 1,
+        "retain": false,
+        "clean_session": false,
+        "will": {
+          "topic": "openj5/v1/system/discovery",
+          "payload": "{\"node_id\": \"{{node_id}}\", \"status\": \"offline\"}",
+          "qos": 1,
+          "retain": true
+        }
+      },
+      "ros2": {
+        "enabled": true,
+        "domain_id": 42,
+        "rmw_impl": "rmw_fastrtps_cpp",
+        "namespace": "openj5"
+      },
+      "websocket": {
+        "enabled": true,
+        "port": 8081,
+        "tls": true,
+        "path": "/ws"
+      },
+      "serial": {
+        "enabled": false,
+        "port": "/dev/ttyUSB0",
+        "baudrate": 115200
+      },
+      "ble": {
+        "enabled": false,
+        "service_uuid": "12345678-1234-1234-1234-123456789abc"
+      },
+      "can": {
+        "enabled": false,
+        "interface": "can0",
+        "bitrate": 500000
+      }
+    }
+  }
+}

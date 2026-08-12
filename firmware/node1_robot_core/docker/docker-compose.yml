@@ -1,0 +1,361 @@
+version: '3.8'
+
+services:
+  # ============================================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================================
+  
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: openj5-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT plain (solo localhost)
+      - "8883:8883"   # MQTT TLS
+      - "9001:9001"   # WebSocket
+    volumes:
+      - ./config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./config/mosquitto/certs:/mosquitto/certs:ro
+      - ./config/mosquitto/acl:/mosquitto/acl:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    networks:
+      - robot-internal
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/broker/uptime", "-C", "1", "-i", "healthcheck", "-W", "5"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: openj5-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - robot-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: openj5-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openj5
+      POSTGRES_USER: openj5
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - robot-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openj5 -d openj5"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ============================================================
+  # ROBOT CORE SERVICES
+  # ============================================================
+
+  robot-core:
+    build:
+      context: ./robot_core
+      dockerfile: Dockerfile
+    container_name: openj5-robot-core
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      # Node Identity
+      NODE_ID: "node1"
+      NODE_NAME: "robot_core"
+      NODE_TYPE: "robot_core"
+      
+      # Communication
+      MQTT_HOST: "mosquitto"
+      MQTT_PORT: 8883
+      MQTT_TLS: "true"
+      MQTT_CA_CERT: "/certs/ca.crt"
+      MQTT_CLIENT_CERT: "/certs/node1.crt"
+      MQTT_CLIENT_KEY: "/certs/node1.key"
+      
+      # Event Bus
+      REDIS_URL: "redis://redis:6379"
+      EVENT_STREAM_PREFIX: "openj5.events"
+      CONSUMER_GROUP: "robot_core"
+      
+      # Database
+      DATABASE_URL: "postgresql://openj5:${DB_PASSWORD}@postgres:5432/openj5"
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      
+      # Config
+      CONFIG_ROOT: "/config"
+      ENV_PREFIX: "OPENJ5_"
+      
+      # API
+      API_HOST: "0.0.0.0"
+      API_PORT: 8080
+      WS_PORT: 8081
+      API_TLS: "true"
+      API_CERT_FILE: "/certs/api.crt"
+      API_KEY_FILE: "/certs/api.key"
+      JWT_PUBLIC_KEY_FILE: "/certs/jwt_public.pem"
+      
+      # ROS 2
+      ROS_DOMAIN_ID: 42
+      ROS_RMW_IMPLEMENTATION: "rmw_fastrtps_cpp"
+      
+      # Digital Twin
+      DIGITAL_TWIN_ENABLED: "true"
+      SIMULATOR: "gazebo"
+      GAZEBO_MODEL_PATH: "/opt/openj5/simulation/gazebo/models"
+      GAZEBO_WORLD_FILE: "/opt/openj5/simulation/gazebo/worlds/openj5.world"
+      
+      # OTA
+      OTA_FIRMWARE_DIR: "/firmware"
+      OTA_SIGNING_KEY_FILE: "/run/secrets/ota_signing_key"
+      
+      # Logging
+      LOG_LEVEL: "INFO"
+      LOG_FORMAT: "json"
+      LOKI_URL: "http://loki:3100/loki/api/v1/push"
+      
+      # Monitoring
+      PROMETHEUS_PORT: 9090
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+    secrets:
+      - db_password
+      - ota_signing_key
+    volumes:
+      - ./config:/config:ro
+      - ./certs:/certs:ro
+      - ./firmware:/firmware:ro
+      - robot_core_logs:/var/log/openj5
+      - simulation_models:/opt/openj5/simulation/gazebo/models:ro
+    networks:
+      - robot-internal
+      - robot-external
+    ports:
+      - "8080:8080"   # REST API (TLS)
+      - "8081:8081"   # WebSocket (TLS)
+      - "9090:9090"   # Prometheus metrics
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 3G
+        reservations:
+          cpus: '1.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================================
+  # ROS 2 BRIDGE
+  # ============================================================
+
+  ros2-bridge:
+    image: ros:humble-ros-base
+    container_name: openj5-ros2-bridge
+    restart: unless-stopped
+    command: >
+      bash -c "source /opt/ros/humble/setup.bash && 
+      ros2 launch rosbridge_server rosbridge_websocket_launch.xml 
+      port:=9090 
+      address:=0.0.0.0
+      ssl:=true
+      certfile:=/certs/rosbridge.crt
+      keyfile:=/certs/rosbridge.key"
+    depends_on:
+      - robot-core
+    environment:
+      ROS_DOMAIN_ID: 42
+      RMW_IMPLEMENTATION: "rmw_fastrtps_cpp"
+    volumes:
+      - ./config/ros2:/ros2:ro
+      - ./certs:/certs:ro
+    networks:
+      - robot-internal
+      - robot-external
+    ports:
+      - "9090:9090"   # ROS 2 WebSocket bridge
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # ============================================================
+  # DIGITAL TWIN (Gazebo Headless)
+  # ============================================================
+
+  gazebo:
+    image: ghcr.io/gazebosim/gz-sim:harmonic
+    container_name: openj5-gazebo
+    restart: unless-stopped
+    command: >
+      bash -c "gz sim -v 4 -r /worlds/openj5.sdf --headless-rendering"
+    depends_on:
+      - robot-core
+    environment:
+      GZ_SIM_RESOURCE_PATH: "/models:/worlds"
+      QT_QPA_PLATFORM: "offscreen"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    volumes:
+      - simulation_models:/models:ro
+      - ./config/gazebo/worlds:/worlds:ro
+    networks:
+      - robot-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    # GPU passthrough se disponibile su RPi4 (richiede firmware specifico)
+    # runtime: nvidia  # solo se GPU
+
+  # ============================================================
+  # MONITORING
+  # ============================================================
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: openj5-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - robot-internal
+    ports:
+      - "9091:9090"
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: openj5-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana_password
+      GF_INSTALL_PLUGINS: "grafana-piechart-panel"
+    secrets:
+      - grafana_password
+    volumes:
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - robot-internal
+      - robot-external
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: openj5-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./config/loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - robot-internal
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: openj5-promtail
+    restart: unless-stopped
+    volumes:
+      - ./config/promtail/config.yml:/etc/promtail/config.yml:ro
+      - robot_core_logs:/var/log/openj5:ro
+      - /var/log:/var/log:ro
+    networks:
+      - robot-internal
+    depends_on:
+      - loki
+
+  # ============================================================
+  # OTEL COLLECTOR
+  # ============================================================
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.98.0
+    container_name: openj5-otel
+    restart: unless-stopped
+    command: --config=/etc/otel-collector/config.yaml
+    volumes:
+      - ./config/otel/collector.yaml:/etc/otel-collector/config.yaml:ro
+    networks:
+      - robot-internal
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  mosquitto_data:
+  mosquitto_logs:
+  redis_data:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  robot_core_logs:
+  simulation_models:
+  grafana_data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  ota_signing_key:
+    file: ./secrets/ota_signing_key.pem
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+
+networks:
+  robot-internal:
+    driver: bridge
+    internal: true  # No internet access
+  robot-external:
+    driver: bridge
+    internal: false # Internet access for OTA, updates

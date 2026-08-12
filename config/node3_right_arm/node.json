@@ -1,0 +1,199 @@
+{
+  "node": {
+    "id": "node3",
+    "name": "right_arm_controller",
+    "type": "right_arm",
+    "hardware": "esp32_s3_devkit",
+    "firmware": "openj5-node3-right-arm",
+    "version": "1.0.0"
+  },
+  "network": {
+    "wifi": {
+      "ssid_env": "OPENJ5_WIFI_SSID",
+      "password_env": "OPENJ5_WIFI_PASSWORD",
+      "static_ip": null,
+      "hostname": "openj5-right-arm"
+    },
+    "mqtt": {
+      "host_env": "OPENJ5_MQTT_HOST",
+      "port": 8883,
+      "tls": true,
+      "ca_cert": "certs/ca.crt",
+      "client_cert": "certs/node3.crt",
+      "client_key": "certs/node3.key",
+      "client_id": "openj5-node3-right-arm",
+      "keepalive": 60,
+      "topic_prefix": "openj5/v1/right_arm"
+    }
+  },
+  "pca9685": {
+    "i2c_bus": 1,
+    "address": 0x41,
+    "frequency_hz": 50,
+    "oe_pin": 22
+  },
+  "servos": [
+    {
+      "name": "shoulder_pitch",
+      "channel": 0,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -90.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "shoulder_roll",
+      "channel": 1,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -45.0,
+      "max_angle_deg": 45.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "shoulder_rotation",
+      "channel": 2,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -90.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "elbow",
+      "channel": 3,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": 0.0,
+      "max_angle_deg": 135.0,
+      "home_angle_deg": 90.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "wrist",
+      "channel": 4,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -90.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 450 }
+    },
+    {
+      "name": "gripper",
+      "channel": 5,
+      "min_pulse": 250,
+      "max_pulse": 500,
+      "home_pulse": 375,
+      "min_angle_deg": 0.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 120.0,
+      "acceleration_deg_per_sec2": 240.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": { "center_pulse": 375, "range_pulse": 250 }
+    }
+  ],
+  "kinematics": {
+    "dh_parameters": [
+      { "link": "base_to_shoulder", "a": 0.0, "alpha": -90.0, "d": 0.12, "theta_offset": 0.0 },
+      { "link": "shoulder_pitch", "a": 0.0, "alpha": 90.0, "d": 0.0, "theta_offset": 90.0 },
+      { "link": "shoulder_roll", "a": 0.0, "alpha": -90.0, "d": 0.0, "theta_offset": 0.0 },
+      { "link": "shoulder_rotation", "a": 0.15, "alpha": 0.0, "d": 0.0, "theta_offset": 0.0 },
+      { "link": "elbow", "a": 0.0, "alpha": 0.0, "d": 0.25, "theta_offset": 0.0 },
+      { "link": "wrist", "a": 0.0, "alpha": 0.0, "d": 0.1, "theta_offset": 0.0 },
+      { "link": "gripper", "a": 0.0, "alpha": 0.0, "d": 0.08, "theta_offset": 0.0 }
+    ],
+    "joint_limits": {
+      "shoulder_pitch": [-90, 90],
+      "shoulder_roll": [-45, 45],
+      "shoulder_rotation": [-90, 90],
+      "elbow": [0, 135],
+      "wrist": [-90, 90],
+      "gripper": [0, 90]
+    },
+    "collision_avoidance": {
+      "enabled": true,
+      "self_collision_check": true,
+      "workspace_limits": {
+        "x": [0.2, 0.8],
+        "y": [-0.5, 0.5],
+        "z": [0.0, 0.8]
+      }
+    }
+  },
+  "motion_primitives": {
+    "home": {
+      "joints": {
+        "shoulder_pitch": 0.0,
+        "shoulder_roll": 0.0,
+        "shoulder_rotation": 0.0,
+        "elbow": 90.0,
+        "wrist": 0.0,
+        "gripper": 0.0
+      },
+      "duration_sec": 2.0,
+      "easing": "ease_in_out_cubic"
+    },
+    "wave": {
+      "sequence": [
+        { "joints": { "shoulder_pitch": -30, "elbow": 45, "wrist": -30 }, "duration_sec": 0.5 },
+        { "joints": { "shoulder_pitch": -30, "elbow": 45, "wrist": 30 }, "duration_sec": 0.5 },
+        { "joints": { "shoulder_pitch": -30, "elbow": 45, "wrist": -30 }, "duration_sec": 0.5 },
+        { "joints": { "shoulder_pitch": 0, "elbow": 90, "wrist": 0 }, "duration_sec": 0.5 }
+      ]
+    },
+    "point": {
+      "description": "Point at target using IK",
+      "implementation": "ik_solver"
+    },
+    "grab": {
+      "joints": { "gripper": 90.0 },
+      "duration_sec": 1.0
+    },
+    "release": {
+      "joints": { "gripper": 0.0 },
+      "duration_sec": 0.5
+    },
+    "reach": {
+      "description": "Reach to 3D position using IK",
+      "implementation": "ik_solver"
+    }
+  },
+  "safety": {
+    "max_joint_velocity_deg_per_sec": 120.0,
+    "collision_threshold_m": 0.2,
+    "force_limit_n": 5.0,
+    "watchdog_timeout_ms": 5000
+  }
+}

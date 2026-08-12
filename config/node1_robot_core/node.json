@@ -1,0 +1,40 @@
+{
+  "node": {
+    "id": "node1",
+    "name": "robot_core",
+    "type": "robot_core",
+    "hardware": "raspberry_pi_4_8gb",
+    "os": "ubuntu_server_24_04_lts",
+    "architecture": "arm64"
+  },
+  "network": {
+    "hostname": "openj5-core",
+    "interfaces": {
+      "eth0": {
+        "dhcp": true,
+        "static_ip": null
+      },
+      "wlan0": {
+        "dhcp": true,
+        "ap_mode": false
+      }
+    },
+    "mqtt": {
+      "host": "localhost",
+      "port": 8883,
+      "tls": true,
+      "ca_cert": "/etc/openj5/certs/ca.crt",
+      "client_cert": "/etc/openj5/certs/node1.crt",
+      "client_key": "/etc/openj5/certs/node1.key",
+      "keepalive": 60
+    },
+    "ros2": {
+      "domain_id": 42,
+      "rmw_impl": "rmw_fastrtps_cpp"
+    },
+    "websocket": {
+      "port": 8081,
+      "tls": true
+    }
+  }
+}

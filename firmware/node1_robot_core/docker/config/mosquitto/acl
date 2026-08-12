@@ -1,0 +1,50 @@
+# OpenJ5 Mosquitto ACL
+# Pattern-based access control for robot topics
+
+# Robot Core (node1) has full access
+user node1
+topic readwrite openj5/#
+topic readwrite $SYS/#
+
+# Head node (node2) - control and status
+user node2
+topic readwrite openj5/node2/#
+topic read openj5/node1/commands/#
+
+# Right arm node (node3)
+user node3
+topic readwrite openj5/node3/#
+topic read openj5/node1/commands/#
+
+# Left arm node (node4)
+user node4
+topic readwrite openj5/node4/#
+topic read openj5/node1/commands/#
+
+# Torso node (node5)
+user node5
+topic readwrite openj5/node5/#
+topic read openj5/node1/commands/#
+
+# Tracks node (node6)
+user node6
+topic readwrite openj5/node6/#
+topic read openj5/node1/commands/#
+
+# ROS2 bridge
+user rosbridge
+topic readwrite openj5/#
+
+# Monitoring
+user monitoring
+topic read openj5/#
+topic read $SYS/#
+
+# API user
+user api
+topic readwrite openj5/#
+
+# Deny all other users
+user anonymous
+topic deny openj5/#
+topic deny $SYS/#

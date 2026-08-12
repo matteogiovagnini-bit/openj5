@@ -1,0 +1,61 @@
+# Robot Core Service Dockerfile
+FROM python:3.11-slim-bookworm
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # OpenCV dependencies
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 \
+    # ROS 2 bridge dependencies
+    curl gnupg2 lsb-release \
+    # Build tools for any pip packages needing compilation
+    build-essential \
+    # Certificates for MQTT TLS
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ROS 2 (Humble) for rosbridge
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \
+    | tee /etc/apt/sources.list.d/ros2.list > /dev/null \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-rosbridge-suite \
+    ros-humble-rosbridge-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Python environment
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY src/ ./src/
+COPY config/ ./config/
+COPY scripts/ ./scripts/
+
+# Create non-root user
+RUN groupadd -r openj5 && useradd -r -g openj5 -d /app -s /bin/bash openj5 \
+    && chown -R openj5:openj5 /app
+
+# Create required directories
+RUN mkdir -p /var/log/openj5 /etc/openj5/certs /opt/openj5/firmware /opt/openj5/plugins \
+    && chown -R openj5:openj5 /var/log/openj5 /etc/openj5 /opt/openj5
+
+# Switch to non-root user
+USER openj5
+
+# Expose ports
+EXPOSE 8080 8081
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Entry point
+ENTRYPOINT ["python", "-m", "robot_core.main"]

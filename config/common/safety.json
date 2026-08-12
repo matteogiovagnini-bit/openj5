@@ -1,0 +1,47 @@
+{
+  "safety": {
+    "emergency_stop": {
+      "hardware_pins": {
+        "node1": null,
+        "node2": 0,
+        "node3": 0,
+        "node4": 0,
+        "node5": 0,
+        "node6": 0
+      },
+      "software_watchdog_ms": 1000,
+      "auto_recovery": false,
+      "notify_all_nodes": true
+    },
+    "joint_limits": {
+      "enforce_in_firmware": true,
+      "enforce_in_sdk": true,
+      "soft_limit_margin_deg": 5.0
+    },
+    "velocity_limits": {
+      "head_deg_per_sec": 180,
+      "arm_deg_per_sec": 120,
+      "torso_deg_per_sec": 60,
+      "tracks_mps": 0.5,
+      "tracks_radps": 1.0
+    },
+    "collision": {
+      "head_threshold_m": 0.3,
+      "arm_threshold_m": 0.2,
+      "tracks_threshold_m": 0.3,
+      "emergency_stop_on_collision": true
+    },
+    "power": {
+      "battery_critical_voltage": 10.5,
+      "battery_low_voltage": 11.0,
+      "max_current_per_node_a": 5.0,
+      "total_max_current_a": 20.0
+    },
+    "thermal": {
+      "motor_max_temp_c": 70,
+      "servo_max_temp_c": 60,
+      "mcu_max_temp_c": 80,
+      "throttle_at_temp_c": 65
+    }
+  }
+}

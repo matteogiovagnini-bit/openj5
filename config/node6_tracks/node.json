@@ -1,0 +1,181 @@
+{
+  "node": {
+    "id": "node6",
+    "name": "track_controller",
+    "type": "tracks",
+    "hardware": "esp32_devkit_v1",
+    "firmware": "openj5-node6-tracks",
+    "version": "1.0.0"
+  },
+  "network": {
+    "wifi": {
+      "ssid_env": "OPENJ5_WIFI_SSID",
+      "password_env": "OPENJ5_WIFI_PASSWORD",
+      "static_ip": null,
+      "hostname": "openj5-tracks"
+    },
+    "mqtt": {
+      "host_env": "OPENJ5_MQTT_HOST",
+      "port": 8883,
+      "tls": true,
+      "ca_cert": "certs/ca.crt",
+      "client_cert": "certs/node6.crt",
+      "client_key": "certs/node6.key",
+      "client_id": "openj5-node6-tracks",
+      "keepalive": 60,
+      "topic_prefix": "openj5/v1/tracks"
+    }
+  },
+  "motor_driver": {
+    "type": "l298n",
+    "config": {
+      "l298n": {
+        "left_motor": {
+          "ena_pin": 18,
+          "in1_pin": 19,
+          "in2_pin": 21
+        },
+        "right_motor": {
+          "enb_pin": 23,
+          "in3_pin": 22,
+          "in4_pin": 5
+        },
+        "pwm_frequency_hz": 1000,
+        "pwm_resolution_bits": 10
+      }
+    }
+  },
+  "motors": [
+    {
+      "id": "left",
+      "type": "dc_geared",
+      "encoder": {
+        "type": "quadrature",
+        "pin_a": 34,
+        "pin_b": 35,
+        "ppr": 1024,
+        "inverted": false
+      },
+      "gear_ratio": 30,
+      "wheel_diameter_mm": 80,
+      "wheel_base_mm": 200,
+      "max_rpm": 200,
+      "pid": {
+        "kp": 0.8,
+        "ki": 0.1,
+        "kd": 0.05,
+        "output_min": -1023,
+        "output_max": 1023,
+        "integral_min": -500,
+        "integral_max": 500
+      }
+    },
+    {
+      "id": "right",
+      "type": "dc_geared",
+      "encoder": {
+        "type": "quadrature",
+        "pin_a": 36,
+        "pin_b": 39,
+        "ppr": 1024,
+        "inverted": true
+      },
+      "gear_ratio": 30,
+      "wheel_diameter_mm": 80,
+      "wheel_base_mm": 200,
+      "max_rpm": 200,
+      "pid": {
+        "kp": 0.8,
+        "ki": 0.1,
+        "kd": 0.05,
+        "output_min": -1023,
+        "output_max": 1023,
+        "integral_min": -500,
+        "integral_max": 500
+      }
+    }
+  ],
+  "odometry": {
+    "type": "differential",
+    "update_rate_hz": 50,
+    "covariance": {
+      "x": 0.01,
+      "y": 0.01,
+      "theta": 0.001
+    }
+  },
+  "imu": {
+    "type": "mpu6050",
+    "i2c_bus": 1,
+    "address": 0x68,
+    "sample_rate_hz": 200,
+    "fusion": "madgwick"
+  },
+  "tof": {
+    "front": {
+      "type": "vl53l0x",
+      "i2c_bus": 1,
+      "address": 0x29,
+      "xshut_pin": 13
+    },
+    "rear": {
+      "type": "vl53l0x",
+      "i2c_bus": 1,
+      "address": 0x30,
+      "xshut_pin": 14
+    }
+  },
+  "collision": {
+    "front_bumpers": {
+      "pins": [27, 26],
+      "type": "ir",
+      "threshold": 100
+    },
+    "rear_bumpers": {
+      "pins": [25, 33],
+      "type": "ir",
+      "threshold": 100
+    }
+  },
+  "motion_primitives": {
+    "move_forward": {
+      "parameters": {
+        "velocity_mps": { "type": "float", "min": -0.5, "max": 0.5, "default": 0.2 },
+        "distance_m": { "type": "float", "min": 0.0, "default": 0.0 }
+      },
+      "implementation": "velocity_control_with_odometry"
+    },
+    "rotate": {
+      "parameters": {
+        "angular_velocity_radps": { "type": "float", "min": -1.0, "max": 1.0, "default": 0.5 },
+        "angle_rad": { "type": "float", "default": 0.0 }
+      },
+      "implementation": "velocity_control_with_imu_fusion"
+    },
+    "arc": {
+      "parameters": {
+        "linear_velocity_mps": { "type": "float", "default": 0.2 },
+        "angular_velocity_radps": { "type": "float", "default": 0.3 }
+      },
+      "implementation": "differential_drive_arc"
+    },
+    "stop": {
+      "parameters": [],
+      "implementation": "brake_motors",
+      "priority": "critical"
+    },
+    "dock": {
+      "parameters": {
+        "dock_id": { "type": "string" }
+      },
+      "implementation": "nav2_docking"
+    }
+  },
+  "safety": {
+    "max_linear_velocity_mps": 0.5,
+    "max_angular_velocity_radps": 1.0,
+    "collision_threshold_m": 0.3,
+    "emergency_stop_deceleration": 2.0,
+    "watchdog_timeout_ms": 1000
+  }
+}

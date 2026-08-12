@@ -1,0 +1,252 @@
+{
+  "node": {
+    "id": "node2",
+    "name": "head_controller",
+    "type": "head",
+    "hardware": "esp32_s3_devkit",
+    "firmware": "openj5-node2-head",
+    "version": "1.0.0"
+  },
+  "network": {
+    "wifi": {
+      "ssid_env": "OPENJ5_WIFI_SSID",
+      "password_env": "OPENJ5_WIFI_PASSWORD",
+      "static_ip": null,
+      "hostname": "openj5-head"
+    },
+    "mqtt": {
+      "host_env": "OPENJ5_MQTT_HOST",
+      "port": 8883,
+      "tls": true,
+      "ca_cert": "certs/ca.crt",
+      "client_cert": "certs/node2.crt",
+      "client_key": "certs/node2.key",
+      "client_id": "openj5-node2-head",
+      "keepalive": 60,
+      "topic_prefix": "openj5/v1/head"
+    }
+  },
+  "pca9685": {
+    "i2c_bus": 1,
+    "address": 0x40,
+    "frequency_hz": 50,
+    "oe_pin": 22
+  },
+  "servos": [
+    {
+      "name": "neck_yaw",
+      "channel": 0,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -90.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": {
+        "center_pulse": 375,
+        "range_pulse": 450
+      }
+    },
+    {
+      "name": "neck_pitch",
+      "channel": 1,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -45.0,
+      "max_angle_deg": 45.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": {
+        "center_pulse": 375,
+        "range_pulse": 450
+      }
+    },
+    {
+      "name": "neck_roll",
+      "channel": 2,
+      "min_pulse": 150,
+      "max_pulse": 600,
+      "home_pulse": 375,
+      "min_angle_deg": -30.0,
+      "max_angle_deg": 30.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 60.0,
+      "acceleration_deg_per_sec2": 120.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": {
+        "center_pulse": 375,
+        "range_pulse": 450
+      }
+    },
+    {
+      "name": "eyes_horizontal",
+      "channel": 3,
+      "min_pulse": 200,
+      "max_pulse": 550,
+      "home_pulse": 375,
+      "min_angle_deg": -45.0,
+      "max_angle_deg": 45.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 120.0,
+      "acceleration_deg_per_sec2": 240.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": {
+        "center_pulse": 375,
+        "range_pulse": 350
+      }
+    },
+    {
+      "name": "eyes_vertical",
+      "channel": 4,
+      "min_pulse": 200,
+      "max_pulse": 550,
+      "home_pulse": 375,
+      "min_angle_deg": -30.0,
+      "max_angle_deg": 30.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 120.0,
+      "acceleration_deg_per_sec2": 240.0,
+      "offset_deg": 0.0,
+      "reversed": true,
+      "calibration": {
+        "center_pulse": 375,
+        "range_pulse": 350
+      }
+    },
+    {
+      "name": "eyelids",
+      "channel": 5,
+      "min_pulse": 250,
+      "max_pulse": 500,
+      "home_pulse": 375,
+      "min_angle_deg": 0.0,
+      "max_angle_deg": 90.0,
+      "home_angle_deg": 0.0,
+      "speed_deg_per_sec": 180.0,
+      "acceleration_deg_per_sec2": 360.0,
+      "offset_deg": 0.0,
+      "reversed": false,
+      "calibration": {
+        "center_pulse": 375,
+        "range_pulse": 250
+      }
+    }
+  ],
+  "leds": {
+    "type": "ws2812",
+    "pin": 48,
+    "count": 12,
+    "brightness": 0.5,
+    "default_pattern": "breathing"
+  },
+  "display": {
+    "type": "ssd1306",
+    "interface": "i2c",
+    "i2c_bus": 1,
+    "address": 0x3C,
+    "width": 128,
+    "height": 64,
+    "rotation": 0
+  },
+  "audio": {
+    "i2s": {
+      "sample_rate": 16000,
+      "bits_per_sample": 16,
+      "channel_format": "stereo",
+      "dma_buf_count": 8,
+      "dma_buf_len": 256
+    },
+    "microphones": [
+      {
+        "name": "mic_left",
+        "i2s_channel": 0,
+        "gain_db": 20
+      },
+      {
+        "name": "mic_right",
+        "i2s_channel": 1,
+        "gain_db": 20
+      }
+    ]
+  },
+  "sensors": {
+    "imu": {
+      "type": "mpu6050",
+      "i2c_bus": 1,
+      "address": 0x68,
+      "sample_rate_hz": 100
+    },
+    "tof": {
+      "type": "vl53l0x",
+      "i2c_bus": 1,
+      "address": 0x29,
+      "xshut_pin": 15,
+      "timing_budget_ms": 33
+    },
+    "temperature": {
+      "type": "internal",
+      "calibration_offset": 0.0
+    }
+  },
+  "motion_primitives": {
+    "home": {
+      "servos": {
+        "neck_yaw": 0.0,
+        "neck_pitch": 0.0,
+        "neck_roll": 0.0,
+        "eyes_horizontal": 0.0,
+        "eyes_vertical": 0.0,
+        "eyelids": 0.0
+      },
+      "duration_sec": 1.0,
+      "easing": "ease_in_out_cubic"
+    },
+    "nod": {
+      "amplitude_deg": 20.0,
+      "cycles": 2,
+      "speed_multiplier": 1.0,
+      "sequence": [
+        { "servos": { "neck_pitch": -20.0 }, "duration_sec": 0.5 },
+        { "servos": { "neck_pitch": 20.0 }, "duration_sec": 0.5 },
+        { "servos": { "neck_pitch": 0.0 }, "duration_sec": 0.5 }
+      ]
+    },
+    "shake": {
+      "amplitude_deg": 30.0,
+      "cycles": 2,
+      "sequence": [
+        { "servos": { "neck_yaw": -30.0 }, "duration_sec": 0.4 },
+        { "servos": { "neck_yaw": 30.0 }, "duration_sec": 0.4 },
+        { "servos": { "neck_yaw": 0.0 }, "duration_sec": 0.4 }
+      ]
+    },
+    "blink": {
+      "duration_ms": 150,
+      "sequence": [
+        { "servos": { "eyelids": 90.0 }, "duration_sec": 0.1 },
+        { "servos": { "eyelids": 0.0 }, "duration_sec": 0.1 }
+      ]
+    },
+    "scan": {
+      "start_deg": -90.0,
+      "end_deg": 90.0,
+      "step_deg": 15.0,
+      "pause_sec": 0.5
+    }
+  },
+  "safety": {
+    "max_joint_velocity_deg_per_sec": 180.0,
+    "collision_threshold_m": 0.3,
+    "watchdog_timeout_ms": 5000
+  }
+}

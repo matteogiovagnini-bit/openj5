@@ -1,0 +1,88 @@
+{
+  "hal": {
+    "servo_driver": {
+      "interface": "IServoDriver",
+      "implementations": {
+        "pca9685": "PCA9685Driver",
+        "soft_pwm": "SoftPWMDriver",
+        "esp32_ledc": "ESP32LECDriver",
+        "gazebo": "GazeboServoDriver",
+        "isaac_sim": "IsaacSimServoDriver"
+      },
+      "default": "pca9685"
+    },
+    "motor_driver": {
+      "interface": "IMotorDriver",
+      "implementations": {
+        "l298n": "L298NDriver",
+        "tb6612": "TB6612Driver",
+        "bts7960": "BTS7960Driver",
+        "odrive": "ODriveDriver",
+        "gazebo": "GazeboMotorDriver"
+      },
+      "default": "l298n"
+    },
+    "distance_sensor": {
+      "interface": "IDistanceSensor",
+      "implementations": {
+        "vl53l0x": "VL53L0XDriver",
+        "ultrasonic": "UltrasonicDriver",
+        "gazebo": "GazeboDistanceDriver"
+      },
+      "default": "vl53l0x"
+    },
+    "imu": {
+      "interface": "IIMU",
+      "implementations": {
+        "mpu6050": "MPU6050Driver",
+        "icm20948": "ICM20948Driver",
+        "gazebo": "GazeboIMUDriver"
+      },
+      "default": "mpu6050"
+    },
+    "camera": {
+      "interface": "ICameraDriver",
+      "implementations": {
+        "v4l2": "V4L2CameraDriver",
+        "ip_camera": "IPCameraDriver",
+        "gazebo": "GazeboCameraDriver"
+      },
+      "default": "v4l2"
+    },
+    "audio_input": {
+      "interface": "IAudioInput",
+      "implementations": {
+        "i2s": "I2SAudioInputDriver",
+        "gazebo": "GazeboAudioInputDriver"
+      },
+      "default": "i2s"
+    },
+    "display": {
+      "interface": "IDisplay",
+      "implementations": {
+        "ssd1306": "SSD1306Driver",
+        "st7789": "ST7789Driver",
+        "gazebo": "GazeboDisplayDriver"
+      },
+      "default": "ssd1306"
+    },
+    "led_strip": {
+      "interface": "ILedStrip",
+      "implementations": {
+        "ws2812": "WS2812Driver",
+        "pwm": "PWMLedDriver",
+        "gazebo": "GazeboLedDriver"
+      },
+      "default": "ws2812"
+    },
+    "battery_monitor": {
+      "interface": "IBatteryMonitor",
+      "implementations": {
+        "ina219": "INA219Driver",
+        "adc": "ADCBatteryDriver",
+        "gazebo": "GazeboBatteryDriver"
+      },
+      "default": "ina219"
+    }
+  }
+}
