@@ -7,6 +7,9 @@ services:
     image: eclipse-mosquitto:2.0
     container_name: openj5-mosquitto
     restart: unless-stopped
+    # uid 1883 = mosquitto user (owns /mosquitto/data|log); gid 1000 = host
+    # openj5 group, so bind-mounted 640 private keys in ./certs are readable
+    user: "1883:1000"
     ports:
       - "1883:1883"   # MQTT plain (solo localhost)
       - "8883:8883"   # MQTT TLS

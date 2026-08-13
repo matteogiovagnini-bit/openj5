@@ -171,7 +171,11 @@ EOF
         >/dev/null 2>&1
 
     rm -f "$CERT_DIR/$name.csr" "$CERT_DIR/$name.san"
-    chmod 600 "$CERT_DIR/$name.key"
+    # 640 + owning group: private keys readable only by owner and group.
+    # Container services run with the owner uid/gid (1000) or with gid 1000
+    # (mosquitto user: 1883:1000), so bind-mounted keys stay readable without
+    # world access.
+    chmod 640 "$CERT_DIR/$name.key"
     log "Certificate for $cn generated"
 }
 

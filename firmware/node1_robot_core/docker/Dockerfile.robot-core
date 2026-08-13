@@ -29,8 +29,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY config/ ./config/
 
-# Create non-root user
-RUN groupadd -r openj5 && useradd -r -g openj5 -d /app -s /bin/bash openj5 \
+# Create non-root user with fixed uid/gid 1000 (matches the host user that
+# owns ./certs private keys; bind-mounted 640 keys need matching uid/gid)
+RUN groupadd -g 1000 openj5 \
+    && useradd -u 1000 -g 1000 -d /app -s /bin/bash openj5 \
     && chown -R openj5:openj5 /app
 
 # Create required directories
