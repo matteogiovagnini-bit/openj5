@@ -26,6 +26,7 @@ yarn-error.log*
 # ---------------- Docker ----------------
 *.tar
 *.tar.gz
+firmware/node1_robot_core/docker/.env
 
 # Secrets - NEVER commit real secrets
 firmware/node1_robot_core/docker/secrets/*.txt
