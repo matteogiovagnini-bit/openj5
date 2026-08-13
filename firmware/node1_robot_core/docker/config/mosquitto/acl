@@ -46,6 +46,9 @@ topic readwrite openj5/#
 
 # Deny all other users
 user anonymous
-topic read $SYS/broker/uptime
+# $SYS/broker/version is a static topic: delivered once, immediately on
+# subscription, so the container healthcheck gets a reply within its window.
+# ($SYS/broker/uptime no longer exists in mosquitto 2.0.)
+topic read $SYS/broker/version
 topic deny openj5/#
 topic deny $SYS/#
