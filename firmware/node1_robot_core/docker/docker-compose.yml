@@ -138,7 +138,9 @@ services:
     ports:
       - "8080:8080"   # REST API (TLS)
       - "8081:8081"   # WebSocket (TLS)
-      - "9090:9090"   # Prometheus metrics
+    # NOTE: no host port for Prometheus metrics on robot-core (port 9090).
+    # Metrics are published to the event bus; robot-core serves no /metrics
+    # HTTP endpoint, and 9090 on the host is used by ros2-bridge.
     deploy:
       resources:
         limits:

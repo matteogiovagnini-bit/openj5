@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     # Certificates for MQTT TLS
     ca-certificates \
+    # Healthcheck HTTP client
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up Python environment
@@ -34,6 +36,10 @@ RUN groupadd -r openj5 && useradd -r -g openj5 -d /app -s /bin/bash openj5 \
 # Create required directories
 RUN mkdir -p /var/log/openj5 /etc/openj5/certs /opt/openj5/firmware /opt/openj5/plugins \
     && chown -R openj5:openj5 /var/log/openj5 /etc/openj5 /opt/openj5
+
+# Declare volume mountpoints (avoids containerd mount failure over
+# directories that exist in image layers)
+VOLUME /var/log/openj5 /opt/openj5/firmware
 
 # Switch to non-root user
 USER openj5
