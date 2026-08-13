@@ -56,7 +56,6 @@ exporters:
     endpoint: http://loki:3100/loki/api/v1/push
     tls:
       insecure: true
-    format: json
 
 service:
   pipelines:
