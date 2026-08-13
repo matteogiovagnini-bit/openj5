@@ -213,11 +213,11 @@ services:
   # ============================================================
 
   gazebo:
-    image: ghcr.io/gazebosim/gz-sim:harmonic
+    image: ghcr.io/j-rivero/gazebo:harmonic-full
     container_name: openj5-gazebo
     restart: unless-stopped
     command: >
-      bash -c "gz sim -v 4 -r /worlds/openj5.sdf --headless-rendering"
+      bash -c "gz sim -v 4 -r /worlds/openj5.world --headless-rendering"
     depends_on:
       - robot-core
     environment:
