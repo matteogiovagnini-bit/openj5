@@ -50,7 +50,7 @@ exporters:
       enabled: true
 
   logging:
-    loglevel: warn
+    verbosity: basic
 
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
@@ -58,6 +58,10 @@ exporters:
       insecure: true
 
 service:
+  # Collector's own telemetry on 8889; the prometheus exporter below needs 8888
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8889
   pipelines:
     traces:
       receivers: [otlp]
