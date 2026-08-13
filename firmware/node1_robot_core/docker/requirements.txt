@@ -40,10 +40,6 @@ cryptography==42.0.5
 # Scheduling
 apscheduler==3.10.4
 
-# ROS 2 Bridge
-rosbridge-library==0.11.1
-rosbridge-server==0.11.1
-
 # Testing
 pytest==8.0.2
 pytest-asyncio==0.23.3

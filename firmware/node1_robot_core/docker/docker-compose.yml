@@ -73,8 +73,8 @@ services:
 
   robot-core:
     build:
-      context: ./robot_core
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.robot-core
     container_name: openj5-robot-core
     restart: unless-stopped
     depends_on:
