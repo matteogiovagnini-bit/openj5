@@ -13,7 +13,7 @@ services:
       - "9001:9001"   # WebSocket
     volumes:
       - ./config/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./config/mosquitto/certs:/mosquitto/certs:ro
+      - ./certs:/mosquitto/certs:ro
       - ./config/mosquitto/acl:/mosquitto/acl:ro
       - mosquitto_data:/mosquitto/data
       - mosquitto_logs:/mosquitto/log
@@ -86,70 +86,51 @@ services:
         condition: service_healthy
     environment:
       # Node Identity
-      NODE_ID: "node1"
-      NODE_NAME: "robot_core"
-      NODE_TYPE: "robot_core"
-      
-      # Communication
-      MQTT_HOST: "mosquitto"
-      MQTT_PORT: 8883
-      MQTT_TLS: "true"
-      MQTT_CA_CERT: "/certs/ca.crt"
-      MQTT_CLIENT_CERT: "/certs/node1.crt"
-      MQTT_CLIENT_KEY: "/certs/node1.key"
-      
+      OPENJ5_NODE_ID: "node1"
+      OPENJ5_NODE_NAME: "robot_core"
+      OPENJ5_NODE_TYPE: "robot_core"
+
       # Event Bus
-      REDIS_URL: "redis://redis:6379"
-      EVENT_STREAM_PREFIX: "openj5.events"
-      CONSUMER_GROUP: "robot_core"
-      
+      OPENJ5_EVENTBUS_REDIS_URL: "redis://redis:6379"
+      OPENJ5_EVENTBUS_STREAM_PREFIX: "openj5.events"
+      OPENJ5_EVENTBUS_CONSUMER_GROUP: "robot_core"
+
       # Database
-      DATABASE_URL: "postgresql://openj5:${DB_PASSWORD}@postgres:5432/openj5"
-      DB_PASSWORD_FILE: /run/secrets/db_password
-      
-      # Config
-      CONFIG_ROOT: "/config"
-      ENV_PREFIX: "OPENJ5_"
-      
+      OPENJ5_DATABASE_URL: "postgresql+asyncpg://openj5:${DB_PASSWORD}@postgres:5432/openj5"
+
       # API
-      API_HOST: "0.0.0.0"
-      API_PORT: 8080
-      WS_PORT: 8081
-      API_TLS: "true"
-      API_CERT_FILE: "/certs/api.crt"
-      API_KEY_FILE: "/certs/api.key"
-      JWT_PUBLIC_KEY_FILE: "/certs/jwt_public.pem"
-      
-      # ROS 2
-      ROS_DOMAIN_ID: 42
-      ROS_RMW_IMPLEMENTATION: "rmw_fastrtps_cpp"
-      
+      OPENJ5_API_HOST: "0.0.0.0"
+      OPENJ5_API_PORT: 8080
+      OPENJ5_API_TLS: "true"
+
       # Digital Twin
-      DIGITAL_TWIN_ENABLED: "true"
-      SIMULATOR: "gazebo"
-      GAZEBO_MODEL_PATH: "/opt/openj5/simulation/gazebo/models"
-      GAZEBO_WORLD_FILE: "/opt/openj5/simulation/gazebo/worlds/openj5.world"
-      
+      OPENJ5_DIGITAL_TWIN_SIMULATOR: "gazebo"
+      OPENJ5_DIGITAL_TWIN_HOST: "gazebo"
+      OPENJ5_DIGITAL_TWIN_MODEL_PATH: "/opt/openj5/simulation/gazebo/models"
+      OPENJ5_DIGITAL_TWIN_WORLD_FILE: "/opt/openj5/simulation/gazebo/worlds/openj5.world"
+      OPENJ5_DIGITAL_TWIN_HEADLESS: "true"
+
       # OTA
-      OTA_FIRMWARE_DIR: "/firmware"
-      OTA_SIGNING_KEY_FILE: "/run/secrets/ota_signing_key"
-      
+      OPENJ5_OTA_FIRMWARE_DIR: "/opt/openj5/firmware"
+
       # Logging
-      LOG_LEVEL: "INFO"
-      LOG_FORMAT: "json"
-      LOKI_URL: "http://loki:3100/loki/api/v1/push"
-      
-      # Monitoring
-      PROMETHEUS_PORT: 9090
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OPENJ5_LOGGING_LEVEL: "INFO"
+      OPENJ5_LOGGING_FILE_ENABLED: "true"
+      OPENJ5_LOGGING_FILE_PATH: "/var/log/openj5/robot_core.jsonl"
+      OPENJ5_LOGGING_LOKI_ENABLED: "true"
+      OPENJ5_LOGGING_LOKI_URL: "http://loki:3100/loki/api/v1/push"
+
+      # Health & Metrics
+      OPENJ5_HEALTH_CHECK_INTERVAL: 30
+      OPENJ5_METRICS_INTERVAL: 60
     secrets:
       - db_password
       - ota_signing_key
     volumes:
       - ./config:/config:ro
       - ./certs:/certs:ro
-      - ./firmware:/firmware:ro
       - robot_core_logs:/var/log/openj5
+      - ota_firmware:/opt/openj5/firmware
       - simulation_models:/opt/openj5/simulation/gazebo/models:ro
     networks:
       - robot-internal
@@ -339,6 +320,7 @@ volumes:
   grafana_data:
   loki_data:
   robot_core_logs:
+  ota_firmware:
   simulation_models:
 
 secrets:

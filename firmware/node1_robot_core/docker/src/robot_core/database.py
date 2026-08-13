@@ -69,11 +69,18 @@ class DatabaseManager:
         logger.info("Database initialized", url=database_url)
     
     async def _run_migrations(self) -> None:
-        """Run Alembic migrations."""
+        """Run Alembic migrations if a migrations directory is present."""
+        import importlib.resources
+
+        script_location = Path("migrations")
+        if not script_location.exists() and not importlib.resources.files("robot_core").joinpath("migrations").exists():
+            logger.info("No migrations directory found, skipping migrations")
+            return
+
         try:
             # Alembic config
             alembic_cfg = AlembicConfig()
-            alembic_cfg.set_main_option("script_location", "migrations")
+            alembic_cfg.set_main_option("script_location", str(script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", 
                 self.config.get("database.url").replace("+asyncpg", ""))
             
