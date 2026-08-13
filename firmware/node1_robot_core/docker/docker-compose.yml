@@ -342,7 +342,6 @@ volumes:
   loki_data:
   robot_core_logs:
   simulation_models:
-  grafana_data:
 
 secrets:
   db_password:
