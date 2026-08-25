@@ -11,10 +11,16 @@ import inspect
 import sys
 from pathlib import Path
 
-from .interfaces import (
-    IPlugin, IPluginManager, IPluginRegistry,
-    PluginMetadata, PluginContext, PluginType,
-    IConfigurablePlugin, Result,
+from .base import (
+    IConfigurablePlugin,
+    IPlugin,
+    IPluginManager,
+    IPluginRegistry,
+    PluginContext,
+    PluginMetadata,
+    PluginPermission,
+    PluginType,
+    Result,
 )
 
 

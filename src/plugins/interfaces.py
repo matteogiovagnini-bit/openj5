@@ -1,12 +1,63 @@
 """
 OpenJ5 Plugin Interfaces - Specific plugin type contracts
+
+Specific plugin categories (vision, speech, AI, ...) extending the base
+contracts defined in base.py.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any
 from abc import abstractmethod
 
-from .manager import IConfigurablePlugin
+from .base import (
+    IConfigurablePlugin,
+    ILifecyclePlugin,
+    IPlugin,
+    PluginConfigSchema,
+    PluginContext,
+    PluginDependency,
+    PluginHealth,
+    PluginMetadata,
+    PluginPermission,
+    PluginState,
+    PluginType,
+    Result,
+)
+
+__all__ = [
+    "IPlugin",
+    "IConfigurablePlugin",
+    "ILifecyclePlugin",
+    "IVisionPlugin",
+    "ISpeechPlugin",
+    "IAIPlugin",
+    "INavigationPlugin",
+    "IBatteryPlugin",
+    "IBehaviorPlugin",
+    "IHardwarePlugin",
+    "ICommunicationPlugin",
+    "PluginMetadata",
+    "PluginState",
+    "PluginType",
+    "PluginDependency",
+    "PluginPermission",
+    "PluginConfigSchema",
+    "PluginHealth",
+    "PluginContext",
+    "FaceDetection",
+    "ObjectDetection",
+    "SegmentationMap",
+    "SpeechResult",
+    "WakeWordResult",
+    "ChatMessage",
+    "Tool",
+    "ChatResponse",
+    "ClassificationResult",
+    "PathPlan",
+    "LocalizationResult",
+    "MapUpdate",
+    "BehaviorResult",
+    "BehaviorInfo",
+]
 
 
 # === COMMON DATA TYPES ===
@@ -128,21 +179,6 @@ class BehaviorInfo:
     description: str
     params_schema: dict = field(default_factory=dict)
     required_plugins: list[str] = field(default_factory=list)
-
-
-# === PLUGIN CONTEXT ===
-
-@dataclass
-class PluginContext:
-    """Context passed to plugin on initialization."""
-    config: dict
-    event_bus: Any  # IEventBus
-    command_bus: Any  # CommandBus
-    query_bus: Any  # QueryBus
-    hardware: Any  # HardwareManager
-    plugin_manager: Any  # PluginManager
-    logger: Any
-    sandbox: Any  # PluginSandbox
 
 
 # === SPECIFIC PLUGIN INTERFACES ===
