@@ -6,7 +6,6 @@ Immutable events for Event-Driven Architecture.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 from datetime import datetime
 import uuid
 

@@ -42,6 +42,16 @@ from .commands import (
     GetRobotStateQuery, GetNodeHealthQuery, GetServoPositionQuery,
     GetArmPoseQuery, GetOdometryQuery, GetBatteryStateQuery,
     GetPluginListQuery, GetFirmwareVersionsQuery,
+    GetHeadAnglesQuery, GetHeadMovingQuery, GetArmJointAnglesQuery,
+    GetTracksVelocityQuery, GetCollisionStatusQuery,
+    GetSpeakingStatusQuery, GetListeningStatusQuery,
+    GetCurrentBehaviorQuery, GetEmotionalStateQuery,
+    GetFaceDetectionsQuery, GetFaceRecognitionsQuery,
+    GetObjectDetectionsQuery, GetSegmentationQuery, GetObjectPoseQuery,
+    GetEntityTrackingQuery, GetBatteryVoltageQuery, GetBatteryCurrentQuery,
+    GetBatteryPercentageQuery, GetBatteryTemperatureQuery,
+    GetBatteryTimeRemainingQuery, GetBatteryChargingQuery, GetBatteryHealthQuery,
+    GetTemperaturesQuery, GetCPUUsageQuery, GetMemoryUsageQuery,
 )
 
 from .entities import (
@@ -91,6 +101,16 @@ __all__ = [
     "GetRobotStateQuery", "GetNodeHealthQuery", "GetServoPositionQuery",
     "GetArmPoseQuery", "GetOdometryQuery", "GetBatteryStateQuery",
     "GetPluginListQuery", "GetFirmwareVersionsQuery",
+    "GetHeadAnglesQuery", "GetHeadMovingQuery", "GetArmJointAnglesQuery",
+    "GetTracksVelocityQuery", "GetCollisionStatusQuery",
+    "GetSpeakingStatusQuery", "GetListeningStatusQuery",
+    "GetCurrentBehaviorQuery", "GetEmotionalStateQuery",
+    "GetFaceDetectionsQuery", "GetFaceRecognitionsQuery",
+    "GetObjectDetectionsQuery", "GetSegmentationQuery", "GetObjectPoseQuery",
+    "GetEntityTrackingQuery", "GetBatteryVoltageQuery", "GetBatteryCurrentQuery",
+    "GetBatteryPercentageQuery", "GetBatteryTemperatureQuery",
+    "GetBatteryTimeRemainingQuery", "GetBatteryChargingQuery", "GetBatteryHealthQuery",
+    "GetTemperaturesQuery", "GetCPUUsageQuery", "GetMemoryUsageQuery",
     # Entities
     "Entity", "Robot", "Node", "Servo", "Motor", "Plugin", "Calibration",
     # Services

@@ -5,12 +5,10 @@ This is the SINGLE public API for all applications.
 Applications MUST use only this SDK - never direct MQTT/ROS/serial.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, Optional, Callable, Awaitable
-from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Callable, Awaitable
 from enum import Enum
 import asyncio
-import uuid
 
 from ..core.domain import (
     Result, CommandBus, QueryBus,
@@ -18,8 +16,19 @@ from ..core.domain import (
     SayTextCommand, SetExpressionCommand, SetLEDCommand,
     BehaviorCommand, EmergencyStopCommand, DeployOTACommand,
     GetRobotStateQuery, GetNodeHealthQuery, GetBatteryStateQuery,
-    Position3D, Pose3D, JointAngles, BatteryState,
-    NodeState, NodeHealth, RobotState,
+    GetHeadAnglesQuery, GetHeadMovingQuery, GetArmJointAnglesQuery,
+    GetArmPoseQuery, GetOdometryQuery, GetTracksVelocityQuery,
+    GetCollisionStatusQuery, GetSpeakingStatusQuery, GetListeningStatusQuery,
+    GetCurrentBehaviorQuery, GetEmotionalStateQuery,
+    GetFaceDetectionsQuery, GetFaceRecognitionsQuery,
+    GetObjectDetectionsQuery, GetSegmentationQuery, GetObjectPoseQuery,
+    GetEntityTrackingQuery, GetBatteryVoltageQuery, GetBatteryCurrentQuery,
+    GetBatteryPercentageQuery, GetBatteryTemperatureQuery,
+    GetBatteryTimeRemainingQuery, GetBatteryChargingQuery, GetBatteryHealthQuery,
+    GetTemperaturesQuery, GetCPUUsageQuery, GetMemoryUsageQuery,
+    GetFirmwareVersionsQuery,
+    Pose3D, JointAngles, BatteryState,
+    NodeHealth, RobotState,
 )
 
 
@@ -801,7 +810,6 @@ class SyncRobot:
         self._loop = None
 
     def __enter__(self) -> SyncRobot:
-        import asyncio
         try:
             self._loop = asyncio.get_event_loop()
         except RuntimeError:

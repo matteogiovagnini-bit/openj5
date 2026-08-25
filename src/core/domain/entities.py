@@ -11,8 +11,8 @@ import uuid
 
 from .value_objects import (
     NodeIdentity, NodeState, NodeHealth, RobotState,
-    ServoConfig, MotorConfig, BatteryState, CalibrationData,
-    Position3D, Pose3D, JointAngles, PluginMetadata
+    ServoConfig, MotorConfig, CalibrationData,
+    PluginMetadata
 )
 
 

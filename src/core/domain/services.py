@@ -5,15 +5,12 @@ Pure domain logic services.
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Optional
 import math
 
 from .value_objects import (
-    NodeState, NodeHealth, BatteryState, BatteryHealth,
-    Position3D, JointAngles, NodeType, Angle
+    NodeState, Position3D, JointAngles, NodeType, Angle
 )
-from .entities import Robot, Node, Servo, Motor
+from .entities import Robot
 
 
 # === SAFETY POLICY ===

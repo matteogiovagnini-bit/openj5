@@ -4,8 +4,7 @@ OpenJ5 Core Domain - Commands & Queries (CQRS)
 from __future__ import annotations
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
-from enum import Enum
+from typing import Any, Generic, Optional, TypeVar
 import uuid
 import time
 
@@ -268,6 +267,156 @@ class GetCalibrationQuery(Query[Result]):
     """Get calibration data."""
     node_id: str = ""
     component: str = ""
+
+
+@dataclass
+class GetHeadAnglesQuery(Query[Result]):
+    """Get head joint angles."""
+    pass
+
+
+@dataclass
+class GetHeadMovingQuery(Query[Result]):
+    """Get head motion status."""
+    pass
+
+
+@dataclass
+class GetArmJointAnglesQuery(Query[Result]):
+    """Get arm joint angles."""
+    arm: str = "right"
+
+
+@dataclass
+class GetTracksVelocityQuery(Query[Result]):
+    """Get track velocities (left, right)."""
+    pass
+
+
+@dataclass
+class GetCollisionStatusQuery(Query[Result]):
+    """Get collision sensor status."""
+    pass
+
+
+@dataclass
+class GetSpeakingStatusQuery(Query[Result]):
+    """Get TTS speaking status."""
+    pass
+
+
+@dataclass
+class GetListeningStatusQuery(Query[Result]):
+    """Get STT listening status."""
+    pass
+
+
+@dataclass
+class GetCurrentBehaviorQuery(Query[Result]):
+    """Get currently active behavior."""
+    pass
+
+
+@dataclass
+class GetEmotionalStateQuery(Query[Result]):
+    """Get emotional state."""
+    pass
+
+
+@dataclass
+class GetFaceDetectionsQuery(Query[Result]):
+    """Get latest face detections."""
+    pass
+
+
+@dataclass
+class GetFaceRecognitionsQuery(Query[Result]):
+    """Get latest face recognitions."""
+    pass
+
+
+@dataclass
+class GetObjectDetectionsQuery(Query[Result]):
+    """Get latest object detections."""
+    classes: Optional[list[str]] = None
+
+
+@dataclass
+class GetSegmentationQuery(Query[Result]):
+    """Get scene segmentation mask."""
+    pass
+
+
+@dataclass
+class GetObjectPoseQuery(Query[Result]):
+    """Get 6D pose of a detected object."""
+    object_id: str = ""
+
+
+@dataclass
+class GetEntityTrackingQuery(Query[Result]):
+    """Get tracked entities."""
+    entity_type: str = ""
+
+
+@dataclass
+class GetBatteryVoltageQuery(Query[Result]):
+    """Get battery voltage."""
+    pass
+
+
+@dataclass
+class GetBatteryCurrentQuery(Query[Result]):
+    """Get battery current."""
+    pass
+
+
+@dataclass
+class GetBatteryPercentageQuery(Query[Result]):
+    """Get battery charge percentage."""
+    pass
+
+
+@dataclass
+class GetBatteryTemperatureQuery(Query[Result]):
+    """Get battery temperature."""
+    pass
+
+
+@dataclass
+class GetBatteryTimeRemainingQuery(Query[Result]):
+    """Get estimated battery time remaining."""
+    pass
+
+
+@dataclass
+class GetBatteryChargingQuery(Query[Result]):
+    """Get charging status."""
+    pass
+
+
+@dataclass
+class GetBatteryHealthQuery(Query[Result]):
+    """Get battery health metrics."""
+    pass
+
+
+@dataclass
+class GetTemperaturesQuery(Query[Result]):
+    """Get all temperature readings."""
+    pass
+
+
+@dataclass
+class GetCPUUsageQuery(Query[Result]):
+    """Get CPU usage statistics."""
+    pass
+
+
+@dataclass
+class GetMemoryUsageQuery(Query[Result]):
+    """Get memory usage statistics."""
+    pass
 
 
 # === COMMAND/QUERY BUS ===

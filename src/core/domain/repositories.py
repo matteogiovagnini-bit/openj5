@@ -2,14 +2,13 @@
 OpenJ5 Core Domain - Repository Interfaces (Ports)
 """
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Protocol, Generic, TypeVar
+from abc import abstractmethod
+from typing import Any, AsyncIterator, Protocol, TypeVar
 from dataclasses import dataclass
 
 from .entities import Robot, Node, Servo, Motor, Plugin, Calibration
 from .value_objects import (
-    NodeIdentity, NodeState, NodeHealth, RobotState,
-    ServoConfig, MotorConfig, BatteryState, CalibrationData,
+    NodeIdentity, NodeState, NodeHealth, CalibrationData,
     PluginMetadata
 )
 from .commands import Result

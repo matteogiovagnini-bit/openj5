@@ -1,0 +1,32 @@
+[project]
+name = "openj5"
+version = "0.2.0"
+description = "OpenJ5 - Open-source Johnny 5-inspired robot platform"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/plugins/interfaces.py" = ["F821"]
+"src/plugins/manager.py" = ["F821"]
+
+[tool.ruff.format]
+quote-style = "double"
