@@ -55,8 +55,8 @@ class Robot(Entity):
 @dataclass
 class Node(Entity):
     """Robot node entity."""
-    identity: NodeIdentity
-    health: NodeHealth
+    identity: NodeIdentity = field(kw_only=True)
+    health: NodeHealth = field(kw_only=True)
     config: dict = field(default_factory=dict)
     servos: dict[str, Servo] = field(default_factory=dict)
     motors: dict[str, Motor] = field(default_factory=dict)
@@ -77,8 +77,8 @@ class Node(Entity):
 @dataclass
 class Servo(Entity):
     """Servo entity."""
-    node_id: str
-    config: ServoConfig
+    node_id: str = field(kw_only=True)
+    config: ServoConfig = field(kw_only=True)
     current_position: float = 0.0  # degrees
     target_position: float = 0.0
     is_moving: bool = False
@@ -99,8 +99,8 @@ class Servo(Entity):
 @dataclass
 class Motor(Entity):
     """Motor entity."""
-    node_id: str
-    config: MotorConfig
+    node_id: str = field(kw_only=True)
+    config: MotorConfig = field(kw_only=True)
     current_velocity: float = 0.0  # RPM
     target_velocity: float = 0.0
     position: float = 0.0  # encoder ticks
@@ -122,7 +122,7 @@ class Motor(Entity):
 @dataclass
 class Plugin(Entity):
     """Plugin entity."""
-    metadata: PluginMetadata
+    metadata: PluginMetadata = field(kw_only=True)
     state: str = "loaded"  # loaded, starting, running, stopping, stopped, error
     config: dict = field(default_factory=dict)
     instance: object = None  # Plugin instance (set by PluginManager)
@@ -151,9 +151,9 @@ class Plugin(Entity):
 @dataclass
 class Calibration(Entity):
     """Calibration entity."""
-    node_id: str
-    component: str  # servo:head:neck_yaw, imu:head, etc.
-    data: CalibrationData
+    node_id: str = field(kw_only=True)
+    component: str = field(kw_only=True)  # servo:head:neck_yaw, imu:head, etc.
+    data: CalibrationData = field(kw_only=True)
     verified: bool = False
     verified_at: Optional[float] = None
 

@@ -419,6 +419,30 @@ class GetMemoryUsageQuery(Query[Result]):
     pass
 
 
+@dataclass
+class GetFirmwareVersionsQuery(Query[Result]):
+    """Get firmware versions across nodes."""
+    node_id: str = ""
+
+
+# === HANDLERS ===
+
+class CommandHandler(ABC):
+    """Handler for a specific command type (registered on CommandBus)."""
+
+    @abstractmethod
+    async def handle(self, command: Command) -> Result:
+        """Process the command."""
+
+
+class QueryHandler(ABC):
+    """Handler for a specific query type (registered on QueryBus)."""
+
+    @abstractmethod
+    async def handle(self, query: Query) -> Result:
+        """Process the query."""
+
+
 # === COMMAND/QUERY BUS ===
 
 class CommandBus:

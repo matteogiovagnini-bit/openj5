@@ -4,7 +4,7 @@ OpenJ5 Core Domain - Value Objects
 Zero external dependencies. Pure Python domain primitives.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Self
 import math
@@ -226,6 +226,35 @@ class PIDConfig:
     output_max: float
     integral_min: float
     integral_max: float
+
+
+@dataclass(frozen=True, slots=True)
+class CalibrationData:
+    """Immutable calibration payload for a calibrated component."""
+    raw_min: int = 0
+    raw_max: int = 4095
+    home_position: float = 0.0
+    offset: float = 0.0
+    scale: float = 1.0
+    verified: bool = False
+    calibrated_at: float = 0.0
+    extra: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class PluginMetadata:
+    """Immutable plugin descriptor (domain projection).
+
+    The rich framework-level descriptor lives in openj5.plugins.base;
+    the domain only needs identity and classification.
+    """
+    plugin_id: str = ""
+    name: str = ""
+    version: str = "0.0.0"
+    plugin_type: str = "generic"
+    entry_point: str = ""
+    author: str = ""
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)

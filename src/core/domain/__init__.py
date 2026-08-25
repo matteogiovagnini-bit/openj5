@@ -5,6 +5,7 @@ from .value_objects import (
     Angle, AngleUnit,
     Position3D, Quaternion, Pose3D, Twist,
     JointAngles, ServoConfig, MotorConfig, PIDConfig,
+    CalibrationData,
     BatteryState, BatteryHealth,
     TemperatureReading, DistanceReading, IMUReading, Odometry,
     NodeIdentity, NodeType, NodeState, NodeHealth, RobotState,
@@ -23,9 +24,9 @@ from .events import (
     # Errors
     HardwareFaultEvent, CommunicationLostEvent, SafetyViolationEvent,
     # Business
-    FaceDetectedEvent, ObjectDetectedEvent, SpeechRecognizedEvent,
-    FaceRecognizedEvent, PersonFollowedEvent, ObjectGraspedEvent,
-    DockingCompletedEvent,
+    FaceDetectedEvent, FaceRecognizedEvent, ObjectDetectedEvent,
+    ObjectGraspedEvent, SpeechRecognizedEvent, PersonFollowedEvent,
+    DockingCompleteEvent, OTADeployedEvent,
 )
 
 from .commands import (
@@ -75,6 +76,7 @@ __all__ = [
     "Angle", "AngleUnit",
     "Position3D", "Quaternion", "Pose3D", "Twist",
     "JointAngles", "ServoConfig", "MotorConfig", "PIDConfig",
+    "CalibrationData",
     "BatteryState", "BatteryHealth",
     "TemperatureReading", "DistanceReading", "IMUReading", "Odometry",
     "NodeIdentity", "NodeType", "NodeState", "NodeHealth", "RobotState",
@@ -86,9 +88,9 @@ __all__ = [
     "IMUTelemetryEvent", "DistanceTelemetryEvent", "OdometryTelemetryEvent",
     "NodeStateChangedEvent", "RobotStateChangedEvent", "PluginStateChangedEvent",
     "HardwareFaultEvent", "CommunicationLostEvent", "SafetyViolationEvent",
-    "FaceDetectedEvent", "ObjectDetectedEvent", "SpeechRecognizedEvent",
-    "FaceRecognizedEvent", "PersonFollowedEvent", "ObjectGraspedEvent",
-    "DockingCompletedEvent",
+    "FaceDetectedEvent", "FaceRecognizedEvent", "ObjectDetectedEvent",
+    "ObjectGraspedEvent", "SpeechRecognizedEvent", "PersonFollowedEvent",
+    "DockingCompleteEvent", "OTADeployedEvent",
     # Commands/Queries
     "Result", "CommandError",
     "Command", "Query",

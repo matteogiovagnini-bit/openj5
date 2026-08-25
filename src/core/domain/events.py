@@ -18,7 +18,7 @@ class EventCategory(Enum):
     BUSINESS = "business"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DomainEvent:
     """Base domain event - immutable, versioned."""
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -57,7 +57,7 @@ class DomainEvent:
 
 # === COMMAND EVENTS ===
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class MoveHeadCommandEvent(DomainEvent):
     target_x: float = 0.0
     target_y: float = 0.0
@@ -71,7 +71,7 @@ class MoveHeadCommandEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.COMMAND)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class MoveArmCommandEvent(DomainEvent):
     arm: str = "right"
     target_x: float = 0.0
@@ -86,7 +86,7 @@ class MoveArmCommandEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.COMMAND)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class MoveTracksCommandEvent(DomainEvent):
     linear_velocity: float = 0.0
     angular_velocity: float = 0.0
@@ -99,7 +99,7 @@ class MoveTracksCommandEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.COMMAND)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class SayTextCommandEvent(DomainEvent):
     text: str = ""
     language: str = "it"
@@ -112,7 +112,7 @@ class SayTextCommandEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.COMMAND)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class BehaviorCommandEvent(DomainEvent):
     behavior: str = ""
     params: dict = field(default_factory=dict)
@@ -122,7 +122,7 @@ class BehaviorCommandEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.COMMAND)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class EmergencyStopCommandEvent(DomainEvent):
     reason: str = "manual"
     scope: str = "all"
@@ -134,7 +134,7 @@ class EmergencyStopCommandEvent(DomainEvent):
 
 # === TELEMETRY EVENTS ===
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class ServoTelemetryEvent(DomainEvent):
     servo_name: str = ""
     position_deg: float = 0.0
@@ -148,7 +148,7 @@ class ServoTelemetryEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.TELEMETRY)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class MotorTelemetryEvent(DomainEvent):
     motor_id: str = ""
     velocity_rpm: float = 0.0
@@ -162,7 +162,7 @@ class MotorTelemetryEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.TELEMETRY)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class BatteryTelemetryEvent(DomainEvent):
     voltage_v: float = 0.0
     current_a: float = 0.0
@@ -176,7 +176,7 @@ class BatteryTelemetryEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.TELEMETRY)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class IMUTelemetryEvent(DomainEvent):
     sensor_id: str = ""
     orientation_w: float = 1.0
@@ -195,7 +195,7 @@ class IMUTelemetryEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.TELEMETRY)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DistanceTelemetryEvent(DomainEvent):
     sensor_id: str = ""
     distance_m: float = 0.0
@@ -206,7 +206,7 @@ class DistanceTelemetryEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.TELEMETRY)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class OdometryTelemetryEvent(DomainEvent):
     x: float = 0.0
     y: float = 0.0
@@ -222,7 +222,7 @@ class OdometryTelemetryEvent(DomainEvent):
 
 # === STATE EVENTS ===
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class NodeStateChangedEvent(DomainEvent):
     node_id: str = ""
     previous_state: str = ""
@@ -234,7 +234,7 @@ class NodeStateChangedEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.STATE)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class RobotStateChangedEvent(DomainEvent):
     previous_state: str = ""
     new_state: str = ""
@@ -245,7 +245,7 @@ class RobotStateChangedEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.STATE)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class PluginStateChangedEvent(DomainEvent):
     plugin_id: str = ""
     previous_state: str = ""
@@ -258,7 +258,7 @@ class PluginStateChangedEvent(DomainEvent):
 
 # === ERROR EVENTS ===
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class HardwareFaultEvent(DomainEvent):
     node_id: str = ""
     component: str = ""  # servo, motor, sensor, comm
@@ -272,7 +272,7 @@ class HardwareFaultEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.ERROR)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class CommunicationLostEvent(DomainEvent):
     node_id: str = ""
     last_seen: float = 0.0
@@ -283,7 +283,7 @@ class CommunicationLostEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.ERROR)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class SafetyViolationEvent(DomainEvent):
     node_id: str = ""
     violation_type: str = ""  # velocity_limit, workspace_limit, collision, battery_critical
@@ -297,7 +297,7 @@ class SafetyViolationEvent(DomainEvent):
 
 # === BUSINESS EVENTS ===
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class FaceDetectedEvent(DomainEvent):
     face_id: str = ""
     bbox_x: float = 0.0
@@ -312,7 +312,18 @@ class FaceDetectedEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.BUSINESS)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
+class FaceRecognizedEvent(DomainEvent):
+    face_id: str = ""
+    identity: str = ""
+    confidence: float = 0.0
+
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, 'category', EventCategory.BUSINESS)
+
+
+@dataclass(frozen=True)
 class ObjectDetectedEvent(DomainEvent):
     object_id: str = ""
     class_name: str = ""
@@ -328,7 +339,18 @@ class ObjectDetectedEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.BUSINESS)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
+class ObjectGraspedEvent(DomainEvent):
+    object_id: str = ""
+    arm: str = "right"
+    grasp_success: bool = True
+
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, 'category', EventCategory.BUSINESS)
+
+
+@dataclass(frozen=True)
 class SpeechRecognizedEvent(DomainEvent):
     text: str = ""
     confidence: float = 0.0
@@ -341,7 +363,7 @@ class SpeechRecognizedEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.BUSINESS)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class PersonFollowedEvent(DomainEvent):
     person_id: str = ""
     distance_m: float = 0.0
@@ -352,7 +374,7 @@ class PersonFollowedEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.BUSINESS)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DockingCompleteEvent(DomainEvent):
     dock_id: str = ""
     success: bool = True
@@ -363,7 +385,7 @@ class DockingCompleteEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.BUSINESS)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class OTADeployedEvent(DomainEvent):
     node_id: str = ""
     firmware_version: str = ""
@@ -397,7 +419,9 @@ EVENT_CLASSES = {
     "CommunicationLostEvent": CommunicationLostEvent,
     "SafetyViolationEvent": SafetyViolationEvent,
     "FaceDetectedEvent": FaceDetectedEvent,
+    "FaceRecognizedEvent": FaceRecognizedEvent,
     "ObjectDetectedEvent": ObjectDetectedEvent,
+    "ObjectGraspedEvent": ObjectGraspedEvent,
     "SpeechRecognizedEvent": SpeechRecognizedEvent,
     "PersonFollowedEvent": PersonFollowedEvent,
     "DockingCompleteEvent": DockingCompleteEvent,
@@ -406,6 +430,11 @@ EVENT_CLASSES = {
 
 EVENT_CATEGORIES = {name: cls.category for name, cls in EVENT_CLASSES.items()}
 
+def _event_category(cls: type[DomainEvent]) -> str:
+    """Resolve the category declared by an event subclass __post_init__."""
+    return cls().category.value
+
+
 EVENT_SCHEMAS = {
     name: {
         "type": "object",
@@ -413,7 +442,7 @@ EVENT_SCHEMAS = {
             "event_id": {"type": "string"},
             "event_type": {"const": name},
             "event_version": {"type": "integer", "const": 1},
-            "category": {"type": "string", "const": cls.category.value},
+            "category": {"type": "string", "const": _event_category(cls)},
             "timestamp": {"type": "number"},
             "source_node": {"type": "string"},
             "correlation_id": {"type": "string"},
