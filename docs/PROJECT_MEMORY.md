@@ -70,7 +70,7 @@ Regola: gli ADR sono immutabili; una decisione che li supera genera un nuovo ADR
 
 ## 4. Hardware Utilizzato (reference)
 
-- Raspberry Pi 4 8GB, Ubuntu Server 22.04/24.04 LTS, Docker Compose.
+- Raspberry Pi 4 8GB, **Raspberry Pi OS Lite 64-bit (Bookworm)** (ADR-016, sostituisce la spec Ubuntu iniziale), boot da NVMe USB3 (~300-400 MB/s), Docker Compose; cgroup memory abilitati via cmdline.txt per i limiti dei container.
 - 3× ESP32-S3 + 2× ESP32, ESP-IDF 5.2+, FreeRTOS @1kHz.
 - PCA9685 (I2C 0x40–0x43 per nodi 2–5), servi hobby standard.
 - L298N + 2 motori DC con encoder (nodo 6), MPU6050/ICM20948, VL53L0X ×2.
@@ -125,6 +125,7 @@ Dettagli completi: `governance/ARCHITECTURAL_PRINCIPLES.md`, `governance/CODING_
 - Sessione 2026-08-25 (1): conformità alla constitution (governance completata, ADR 005–015, documenti di continuità).
 - Sessione 2026-08-25 (2): CI base attiva (ruff, doc-check, docker build); CHANGELOG corretto; framework plugin riparato (`src/plugins/base.py`), bug latenti del dominio corretti, cinematica DH+IK implementata; `src/` ora importabile al 100%.
 - Sessione 2026-08-25 (3): percorso di deploy Node 1 documentato e automatizzato (`docs/deployment/DEPLOYMENT.md` + `scripts/deploy/bootstrap_rpi4.sh`); validazione su hardware reale = T-018.
+- Sessione 2026-08-25 (4): **ADR-016** — OS di riferimento Nodo 1 passa a Raspberry Pi OS Lite 64-bit (Bookworm) + storage NVMe USB3; DEPLOYMENT/bootstrap riscritti (cgroup cmdline, bootloader USB recovery, TRIM); ROS confermato container-only.
 - v0.3.0: testing — **in corso** (T-003…T-006 da fare).
 - Firmware nodi 3–6, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 

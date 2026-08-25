@@ -4,6 +4,44 @@
 
 ---
 
+## Sessione: 2026-08-25 (5) — ADR-016: Pi OS Lite 64-bit + NVMe USB3
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-08-25 |
+| Versione progetto | 0.2.0 → v0.3.0 in corso |
+| Obiettivo | Decisione Livello C sull'OS del Nodo 1 proposta dall'owner (Pi OS invece di Ubuntu) + storage NVMe |
+
+### Attività completate
+1. **Analisi comparativa** Ubuntu Server 24.04 vs Pi OS Lite vs Pi OS desktop per il carico OpenJ5: ROS container-only (ADR-015) elimina il vantaggio storico Ubuntu; libcamera/picamera2 (roadmap v0.5.0) favorevole a Pi OS; desktop escluso (headless, risparmio ~0,5-1GB RAM). Owner confermato: **Pi OS Lite 64-bit (Bookworm)**.
+2. **ADR-016 creato**: decisione OS + storage NVMe USB3 (~300-400 MB/s vs SD), alternative considerate, conseguenze (finestra supporto Debian, cmdline.txt obbligatorio per cgroup memoria, recovery bootloader via SD), aggiornati INDEX.md e tabella ADR in ARCHITECTURE.md.
+3. **DEPLOYMENT.md riscritto** per Pi OS Lite+NVMe: flash diretto NVMe con Imager (customizzazione headless), recovery one-time bootloader USB da SD solo se necessario, §4.1 patch `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` su `/boot/firmware/cmdline.txt` con test verifica limite 256MB, watchdog via `dtparam=watchdog=on`, TRIM check enclosure (`lsblk --discard`), benchmark `hdparm`, UFW (non preinstallato su Pi OS), troubleshooting esteso (NVMe sotto carico = alimentazione).
+4. **bootstrap_rpi4.sh aggiornato**: guardia anti-Ubuntu (rifiuta con rimando ad ADR-016), rilevazione Bookworm/arm64, patch idempotente cmdline.txt (riga singola verificata) + config.txt watchdog con flag REBOOT_REQUIRED e istruzioni post-reboot.
+5. Coerenza repo: README (prerequisiti + quick start path corretto: `firmware/node1_robot_core/docker`), GOALS G1.1, ARCHITECTURE.md (C4 context + deployment diagram), PROJECT_MEMORY §4/timeline, NEXT_TASK T-017/T-018, CHANGELOG.
+
+### File creati (1)
+`docs/adr/ADR-016-pios-lite-nvme-node1.md`
+
+### File modificati
+`docs/deployment/DEPLOYMENT.md` (rewrite), `scripts/deploy/bootstrap_rpi4.sh` (rewrite),
+`README.md`, `governance/GOALS.md`, `docs/architecture/ARCHITECTURE.md`,
+`docs/adr/INDEX.md`, `CHANGELOG.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.md`
+
+### Decisioni prese
+- **ADR-016** (Livello C, approvato dall'owner): Pi OS Lite 64-bit Bookworm come OS di riferimento Nodo 1; NVMe USB3 storage primario; SD = solo recovery bootloader; variante desktop esclusa (aggiungibile a posteriori senza reflash).
+- Ubuntu resta alternativa documentata nell'ADR, non percorso supportato.
+
+### Problemi riscontrati
+Nessuno bloccante.
+
+### Debito tecnico
+Invariato; T-018 ora include verifica boot USB + test cgroup.
+
+### Prossimi passi consigliati
+T-018 validazione su hardware reale (Pi OS Lite su NVMe), oppure T-003 unit test core domain.
+
+---
+
 ## Sessione: 2026-08-25 (4) — Preparazione deploy Raspberry Pi 4 (Node 1)
 
 | Campo | Valore |

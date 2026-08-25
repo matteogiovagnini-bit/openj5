@@ -59,7 +59,7 @@ Ogni commit/PR passa: Build → Unit Test → Integration Test (sim) → Lint �
 ### Nodo 1 - Raspberry Pi 4 8GB (Robot Core)
 | Obiettivo | Descrizione | Done Criteria |
 |-----------|-------------|---------------|
-| G1.1 | OS Base: Ubuntu Server 22.04 / 24.04 LTS + Docker | Bootable image, Docker, composes up |
+| G1.1 | OS Base: Raspberry Pi OS Lite 64-bit (Bookworm) + Docker, boot NVMe USB3 (ADR-016) | Bootable, Docker, composes up |
 | G1.2 | ROS 2 Humble/Iron + rosbridge | `ros2 topic list` funziona, bridge WS attivo |
 | G1.3 | MQTT Broker (Mosquitto/EMQX) + Auth + ACL | Pub/sub da ESP32 funziona con auth |
 | G1.4 | Robot Core Service (Config, Logging, DB, Scheduler, Plugin Manager) | Service up, REST API risponde, plugin load |

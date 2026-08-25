@@ -52,6 +52,7 @@ Any specific implementation details, migration paths, or follow-up tasks.
 | [ADR-013](ADR-013-security-mtls-jwt-signed-ota.md) | Security: mTLS, JWT, Signed OTA, Fail-Safe | Accepted | 2026-07-15 |
 | [ADR-014](ADR-014-python-core-cpp-firmware.md) | Python for Robot Core, C++ for Firmware | Accepted | 2026-07-15 |
 | [ADR-015](ADR-015-mqtt-primary-transport.md) | MQTT as Primary Transport Protocol | Accepted | 2026-07-15 |
+| [ADR-016](ADR-016-pios-lite-nvme-node1.md) | Raspberry Pi OS Lite 64-bit (Bookworm) as Node 1 Reference OS, NVMe-over-USB3 Storage | Accepted | 2026-08-25 |
 
 ## Governance
 

@@ -16,7 +16,7 @@ C4Context
     Person(developer, "Developer", "Extends platform via Plugins, SDK")
 
     System_Boundary(openj5, "OpenJ5 Platform") {
-        System(node1, "Node 1: Robot Core (RPi4)", "Ubuntu + Docker + ROS2 + MQTT Broker\nAI, Vision, Speech, Planning, Behavior\nConfig, Logging, DB, OTA, Plugin Manager")
+        System(node1, "Node 1: Robot Core (RPi4)", "Raspberry Pi OS Lite 64-bit + Docker + MQTT Broker\nAI, Vision, Speech, Planning, Behavior\nConfig, Logging, DB, OTA, Plugin Manager")
         System(node2, "Node 2: Head Controller (ESP32-S3)", "6 Servos, LED, Display, Microphones, Sensors")
         System(node3, "Node 3: Right Arm (ESP32-S3)", "6 Servos: Shoulder P/R/Rot, Elbow, Wrist, Gripper")
         System(node4, "Node 4: Left Arm (ESP32-S3)", "6 Servos: Mirrored Right Arm")
@@ -300,7 +300,7 @@ stateDiagram-v2
 C4Deployment
     title Deployment Diagram - OpenJ5 Physical Layout
 
-    Deployment_Node(rpi4, "Raspberry Pi 4 8GB", "Ubuntu Server 24.04 LTS") {
+    Deployment_Node(rpi4, "Raspberry Pi 4 8GB", "Raspberry Pi OS Lite 64-bit (Bookworm), NVMe USB3") {
         Container(docker, "Docker Engine", "Container Runtime") {
             Container(mosquitto, "Mosquitto MQTT", "Port 8883 (TLS)")
             Container(redis, "Redis Stack", "Port 6379 (Streams)")
@@ -561,6 +561,7 @@ flowchart TD
 | ADR-011 | OTA with Signed Firmware and Rollback | Accepted | 2026-07-15 |
 | ADR-012 | FreeCAD Parametric CAD with Spreadsheet Configuration | Accepted | 2026-07-15 |
 | ADR-013 | Security: mTLS, JWT, Signed OTA, Fail-Safe | Accepted | 2026-07-15 |
+| ADR-016 | Raspberry Pi OS Lite 64-bit (Bookworm) + NVMe-over-USB3 for Node 1 | Accepted | 2026-08-25 |
 
 ---
 

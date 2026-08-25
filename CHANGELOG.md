@@ -13,11 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI/CD pipeline, integration tests, simulation parity tests, hardware-in-loop tests
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
 
+### Changed
+- **ADR-016**: Node 1 reference OS switched from Ubuntu Server to Raspberry Pi OS
+  Lite 64-bit (Bookworm), primary storage NVMe on USB3 (headless-only, desktop
+  variant excluded); README, ARCHITECTURE diagrams and GOALS updated accordingly
+
 ### Added
-- Raspberry Pi 4 deployment path: `docs/deployment/DEPLOYMENT.md` (Ubuntu Server
-  24.04 arm64, Docker install, secrets/certs generation, stack launch, verification,
-  network layout, RPi-specific troubleshooting) and `scripts/deploy/bootstrap_rpi4.sh`
-  (idempotent post-first-boot automation); DEPLOYMENT added to CI doc gate
+- Raspberry Pi 4 deployment path rewritten for Pi OS Lite + NVMe:
+  `docs/deployment/DEPLOYMENT.md` (Imager flow onto NVMe, one-time USB bootloader
+  recovery via SD, memory-cgroup cmdline patch required for compose limits,
+  watchdog dtparam, TRIM check, UFW hardening, RPi troubleshooting) and
+  `scripts/deploy/bootstrap_rpi4.sh` (Bookworm detection with Ubuntu guard,
+  idempotent cmdline/config.txt patches, reboot hint); DEPLOYMENT in CI doc gate
 - Plugin framework base contracts (`src/plugins/base.py`): IPlugin,
   IConfigurablePlugin, ILifecyclePlugin, IPluginManager, IPluginRegistry,
   PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health and a

@@ -115,7 +115,7 @@ OpenJ5/
 
 ### Prerequisiti
 
-- **Raspberry Pi 4 8GB** con Ubuntu Server 22.04/24.04 LTS
+- **Raspberry Pi 4 8GB** con Raspberry Pi OS Lite 64-bit (Bookworm) — ADR-016 — boot da NVMe USB3 consigliato
 - **5× ESP32-S3/ESP32** (DevKit o custom PCB)
 - **Docker** + **Docker Compose**
 - **Python 3.11+** (per SDK e tooling)
@@ -125,17 +125,18 @@ OpenJ5/
 ### Setup Robot Core (Nodo 1 - Raspberry Pi)
 
 ```bash
-# Clona repository
-git clone https://github.com/openj5/openj5.git
-cd openj5
+# Guida completa: docs/deployment/DEPLOYMENT.md
+# Automazione: scripts/deploy/bootstrap_rpi4.sh
 
-# Build e avvio servizi core
-cd src/core/infrastructure/docker
+git clone https://github.com/matteogiovagnini-bit/openj5.git
+cd openj5/firmware/node1_robot_core/docker
+
+bash secrets/generate.sh          # password db/grafana + chiave OTA
+bash certs/generate.sh --quiet    # CA + certificati mTLS
 docker compose up -d
 
 # Verifica servizi
-curl http://localhost:8080/health
-curl http://localhost:8080/api/docs  # Swagger UI
+curl -fk https://localhost:8080/health
 ```
 
 ### Setup Firmware ESP32 (Nodi 2-6)

@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
-# OpenJ5 Node 1 bootstrap - Raspberry Pi 4 8GB + Ubuntu Server 24.04 LTS arm64.
+# OpenJ5 Node 1 bootstrap - Raspberry Pi 4 8GB + Raspberry Pi OS Lite 64-bit.
 #
-# Automates docs/deployment/DEPLOYMENT.md sections 3-7:
-#   system prep, Docker install, code checkout, secrets+certs, stack up.
+# Reference OS/storage: Pi OS Lite Bookworm arm64 + NVMe on USB3 (ADR-016).
+# Automates docs/deployment/DEPLOYMENT.md sections 4-8:
+#   system prep, memory cgroups for compose limits, Docker install,
+#   code checkout, secrets+certs, stack up.
 #
 # Usage:
 #   bash scripts/deploy/bootstrap_rpi4.sh                  # full run
@@ -33,14 +35,21 @@ command -v sudo >/dev/null 2>&1 || die "run as a sudo-capable user"
 [ -f /proc/device-tree/model ] && grep -qi "Raspberry Pi" /proc/device-tree/model \
     || log "WARNING: this does not look like a Raspberry Pi (continuing)"
 . /etc/os-release
-case "${VERSION_ID:-}" in
-    22.04|24.04) log "Ubuntu $VERSION_ID detected" ;;
-    *) log "WARNING: Ubuntu 22.04/24.04 expected, found '${VERSION_ID:-?}' (continuing)" ;;
+case "${ID:-}" in
+    debian|raspbian) ;;
+    ubuntu) die "Ubuntu detected: reference OS is now Raspberry Pi OS Lite 64-bit (ADR-016). Reflash or override with FORCE_OS=1." ;;
+    *) die "unsupported OS '${ID:-?}': use Raspberry Pi OS Lite 64-bit (Bookworm)" ;;
 esac
-[ "$(uname -m)" = "aarch64" ] || die "64-bit OS required (aarch64). Reflash with Ubuntu Server 64-bit."
+[ "${VERSION_ID:-0}" = "12" ] || log "WARNING: Bookworm (Debian 12) expected, found '${VERSION_ID:-?}'"
+[ "$(uname -m)" = "aarch64" ] || die "64-bit OS required (aarch64). Reflash with Pi OS Lite 64-bit."
+if [ "${FORCE_OS:-0}" != "1" ]; then
+    true
+fi
 
 FREE_GB=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
 [ "${FREE_GB:-0}" -ge 16 ] || die "only ${FREE_GB}GB free on / — at least 16GB needed for images+volumes"
+
+REBOOT_REQUIRED=0
 
 # ------------------------------------------------------------
 # 1. System preparation
@@ -51,13 +60,36 @@ sudo apt-get full-upgrade -y -qq
 sudo timedatectl set-timezone "$TIMEZONE" 2>/dev/null || log "timezone setup skipped"
 sudo apt-get install -y -qq git curl openssl ca-certificates
 
-# Reduce SD wear when journald is persistent
-if [ -d /var/log/journal ]; then
-    step "journald -> volatile (SD wear reduction)"
-    sudo mkdir -p /etc/systemd/journald.conf.d
-    printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=64M\n' \
-        | sudo tee /etc/systemd/journald.conf.d/openj5.conf >/dev/null
-    sudo systemctl restart systemd-journald
+step "Memory cgroups for container limits (ADR-016)"
+CMDLINE=/boot/firmware/cmdline.txt
+if [ ! -f "$CMDLINE" ]; then
+    CMDLINE=/boot/cmdline.txt
+fi
+[ -f "$CMDLINE" ] || die "cmdline.txt not found (/boot/firmware/cmdline.txt expected on Bookworm)"
+if grep -q cgroup_memory "$CMDLINE"; then
+    log "cgroup parameters already present"
+else
+    sudo sed -i '1s/$/ cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory/' "$CMDLINE"
+    grep -q ' ' <<< "$(cat "$CMDLINE")" && awk 'NR>1{exit 1}' "$CMDLINE" \
+        || log "cmdline.txt kept as single line"
+    REBOOT_REQUIRED=1
+    log "patched $CMDLINE (reboot required to activate)"
+fi
+
+step "journald -> volatile (storage wear reduction)"
+sudo mkdir -p /etc/systemd/journald.conf.d
+printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=64M\n' \
+    | sudo tee /etc/systemd/journald.conf.d/openj5.conf >/dev/null
+sudo systemctl restart systemd-journald
+
+step "Hardware watchdog"
+if ! grep -q 'dtparam=watchdog=on' /boot/firmware/config.txt 2>/dev/null; then
+    echo 'dtparam=watchdog=on' | sudo tee -a /boot/firmware/config.txt >/dev/null
+    sudo apt-get install -y -qq watchdog
+    sudo systemctl enable --now watchdog 2>/dev/null || true
+    REBOOT_REQUIRED=1
+else
+    log "watchdog dtparam already enabled"
 fi
 
 # ------------------------------------------------------------
@@ -73,7 +105,6 @@ else
 fi
 docker info >/dev/null 2>&1 || { sudo usermod -aG docker "$USER"; die "added '$USER' to docker group - log out, back in, rerun"; }
 docker compose version >/dev/null 2>&1 || die "docker compose plugin missing"
-docker info --format 'cgroup driver: {{.CgroupDriver}}' || true
 sudo systemctl enable docker >/dev/null 2>&1 || true
 
 # ------------------------------------------------------------
@@ -117,4 +148,9 @@ log "  docker compose ps"
 log "  curl -fk https://localhost:8080/health"
 log "  Grafana: http://$(hostname):3000 (admin / secrets/grafana_password.txt)"
 log ""
+if [ "$REBOOT_REQUIRED" -eq 1 ]; then
+    log "IMPORTANT: reboot now ('sudo reboot') so cgroup/watchdog params take effect,"
+    log "then verify memory limits: docker run --rm --memory=256m alpine sh -c 'free -m'"
+    log ""
+fi
 log "Full guide: docs/deployment/DEPLOYMENT.md"
