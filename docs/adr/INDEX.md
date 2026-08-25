@@ -38,7 +38,7 @@ Any specific implementation details, migration paths, or follow-up tasks.
 | ID | Title | Status | Date |
 |----|-------|--------|------|
 | [ADR-001](ADR-001-hexagonal-architecture.md) | Hexagonal Architecture for Core Domain | Accepted | 2026-07-15 |
-| [ADR-002](ADR-002-distributed-6-node-architecture.md) | 6-Node Distributed Architecture | Accepted | 2026-07-15 |
+| [ADR-002](ADR-002-six-node-distributed-architecture.md) | 6-Node Distributed Architecture | Accepted | 2026-07-15 |
 | [ADR-003](ADR-003-communication-gateway-pattern.md) | Communication Gateway Pattern (Multi-Protocol) | Accepted | 2026-07-15 |
 | [ADR-004](ADR-004-event-driven-architecture.md) | Event-Driven Architecture with Central Event Bus | Accepted | 2026-07-15 |
 | [ADR-005](ADR-005-hardware-abstraction-layer.md) | Hardware Abstraction Layer (HAL) for All Drivers | Accepted | 2026-07-15 |
