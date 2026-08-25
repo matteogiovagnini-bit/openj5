@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
 
 ### Added
+- Raspberry Pi 4 deployment path: `docs/deployment/DEPLOYMENT.md` (Ubuntu Server
+  24.04 arm64, Docker install, secrets/certs generation, stack launch, verification,
+  network layout, RPi-specific troubleshooting) and `scripts/deploy/bootstrap_rpi4.sh`
+  (idempotent post-first-boot automation); DEPLOYMENT added to CI doc gate
 - Plugin framework base contracts (`src/plugins/base.py`): IPlugin,
   IConfigurablePlugin, ILifecyclePlugin, IPluginManager, IPluginRegistry,
   PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health and a

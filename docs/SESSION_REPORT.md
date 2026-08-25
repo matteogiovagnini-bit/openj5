@@ -4,6 +4,43 @@
 
 ---
 
+## Sessione: 2026-08-25 (4) — Preparazione deploy Raspberry Pi 4 (Node 1)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-08-25 |
+| Versione progetto | 0.2.0 → v0.3.0 in corso |
+| Obiettivo | Definire come preparare il RPi4 8GB come Nodo 1 (openj5-core) |
+
+### Attività completate
+1. **T-017 ✅**: percorso di deploy completo:
+   - `docs/deployment/DEPLOYMENT.md`: hardware richiesto (SSD consigliato, PSU, cooling), flash Ubuntu Server 24.04 LTS arm64 headless con Pi Imager, nota UID/GID 1000 per permessi certificati mosquitto, preparazione sistema (timezone, journald volatile per usura SD, watchdog HW), installazione Docker ufficiale, checkout/rsync codice, generazione segreti+certificati sul dispositivo, `docker compose up -d`, tabella verifica (API/Swagger/MQTT/Grafana/Prometheus/Loki), layout porte host + hardening UFW, troubleshooting specifico RPi (da KNOWLEDGE_BASE), prossimi passi (certificati ESP32 già pronti per nodi 2–6).
+   - `scripts/deploy/bootstrap_rpi4.sh`: automatizza sezioni 3–7 in modo idempotente (preflight arch/os/spazio disco, apt full-upgrade, journald volatile, Docker via get.docker.com, gruppo docker, clone/pull repo, generate.sh segreti+certs con fix permessi chiavi per uid 1883/gid 1000, compose up --build). Sintassi verificata (`bash -n`).
+2. `DEPLOYMENT.md` aggiunto alla doc gate CI (`scripts/check_docs.sh`).
+
+### File creati (2)
+`docs/deployment/DEPLOYMENT.md`, `scripts/deploy/bootstrap_rpi4.sh`
+
+### File modificati
+`scripts/check_docs.sh`, `CHANGELOG.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.md`
+
+### Decisioni prese
+- Ubuntu Server **24.04 LTS arm64** come riferimento operativo (README indicava 22.04/24.04; si standardizza sul 24.04).
+- SSD USB3 raccomandato (PostgreSQL+Prometheus su SD = usura); journald volatile di default nel bootstrap.
+- Segreti e certificati generati SEMPRE sul dispositivo, mai trasferiti né committati.
+- Nuovo task **T-018** (validazione su hardware fisico): il deploy resta "fatto" a livello documentale/script finché non eseguito su un Pi reale.
+
+### Problemi riscontrati
+Nessuno bloccante.
+
+### Debito tecnico
+Invariato; T-018 aggiunto come dipendenza operativa per dichiarare il Nodo 1 "up".
+
+### Prossimi passi consigliati
+Eseguire bootstrap sul Pi reale (T-018) oppure continuare v0.3.0 con T-003 (unit test core domain).
+
+---
+
 ## Sessione: 2026-08-25 (3) — T-015 riparazione framework plugin
 
 | Campo | Valore |

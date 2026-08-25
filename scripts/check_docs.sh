@@ -26,6 +26,7 @@ for f in \
     docs/architecture/ARCHITECTURE.md \
     docs/api/API.md \
     docs/configuration/CONFIGURATION.md \
+    docs/deployment/DEPLOYMENT.md \
     docs/adr/INDEX.md \
     docs/adr/TEMPLATE.md \
     docs/PROJECT_MEMORY.md \
