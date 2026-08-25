@@ -4,7 +4,58 @@
 
 ---
 
-## Sessione: 2026-08-25 — Conformità alla Project Constitution (Punto 1)
+## Sessione: 2026-08-25 (2) — T-001 + base pipeline CI
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-08-25, sessione successiva alla conformità governance |
+| Versione progetto | 0.2.0 → v0.3.0 iniziata |
+| Obiettivo | T-001 (CHANGELOG onesto) + T-002 (pipeline CI base) |
+
+### Attività completate
+1. **T-001 ✅**: CHANGELOG "Unreleased" non dichiara più CI/test inesistenti; contiene solo lavoro reale + sezione Planned che rimanda a ROADMAP/NEXT_TASK.
+2. **Lint e difetti reali**: installato ruff 0.16.4, analizzati `src/` + `robot_core/`: 174 violazioni E/F. Corrette le meccaniche sicure:
+   - 14 classi Query mancanti aggiunte a `src/core/domain/commands.py` (+ export in `__init__`, + import in `sdk/robot.py`) — percorsi SDK che avrebbero sollevato NameError
+   - Import mancanti: `Protocol` (event_bus), `Path`/`Any` (database.py), `uuid` (ota.py), `ABC`/`abstractmethod` (robot_core/plugins.py)
+   - Sostituiti star-import in `robot_core/api/` con import espliciti
+   - 79 auto-fix ruff (unused imports/variables); variabile morta `rs` in rest.py rimossa
+   - 4 import `Result` a fine file spostati in testa (config_service, event_bus, communication, state_machine)
+3. **T-002 🟡 parziale**: creati `.github/workflows/ci.yml` (job python-lint / doc-check / docker-build) e `scripts/check_docs.sh` (esistenza doc obbligatorie + verifica link ADR nell'INDEX). Verificati localmente: `ruff check` pulito, doc-check OK, YAML valido.
+4. **Scoperta debito grave documentata**: framework plugin `src/plugins/` non importabile — `interfaces.py` e `manager.py` si importano a vicenda classi mai definite (IPlugin, IPluginManager, IPluginRegistry, PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health). Contenimento statico: per-file-ignores in `pyproject.toml`; riparazione = nuovo task **T-015**.
+5. **T-007 bloccato**: skeleton firmware Node 2 non compilabile (manca `head_controller.hpp`, sorgenti elencati nel CMakeLists, direttive `project()`): job ESP-IDF rinviato a dopo T-014.
+
+### File creati (3)
+`.github/workflows/ci.yml`, `scripts/check_docs.sh`, `pyproject.toml`
+
+### File modificati
+`CHANGELOG.md`, `docs/NEXT_TASK.md`, `PROJECT_STATUS.md`, `docs/PROJECT_MEMORY.md`,
+`src/core/domain/commands.py`, `src/core/domain/__init__.py`, `src/sdk/robot.py`,
+`src/eventbus/event_bus.py`, `src/gateway/communication.py`,
+`src/statemachine/state_machine.py`, `src/config/config_service.py`,
+`firmware/node1_robot_core/docker/src/robot_core/{plugins,database,ota}.py`,
+`firmware/node1_robot_core/docker/src/robot_core/api/{rest,__init__,websocket}.py`
+(websocket.py via auto-fix)
+
+### Decisioni prese
+- Ruff baseline pragmatica: regole E4/E7/E9/F; `ruff format` NON adottato ora (36 file) → T-016.
+- F821 ignorato solo in `src/plugins/interfaces.py`/`manager.py` come contenimento temporaneo tracciato (T-015).
+- Job firmware escluso dalla CI finché lo skeleton non compila (niente build finte verdi).
+
+### Problemi riscontrati
+- Docker daemon locale non attivo: build robot-core non rieseguibile in locale (già validata il 13/08 con stesso contesto/Dockerfile).
+
+### Debito tecnico
+Vedi `docs/PROJECT_MEMORY.md` §10 aggiornato. Nuovi: plugin framework contracts (T-015), formatter (T-016).
+
+### Prossimi passi consigliati
+T-015 (riparare contratti plugin, ~1g) poi T-003 (unit test core domain) per completare v0.3.0.
+
+### Prompt di continuità
+`docs/CONTINUATION_PROMPT.md` (aggiornare "Stato attuale" alla prossima chiusura).
+
+---
+
+## Sessione: 2026-08-25 (1) — Conformità alla Project Constitution (Punto 1)
 
 | Campo | Valore |
 |-------|--------|

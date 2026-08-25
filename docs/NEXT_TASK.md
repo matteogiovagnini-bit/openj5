@@ -1,7 +1,7 @@
 # NEXT_TASK — Prossime Attività per Priorità
 
 > Aggiornare a ogni sessione. Formato: ID, Titolo, Descrizione, Priorità, Dipendenze, Stima, Stato.
-> Ultimo aggiornamento: 2026-08-25
+> Ultimo aggiornamento: 2026-08-25 (sessione 2)
 
 ---
 
@@ -9,23 +9,25 @@
 
 | ID | Titolo | Descrizione | Priorità | Dipendenze | Stima | Stato |
 |----|--------|-------------|----------|------------|-------|-------|
-| T-001 | Correggere CHANGELOG "Unreleased" | La sezione Unreleased dichiara CI/CD e test non esistenti nel repo. Spostare le voci in "Planned" o rimuoverle finché non reali | Alta | — | 0.5h | ⬜ Da fare |
-| T-002 | Pipeline GitHub Actions base | `.github/workflows/ci.yml`: ruff + mypy su Python, build Docker robot-core, check doc (doc esiste per file modificati), lint C++ clang-tidy su firmware | Alta | — | 1g | ⬜ Da fare |
+| T-001 | Correggere CHANGELOG "Unreleased" | La sezione Unreleased dichiarava CI/CD e test inesistenti. Sistemata: voci rimosse, lavoro reale documentato | Alta | — | 0.5h | ✅ Fatto 2026-08-25 |
+| T-002 | Pipeline GitHub Actions base | `.github/workflows/ci.yml` creato con job: python-lint (ruff), doc-check (`scripts/check_docs.sh`), docker-build robot-core. mypy e clang-tidy ancora da aggiungere quando il debito lo consente | Alta | — | 1g | 🟡 Parziale 2026-08-25 |
 | T-003 | Suite unit test core domain | pytest su `src/core/domain/` (value objects, events, commands, entities): target ≥90% coverage; usare InMemory adapters già presenti | Alta | T-002 | 2g | ⬜ Da fare |
 | T-004 | Integration test REST API + WebSocket | Test endpoint `robot_core/api/rest.py` con httpx/Testcontainers (postgres+redis); test WS bidirezionale | Alta | T-003 | 2g | ⬜ Da fare |
 | T-005 | Integration test event bus + state machine | Round-trip RedisEventBus con consumer groups/DLQ; test tabella transizioni e fault propagation orchestratore | Alta | T-003 | 1.5g | ⬜ Da fare |
 | T-006 | Simulation parity tests | Stessa suite gira contro mock driver e Gazebo headless in CI (base per GOALS G3) | Alta | T-005 | 3g | ⬜ Da fare |
-| T-007 | Build firmware ESP-IDF in CI | Job che compila `firmware/node2_head` con container ESP-IDF 5.2 (valida CMakeLists attuali) | Alta | T-002 | 1g | ⬜ Da fare |
+| T-007 | Build firmware ESP-IDF in CI | Job che compila `firmware/node2_head` con container ESP-IDF 5.2. **Bloccato**: skeleton non compilabile (manca `head_controller.hpp`, sorgenti elencati nel CMakeLists, `include(project.cmake)`/`project()`) — completare prima T-014 | Alta | T-014 | 1g | 🔴 Bloccato |
 
 ## Priorità Media — Chiusura Debiti Codice
 
 | ID | Titolo | Descrizione | Priorità | Dipendenze | Stima | Stato |
 |----|--------|-------------|----------|------------|-------|-------|
 | T-010 | Cablare i bus reali nell'SDK | `src/sdk/robot.py` TODO: inizializzare CommandBus/QueryBus da config invece di stub | Media | T-003 | 1g | ⬜ Da fare |
-| T-011 | Auto-reconnect MqttGateway | Riconnessione con backoff esponenziale + risubscribe (`src/gateway/communication.py:261`) | Media | — | 0.5g | ⬜ Da fare |
-| T-012 | Persistenza config runtime | `config.py`/`service.py` TODO: persistere set() su file/DB con validazione schema | Media | — | 1g | ⬜ Da fare |
-| T-013 | Firma artefatti plugin | Implementare verifica firma crittografica e permission proxy in `src/plugins/manager.py` (stubi a righe ~408/431) | Media | ADR-007 | 2g | ⬜ Da fare |
-| T-014 | Firmware Node 3 (Right Arm) | Controllo 6 servi con interpolazione traiettorie, gripper, collision detection base; riusare componenti `firmware/common` | Media | T-007 | 5g | ⬜ Da fare |
+| T-011 | Auto-reconnect MqttGateway | Riconnessione con backoff esponenziale + risubscribe (`src/gateway/communication.py`) | Media | — | 0.5g | ⬜ Da fare |
+| T-012 | Persistenza config runtime | `config.py`/`service.py`: persistere set() su file/DB con validazione schema | Media | — | 1g | ⬜ Da fare |
+| T-013 | Firma artefatti plugin | Implementare verifica firma crittografica e permission proxy in `src/plugins/manager.py` | Media | T-015 | 2g | ⬜ Da fare |
+| T-014 | Firmware Node 3 (Right Arm) | Controllo 6 servi con interpolazione traiettorie, gripper, collision detection base; riusare componenti `firmware/common`. Include: rendere compilabile lo skeleton Node 2 (CMakeLists valido + header/sorgenti mancanti) per sbloccare T-007 | Media | T-007 | 5g | ⬜ Da fare |
+| T-015 | Riparare contratti framework plugin (`src/plugins/`) | `interfaces.py` e `manager.py` si importano a vicenda classi che nessuno definisce (IPlugin, IPluginManager, IPluginRegistry, PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health): import del package fallisce. Definire i contratti una volta sola secondo ADR-007, rompere il circolo, rimuovere i per-file-ignores da `pyproject.toml` | Media | — | 1g | ⬜ Da fare |
+| T-016 | Adottare `ruff format` | Formatter non ancora applicato (36 file da riformattare): decidere baseline, applicare in commit dedicato, aggiungere gate `ruff format --check` in CI | Media | T-015 | 0.5g | ⬜ Da fare |
 
 ## Priorità Bassa — Roadmap v0.4.0+
 

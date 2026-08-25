@@ -139,11 +139,13 @@ Roadmap completa in `ROADMAP.md`; idee in `future/future.md`: riconoscimento fac
 
 | Area | Debito/Rischio | Mitigazione prevista |
 |------|----------------|---------------------|
-| Testing | Nessun test nel repo nonostante CHANGELOG "Unreleased" dichiari il contrario | v0.3.0: creare suite reale + correggere CHANGELOG |
-| Plugin | Firma crittografica artefatti e sandbox permessi sono stub | Prima dell'esposizione marketplace |
+| Testing | Nessun test nel repo; CHANGELOG corretto il 2026-08-25 (non dichiara più lavoro inesistente) | v0.3.0: creare suite reale (T-003…T-006) |
+| CI | Pipeline base attiva (ruff, doc-check, docker build); mancano mypy, clang-tidy, job firmware | T-002 completamento + T-007 (bloccato da skeleton firmware) |
+| Plugin framework `src/plugins/` | Contratti base (IPlugin, IPluginManager, PluginMetadata…) non definiti da nessuno: import circolare rotto, package non importabile. ruff per-file-ignores attivi come contenimento statico | T-015: definire contratti secondo ADR-007 e rimuovere gli ignore |
+| Formatter | `ruff format` non adottato (36 file da riformattare) | T-016 |
 | SDK | Buses reali non cablati (`TODO` in `src/sdk/robot.py`) | Integrazione con command bus esistente |
 | Gateway | Auto-reconnect MQTT assente | Resilienza rete (GOALS T5) |
 | Event Bus | NATS non implementato (`NotImplementedError`) | Alternativa futura, non bloccante |
 | Config | set() runtime non persistito su file/DB | Hot-reload completo |
-| Firmware | Solo scheletro Node 2; OTA client parziale | ROADMAP v0.4.0 |
+| Firmware | Solo scheletro Node 2, NON compilabile (header/sorgenti/CMakeLists mancanti); OTA client parziale | T-014 poi ROADMAP v0.4.0 |
 | Certificati | Rinnovo automatico mancante | ROADMAP v0.4.0 |

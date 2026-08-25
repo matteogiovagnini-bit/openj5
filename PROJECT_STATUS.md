@@ -72,7 +72,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 ### 🔴 Not Started (Next Releases)
 | Component | Priority | Target Release |
 |-----------|----------|----------------|
-| CI/CD Pipeline (GitHub Actions) | High | v0.3.0 |
+| CI/CD Pipeline (GitHub Actions) | High | v0.3.0 — 🟡 base shipped (lint, doc-check, docker build); tests pending |
 | Integration Tests | High | v0.3.0 |
 | Simulation Test Suite | High | v0.3.0 |
 | Firmware Nodes 3-6 | High | v0.4.0 |

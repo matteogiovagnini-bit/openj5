@@ -7,13 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] - v0.3.0
+## [Unreleased]
+
+### Planned (see ROADMAP.md v0.3.0)
+- CI/CD pipeline, integration tests, simulation parity tests, hardware-in-loop tests
+  (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
 
 ### Added
-- CI/CD pipeline (GitHub Actions) with build, lint, test, doc check gates
-- Integration test suite for Robot Core API
-- Simulation parity tests (same tests pass on real and simulated robot)
-- Hardware-in-loop tests for ESP32 nodes
+- CI pipeline (GitHub Actions `.github/workflows/ci.yml`): Python lint gate (ruff),
+  documentation check gate (`scripts/check_docs.sh`), Docker build gate for robot-core
+- `pyproject.toml` with ruff configuration (E4/E7/E9/F rules)
+- Fixed latent defects surfaced by linting:
+  - 14 missing SDK Query dataclasses added to `core/domain` (head/arm/tracks/speech/
+    behavior/vision/battery/system) and exported
+  - Missing imports (`Path`, `Any`, `uuid`, `ABC`, `abstractmethod`, `Protocol`)
+  - Star-imports replaced with explicit imports in robot_core API
+  - Trailing module-level imports moved to top of file
+- Governance documents filled: ARCHITECTURAL_PRINCIPLES, CODING_STANDARD,
+  CONSTRAINTS, NAMING_CONVENTIONS
+- ADR-005 to ADR-015 formalized (HAL, Robot SDK facade, Plugin Architecture,
+  Configuration-Driven, State Machine per Node, Digital Twin Native, Signed OTA,
+  FreeCAD Parametric CAD, Security mTLS/JWT/Fail-Safe, Python Core + C++ Firmware,
+  MQTT Primary Transport); fixed broken ADR-002 link in ADR INDEX
+- Project continuity documents: PROJECT_MEMORY, NEXT_TASK, KNOWLEDGE_BASE,
+  CONTINUATION_PROMPT, SESSION_REPORT
 
 ---
 
