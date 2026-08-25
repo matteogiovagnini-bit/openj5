@@ -14,15 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
 
 ### Added
+- Plugin framework base contracts (`src/plugins/base.py`): IPlugin,
+  IConfigurablePlugin, ILifecyclePlugin, IPluginManager, IPluginRegistry,
+  PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health and a
+  unified PluginContext - breaking the circular import between interfaces.py
+  and manager.py; package `src.plugins` is now importable
+- Domain services: `IKinematicsService`/`KinematicsService` (DH forward
+  kinematics + damped-least-squares numerical inverse kinematics) and
+  `IMotionPlanner` interface implemented by `MotionPlannerService`
+- Value objects: `CalibrationData`, domain-level `PluginMetadata`
+- Domain handlers: `CommandHandler`, `QueryHandler` contracts for the CQRS buses
 - CI pipeline (GitHub Actions `.github/workflows/ci.yml`): Python lint gate (ruff),
   documentation check gate (`scripts/check_docs.sh`), Docker build gate for robot-core
 - `pyproject.toml` with ruff configuration (E4/E7/E9/F rules)
-- Fixed latent defects surfaced by linting:
-  - 14 missing SDK Query dataclasses added to `core/domain` (head/arm/tracks/speech/
-    behavior/vision/battery/system) and exported
-  - Missing imports (`Path`, `Any`, `uuid`, `ABC`, `abstractmethod`, `Protocol`)
-  - Star-imports replaced with explicit imports in robot_core API
-  - Trailing module-level imports moved to top of file
 - Governance documents filled: ARCHITECTURAL_PRINCIPLES, CODING_STANDARD,
   CONSTRAINTS, NAMING_CONVENTIONS
 - ADR-005 to ADR-015 formalized (HAL, Robot SDK facade, Plugin Architecture,
@@ -31,6 +35,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MQTT Primary Transport); fixed broken ADR-002 link in ADR INDEX
 - Project continuity documents: PROJECT_MEMORY, NEXT_TASK, KNOWLEDGE_BASE,
   CONTINUATION_PROMPT, SESSION_REPORT
+
+### Fixed
+- `events.py`: removed `slots=True` that broke zero-arg `super()` in every event
+  subclass (any instantiation would fail); `EVENT_SCHEMAS` no longer reads class
+  attributes through slotted member descriptors; added missing
+  `FaceRecognizedEvent`/`ObjectGraspedEvent`; export renamed to defined
+  `DockingCompleteEvent`
+- `entities.py`: resolved dataclass inheritance TypeError via kw_only fields;
+  satisfied missing `CalibrationData`/`PluginMetadata` value objects
+- `services.py`: fixed `math.time()` -> `time.time()`; added kinematics/motion
+  planner contracts referenced by package exports
+- Earlier lint pass: 14 missing SDK Query dataclasses added and exported; missing
+  imports (`Path`, `Any`, `uuid`, `ABC`, `abstractmethod`, `Protocol`);
+  star-imports replaced in robot_core API; trailing module-level imports moved
 
 ---
 

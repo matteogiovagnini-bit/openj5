@@ -122,7 +122,9 @@ Dettagli completi: `governance/ARCHITECTURAL_PRINCIPLES.md`, `governance/CODING_
 - v0.1.0 (2026-06-30): core domain, plugin, SDK, gateway, event bus, state machine, config, ADR 1–4, scheletro firmware.
 - v0.2.0 (2026-07-15): robot_core completo, REST 25+ endpoint, WebSocket, Docker Compose 10 servizi, config infrastruttura.
 - Sessione 2026-08-12/13: stabilizzazione operativa dello stack Docker (~18 fix: certificati, healthcheck mosquitto, porte, Loki/OTEL).
-- v0.3.0: CI/CD + testing — **non ancora implementato** (da fare).
+- Sessione 2026-08-25 (1): conformità alla constitution (governance completata, ADR 005–015, documenti di continuità).
+- Sessione 2026-08-25 (2): CI base attiva (ruff, doc-check, docker build); CHANGELOG corretto; framework plugin riparato (`src/plugins/base.py`), bug latenti del dominio corretti, cinematica DH+IK implementata; `src/` ora importabile al 100%.
+- v0.3.0: testing — **in corso** (T-003…T-006 da fare).
 - Firmware nodi 3–6, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 
 Stato dettagliato: `PROJECT_STATUS.md`. Prossime attività: `docs/NEXT_TASK.md`.
@@ -141,7 +143,7 @@ Roadmap completa in `ROADMAP.md`; idee in `future/future.md`: riconoscimento fac
 |------|----------------|---------------------|
 | Testing | Nessun test nel repo; CHANGELOG corretto il 2026-08-25 (non dichiara più lavoro inesistente) | v0.3.0: creare suite reale (T-003…T-006) |
 | CI | Pipeline base attiva (ruff, doc-check, docker build); mancano mypy, clang-tidy, job firmware | T-002 completamento + T-007 (bloccato da skeleton firmware) |
-| Plugin framework `src/plugins/` | Contratti base (IPlugin, IPluginManager, PluginMetadata…) non definiti da nessuno: import circolare rotto, package non importabile. ruff per-file-ignores attivi come contenimento statico | T-015: definire contratti secondo ADR-007 e rimuovere gli ignore |
+| Plugin framework `src/plugins/` | ✅ Riparato 2026-08-25: contratti unici in `base.py`, package importabile, lifecycle verificato end-to-end | — |
 | Formatter | `ruff format` non adottato (36 file da riformattare) | T-016 |
 | SDK | Buses reali non cablati (`TODO` in `src/sdk/robot.py`) | Integrazione con command bus esistente |
 | Gateway | Auto-reconnect MQTT assente | Resilienza rete (GOALS T5) |

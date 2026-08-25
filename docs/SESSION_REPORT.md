@@ -4,6 +4,51 @@
 
 ---
 
+## Sessione: 2026-08-25 (3) — T-015 riparazione framework plugin
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-08-25 |
+| Versione progetto | 0.2.0 → v0.3.0 in corso |
+| Obiettivo | T-015: definire i contratti base del framework plugin e rendere importabile `src/plugins` |
+
+### Attività completate
+1. **T-015 ✅**: creato `src/plugins/base.py` con i contratti definiti UNA sola volta (ADR-007): `IPlugin`, `IConfigurablePlugin`, `ILifecyclePlugin`, `IPluginManager`, `IPluginRegistry`, `PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health`, `PluginContext` unificato (allineato ai campi effettivamente costruiti da PluginManager). `interfaces.py` ora estende solo contratti specifici; `manager.py` implementa. Import circolare eliminato; per-file-ignores rimossi da pyproject.toml.
+2. **Bug latenti a cascata corretti** (emersi rendendo il package importabile — il modulo non era mai stato eseguito):
+   - `events.py`: rimosso `slots=True` (rompeva `super()` zero-arg in OGNI sottoclasse evento → ogni istanziazione falliva); `EVENT_SCHEMAS` non legge più attributi di classe tramite member descriptor; aggiunti `FaceRecognizedEvent`/`ObjectGraspedEvent`; export `DockingCompletedEvent` → `DockingCompleteEvent`.
+   - `commands.py`: aggiunti `CommandHandler`/`QueryHandler` (contratti usati dai bus) e `GetFirmwareVersionsQuery` mancante.
+   - `entities.py`: risolto TypeError dataclass inheritance con campi kw_only; soddisfatti import `CalibrationData`/`PluginMetadata` come value objects di dominio.
+   - `services.py`: fix `math.time()` → `time.time()`; implementati `IKinematicsService`+`KinematicsService` (FK via parametri DH, IK numerica damped least squares) e `IMotionPlanner` ABC.
+3. **Verifiche**: smoke test FK/IK contro soluzione analitica (residuo 0.9mm su catena 2-link), quaternion yaw-90 corretto, generazione traiettoria ok; lifecycle plugin end-to-end (load→enable→disable→unload→discover) su plugin dummy in temp dir; `ruff check` pulito su tutto; doc-check OK.
+4. **Self-review**: durante lo sviluppo il lint ha beccato 2 bug nel nuovo codice cinematica (variabile quaternion sbagliata, formula DLS con indici errati + segno Jacobiano da differenze d'errore): tutti corretti e verificati numericamente.
+
+### File creati (1)
+`src/plugins/base.py`
+
+### File modificati
+`src/plugins/{interfaces,manager,__init__}.py`, `pyproject.toml`,
+`src/core/domain/{events,commands,entities,services,value_objects,__init__}.py`,
+`CHANGELOG.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.md`
+
+### Decisioni prese
+- Contratti plugin in `base.py` (non in interfaces né manager): direzione dipendenze univoca base ← interfaces ← (nulla), base ← manager.
+- `PluginMetadata` esiste in due proiezioni: VO immutabile nel dominio (`value_objects`) per l'aggregato `Plugin`, versione ricca nel framework (`plugins/base`). Il dominio non dipende dal layer plugin (regola P1).
+- IK numerica in radianti internamente (damping tarato per rad); API resta in gradi.
+
+### Problemi riscontrati
+Nessuno bloccante.
+
+### Debito tecnico
+Rimosso: plugin framework contracts (T-015 ✅). Rimane: formatter (T-016), SDK buses (T-010), MQTT reconnect (T-011), persistenza config (T-012), firma plugin (T-013), firmware skeleton (T-014/T-007).
+
+### Prossimi passi consigliati
+T-003 unit test core domain (ora che tutto è importabile) → completare v0.3.0.
+
+### Prompt di continuità
+`docs/CONTINUATION_PROMPT.md`.
+
+---
+
 ## Sessione: 2026-08-25 (2) — T-001 + base pipeline CI
 
 | Campo | Valore |
