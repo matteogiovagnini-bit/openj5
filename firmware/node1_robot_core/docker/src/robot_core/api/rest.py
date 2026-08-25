@@ -17,7 +17,21 @@ from robot_core.scheduler import TaskScheduler, ScheduledJob, JobType
 from robot_core.statemachine import StateMachineOrchestrator, RobotState, NODE_TRANSITIONS
 from robot_core.digital_twin import DigitalTwinBridge
 from robot_core.health import HealthService
-from robot_core.api.models import *
+from robot_core.api.models import (
+    CalibrationPosition,
+    CommandResponse,
+    ConfigUpdate,
+    NodeInfo,
+    OTAPackage,
+    OTAStatus,
+    PluginAction,
+    PluginInfo,
+    RobotCommand,
+    RobotMode,
+    RobotStatus,
+    ScheduleJob,
+    ScheduleJobResponse,
+)
 
 
 def create_rest_api(
@@ -378,7 +392,6 @@ def create_rest_api(
 
     @router.post("/system/shutdown")
     async def system_shutdown():
-        rs = state_machine.get_robot_state()
         await state_machine.request_global_transition(RobotState.SHUTDOWN, "api_request")
         return {"status": "ok", "message": "Shutdown initiated"}
 

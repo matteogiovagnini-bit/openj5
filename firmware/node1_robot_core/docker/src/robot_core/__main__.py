@@ -21,7 +21,6 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from robot_core.config import ConfigService, get_config_service
 from robot_core.logging import setup_logging, get_logger

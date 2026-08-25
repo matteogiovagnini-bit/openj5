@@ -9,7 +9,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncGenerator, Callable, Awaitable
+from typing import AsyncGenerator, Callable, Awaitable
 from abc import ABC, abstractmethod
 
 import redis.asyncio as redis

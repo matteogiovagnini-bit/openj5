@@ -4,11 +4,9 @@ OpenJ5 Robot Core - WebSocket Handler
 Real-time event streaming and bidirectional communication.
 """
 
-import asyncio
 import json
 import uuid
 from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from robot_core.eventbus import EventBus, DomainEvent
@@ -110,7 +108,7 @@ def create_websocket_handler(
 
         except WebSocketDisconnect:
             pass
-        except Exception as e:
+        except Exception:
             pass
         finally:
             connections.pop(client_id, None)

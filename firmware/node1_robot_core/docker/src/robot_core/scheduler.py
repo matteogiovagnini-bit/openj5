@@ -4,10 +4,9 @@ OpenJ5 Robot Core - Task Scheduler
 APScheduler-based task scheduler for recurring jobs.
 """
 
-import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Awaitable, Optional
+from typing import Callable
 from enum import Enum
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

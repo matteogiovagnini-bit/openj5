@@ -9,15 +9,13 @@ import asyncio
 import hashlib
 import hmac
 import json
-import os
-import ssl
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import aiofiles
-import aiohttp
 
 from robot_core.config import ConfigService
 from robot_core.eventbus import EventBus, DomainEvent

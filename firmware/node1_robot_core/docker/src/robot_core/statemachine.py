@@ -9,7 +9,7 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Awaitable, Optional
+from typing import Any, Optional
 
 from robot_core.config import ConfigService
 from robot_core.eventbus import EventBus, DomainEvent

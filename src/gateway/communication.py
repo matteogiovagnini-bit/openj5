@@ -5,11 +5,13 @@ Abstracts all communication protocols. Applications use ICommunicationGateway on
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable, Protocol
+from typing import Callable, Awaitable
 from abc import ABC, abstractmethod
 from enum import Enum
 import asyncio
 import uuid
+
+from ..core.domain import Result
 
 
 class QoS(Enum):
@@ -590,7 +592,3 @@ class MultiProtocolGateway(ICommunicationGateway):
 
     async def get_stats(self) -> dict:
         return {proto: await gw.get_stats() for proto, gw in self._gateways.items()}
-
-
-# Result import
-from ..core.domain import Result

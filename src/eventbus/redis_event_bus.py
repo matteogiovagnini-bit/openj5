@@ -2,10 +2,9 @@
 OpenJ5 Event Bus - Redis Streams Implementation
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable, Awaitable
+from dataclasses import dataclass
+from typing import AsyncIterator, Callable, Awaitable
 from abc import ABC, abstractmethod
-from enum import Enum
 import asyncio
 import json
 import uuid
@@ -216,7 +215,7 @@ class RedisEventBus(IEventBus):
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 # Log error, continue
                 await asyncio.sleep(1)
 

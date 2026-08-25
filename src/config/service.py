@@ -5,7 +5,7 @@ Hot-reloadable, multi-source configuration with JSON Schema validation.
 Priority: ENV > Database > YAML > JSON > Defaults
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Awaitable
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -15,7 +15,6 @@ import os
 import yaml
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-import jsonschema
 from jsonschema import validate, ValidationError
 
 

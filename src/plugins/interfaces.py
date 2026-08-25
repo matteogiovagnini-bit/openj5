@@ -3,11 +3,10 @@ OpenJ5 Plugin Interfaces - Specific plugin type contracts
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Protocol
-from abc import ABC, abstractmethod
-from enum import Enum
+from typing import Any
+from abc import abstractmethod
 
-from .manager import IPlugin, IConfigurablePlugin, PluginMetadata, PluginState, PluginType
+from .manager import IConfigurablePlugin
 
 
 # === COMMON DATA TYPES ===

@@ -8,7 +8,7 @@ import asyncio
 import psutil
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Awaitable
+from typing import Callable, Awaitable
 
 from robot_core.config import ConfigService
 from robot_core.eventbus import EventBus, DomainEvent

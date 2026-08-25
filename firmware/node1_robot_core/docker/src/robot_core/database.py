@@ -6,7 +6,8 @@ SQLAlchemy async database manager with migrations.
 
 import asyncio
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Optional
+from pathlib import Path
+from typing import Any, AsyncGenerator, Optional
 
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -14,8 +15,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
 )
-from sqlalchemy.pool import NullPool
-from sqlalchemy import text, event
+from sqlalchemy import text
 from alembic.config import Config as AlembicConfig
 from alembic import command
 

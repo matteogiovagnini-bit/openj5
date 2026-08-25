@@ -4,10 +4,10 @@ OpenJ5 Robot Core - Plugin Manager
 Dynamic plugin loading, lifecycle management, dependency resolution.
 """
 
-import asyncio
 import importlib
 import importlib.util
 import sys
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional

@@ -10,7 +10,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 import asyncio
 import time
-from datetime import datetime
+
+from ..core.domain import Result
 
 
 class NodeState(Enum):
@@ -527,6 +528,3 @@ def create_default_state_machine(
         handlers=handlers,
         watchdog_timeout=watchdog_timeout
     )
-
-
-from ..core.domain import Result

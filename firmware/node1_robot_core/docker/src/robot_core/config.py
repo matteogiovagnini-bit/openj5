@@ -13,7 +13,6 @@ from typing import Any, Callable, Awaitable
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import yaml
-import jsonschema
 from jsonschema import validate, ValidationError
 
 from robot_core.logging import get_logger

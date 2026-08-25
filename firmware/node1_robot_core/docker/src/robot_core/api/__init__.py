@@ -6,7 +6,6 @@ REST API + WebSocket for robot control, monitoring, and configuration.
 
 from robot_core.api.rest import create_rest_api
 from robot_core.api.websocket import create_websocket_handler
-from robot_core.api.models import *
 
 def create_api_app(
     config,

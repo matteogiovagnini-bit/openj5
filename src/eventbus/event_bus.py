@@ -5,13 +5,15 @@ Redis Streams / NATS implementation for distributed event-driven architecture.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable, Awaitable
+from typing import AsyncIterator, Protocol
 from abc import ABC, abstractmethod
 from enum import Enum
 import asyncio
 import json
 import uuid
 from datetime import datetime
+
+from ..core.domain import Result
 
 
 class EventCategory(Enum):
@@ -264,7 +266,7 @@ class RedisEventBus(IEventBus):
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 # Log error, continue
                 await asyncio.sleep(1)
 
@@ -451,6 +453,3 @@ class EventBusFactory:
             raise NotImplementedError("NATS not yet implemented")
         else:
             raise ValueError(f"Unknown event bus type: {bus_type}")
-
-
-from ..core.domain import Result
