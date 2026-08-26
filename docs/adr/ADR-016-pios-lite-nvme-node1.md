@@ -22,7 +22,9 @@ real hardware deployment (T-018) the OS choice was re-evaluated, because:
 5. Owner preference for the official Pi Foundation OS.
 
 ## Decision
-1. **Raspberry Pi OS Lite 64-bit (Bookworm)** is the reference OS for Node 1.
+1. **Raspberry Pi OS Lite 64-bit** is the reference OS for Node 1 (first real
+   deployment, T-018, uses the current Imager image based on **Debian 13
+   "Trixie"**, kernel 6.18; Bookworm/Debian 12 equally supported by procedures).
    The desktop (PIXEL) variant is explicitly NOT used: the node runs headless,
    all interaction is via SSH/browser (REST :8080, Grafana :3000, rosbridge :9090),
    saving ~0.5-1GB RAM and reducing attack surface. Desktop can be added later for

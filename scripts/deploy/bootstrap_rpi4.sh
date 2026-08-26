@@ -40,7 +40,10 @@ case "${ID:-}" in
     ubuntu) die "Ubuntu detected: reference OS is now Raspberry Pi OS Lite 64-bit (ADR-016). Reflash or override with FORCE_OS=1." ;;
     *) die "unsupported OS '${ID:-?}': use Raspberry Pi OS Lite 64-bit (Bookworm)" ;;
 esac
-[ "${VERSION_ID:-0}" = "12" ] || log "WARNING: Bookworm (Debian 12) expected, found '${VERSION_ID:-?}'"
+case "${VERSION_ID:-0}" in
+    12|13) log "Debian ${VERSION_ID} detected (Pi OS Bookworm/Trixie family)" ;;
+    *) log "WARNING: Debian 12/13 (Bookworm/Trixie) expected, found '${VERSION_ID:-?}'" ;;
+esac
 [ "$(uname -m)" = "aarch64" ] || die "64-bit OS required (aarch64). Reflash with Pi OS Lite 64-bit."
 if [ "${FORCE_OS:-0}" != "1" ]; then
     true
@@ -113,6 +116,8 @@ sudo systemctl enable docker >/dev/null 2>&1 || true
 step "Repository"
 if [ -d "$REPO_DIR/.git" ]; then
     git -C "$REPO_DIR" pull --ff-only || log "pull failed, keeping current checkout"
+elif [ -d "$DEPLOY_DIR" ]; then
+    log "checkout already present without .git (rsync copy) - keeping it"
 else
     mkdir -p "$(dirname "$REPO_DIR")"
     git clone "$REPO_URL" "$REPO_DIR"
