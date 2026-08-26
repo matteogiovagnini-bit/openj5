@@ -27,6 +27,7 @@ for f in \
     docs/api/API.md \
     docs/configuration/CONFIGURATION.md \
     docs/deployment/DEPLOYMENT.md \
+    docs/hardware/BENCH_TRACKS.md \
     docs/adr/INDEX.md \
     docs/adr/TEMPLATE.md \
     docs/PROJECT_MEMORY.md \

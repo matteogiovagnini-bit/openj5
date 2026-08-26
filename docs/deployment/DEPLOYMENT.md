@@ -219,7 +219,27 @@ sudo ufw allow 8883/tcp        # ESP32 nodes
 sudo ufw enable
 ```
 
-## 11. Troubleshooting
+## 11. Daily Power Off / On (quick reference)
+
+**Spegnimento:**
+```bash
+cd ~/src/openj5/firmware/node1_robot_core/docker
+docker compose stop        # opzionale ma pulito
+sudo poweroff
+```
+Attendere ~20s che il LED ACT smetta di lampeggiare prima di staccare la USB-C.
+Se in uso, staccare anche la batteria dei motori (guida banco: `docs/hardware/BENCH_TRACKS.md`).
+
+**Riaccensione:**
+1. Alimentatore USB-C → boot automatico da NVMe (~60s)
+2. Lo stack risale da solo (`unless-stopped`). Se avevi fatto `stop`:
+   `docker compose start`
+3. Verifica (~90s dopo il boot): `docker compose ps` tutto healthy +
+   `curl -fk https://localhost:8080/health`
+4. Browser da PC: Swagger `https://openj5-core.local:8080/api/docs`,
+   Grafana `http://openj5-core.local:3000`
+
+## 12. Troubleshooting
 
 | Symptom | Cause / Fix |
 |---------|-------------|
@@ -234,7 +254,7 @@ sudo ufw enable
 
 Full lessons learned: `docs/KNOWLEDGE_BASE.md`.
 
-## 12. What's Next After Bootstrap
+## 13. What's Next After Bootstrap
 
 1. ESP32 nodes flash (ROADMAP v0.4.0) will consume `certs/nodeN.crt|key`
    generated here.
