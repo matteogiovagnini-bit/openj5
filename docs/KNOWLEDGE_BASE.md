@@ -48,6 +48,7 @@ Primo boot storico del Robot Core su hardware fisso (T-018). Sezione alimentata 
 | `ImportError: cannot import name 'EventBus'` | Sette moduli usano il nome `EventBus`; il modulo definisce `IEventBus` | Alias `EventBus = IEventBus` in `eventbus.py` |
 | `publish() takes 2 positional arguments but 3 were given` (metriche) | Chiamata `(topic, payload)` invece di `DomainEvent` | Pubblicare `DomainEvent(event_type=..., source_node=..., payload=...)` |
 | Limiti memoria compose "non applicati" (falso allarme) | `free` dentro il container mostra SEMPRE la RAM host (`/proc/meminfo` non virtualizzato senza lxcfs); i parametri `cgroup_enable/disable=memory` sono knob cgroup **v1**, ignorati in v2 | Verificare con `docker stats` (LIMIT colonna) o OOM test: `docker run --rm --memory=256m alpine sh -c "tail /dev/zero"` → exit 137 |
+| Volume nominato "read-only" per container DIVERSI da quello originale | Con containerd image store, un volume creato mentre l'immagine dichiarava `VOLUME` resta marcato come image-backed → read-only per ogni altro container che lo monta | Rimuovere e ricreare il volume: `docker rm -f <c>; docker volume rm <v>; docker volume create <v>` (sicuro per volumi di log; MAI per dati) |
 | Bootstrap falliva su checkout rsync senza `.git` | Script tentava `git clone` in directory esistente | Gestione branch: clone solo se dir assente |
 | Pi OS corrente è Debian 13 (Trixie), non Bookworm | L'Imager distribuisce già Trixie (kernel 6.18) | Procedure accettano 12|13; ADR-016 aggiornato |
 
