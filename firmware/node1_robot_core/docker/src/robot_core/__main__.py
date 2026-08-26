@@ -220,7 +220,7 @@ class RobotCore:
         if self.scheduler:
             await self.scheduler.stop()
         if self.ota_manager:
-            await self.ota_manager.stop()
+            await self.ota_manager.shutdown()
         if self.plugin_manager:
             await self.plugin_manager.shutdown()
         if self.health_service:

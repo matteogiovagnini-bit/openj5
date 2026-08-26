@@ -52,7 +52,7 @@ class DomainEvent:
 
 class IEventBus(ABC):
     """Event bus interface."""
-    
+
     @abstractmethod
     async def publish(self, event: DomainEvent) -> bool: ...
     
@@ -74,6 +74,10 @@ class IEventBus(ABC):
         event_types: list[str] | None = None,
         limit: int = 1000,
     ) -> AsyncGenerator[DomainEvent, None]: ...
+
+
+# Alias: most modules reference the bus type as "EventBus"
+EventBus = IEventBus
 
 
 class RedisEventBus(IEventBus):
