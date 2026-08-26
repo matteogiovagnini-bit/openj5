@@ -23,7 +23,9 @@ services:
     networks:
       - robot-internal
     healthcheck:
-      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/broker/version", "-C", "1", "-i", "healthcheck", "-W", "5"]
+      # Deterministic MQTT roundtrip: publish retained, then read it back.
+      # Does not depend on $SYS topics (not published by all mosquitto builds).
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t openj5/healthcheck/probe -r -m ok && mosquitto_sub -h localhost -t openj5/healthcheck/probe -C 1 -W 3"]
       interval: 30s
       timeout: 10s
       retries: 3

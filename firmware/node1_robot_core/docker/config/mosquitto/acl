@@ -1,5 +1,18 @@
 # OpenJ5 Mosquitto ACL
-# Pattern-based access control for robot topics
+# Pattern-based access control for robot topics.
+#
+# IMPORTANT: rules placed before any `user <name>` line are GLOBAL and apply
+# to every client, including anonymous ones. Mosquitto does NOT match the
+# `user anonymous` section against username-less clients (verified on real
+# deployment 2026-08-26): anonymous grants must be declared here at top level.
+
+# --- GLOBAL RULES (all clients, incl. anonymous on the localhost listener) ---
+topic read $SYS/broker/version
+
+# Healthcheck roundtrip topic (localhost listener only; harmless by design)
+topic readwrite openj5/healthcheck/#
+
+# --- PER-USER RULES ---
 
 # Robot Core (node1) has full access
 user node1
@@ -43,12 +56,3 @@ topic read $SYS/#
 # API user
 user api
 topic readwrite openj5/#
-
-# Deny all other users
-user anonymous
-# $SYS/broker/version is a static topic: delivered once, immediately on
-# subscription, so the container healthcheck gets a reply within its window.
-# ($SYS/broker/uptime no longer exists in mosquitto 2.0.)
-topic read $SYS/broker/version
-topic deny openj5/#
-topic deny $SYS/#
