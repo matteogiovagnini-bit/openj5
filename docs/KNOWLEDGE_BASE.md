@@ -34,6 +34,25 @@ Lezioni dal debug dello stack `docker-compose` (10 servizi) su host Linux:
 
 ---
 
+## 1-bis. Problemi Risolti (primo deployment reale su RPi4, 2026-08-26)
+
+Primo boot storico del Robot Core su hardware fisso (T-018). Sezione alimentata dalle lezioni del giorno:
+
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Container mosquitto unhealthy: healthcheck timeout su `$SYS/broker/version` | **La sezione `user anonymous` nell'ACL NON viene applicata ai client senza username**: anonimo = zero permessi (deny-by-default), nessuna consegna messaggi nemmeno su topic normali | Regole globali PRIMA di qualsiasi blocco `user` nel file ACL (`topic read $SYS/broker/version` + topic healthcheck) |
+| Healthcheck `$SYS` fragile tra build mosquitto | `$SYS` non pubblicato da tutte le build/configurazioni | Healthcheck deterministico: `mosquitto_pub retained` + `mosquitto_sub` readback su `openj5/healthcheck/probe` |
+| robot-core: mount volume `/var/log/openj5` → "read-only file system" al create | Docker moderno (containerd image store): `VOLUME` dichiarato nel Dockerfile + volume nominato compose sullo stesso path = conflitto | Rimuovere `VOLUME` dal Dockerfile; la persistenza la gestisce solo compose |
+| Dopo rebuild il container vecchio continua a crashare | Compose non ricrea se cambia solo l'immagine sotto lo stesso tag | `docker compose up -d --force-recreate <servizio>` dopo un rebuild |
+| `ModuleNotFoundError: No module named 'robot_core'` | Codice copiato in `/app/src/`, entrypoint `python -m robot_core.__main__` gira da `/app` senza PYTHONPATH | `ENV PYTHONPATH=/app/src` nel Dockerfile |
+| `ImportError: cannot import name 'EventBus'` | Sette moduli usano il nome `EventBus`; il modulo definisce `IEventBus` | Alias `EventBus = IEventBus` in `eventbus.py` |
+| `publish() takes 2 positional arguments but 3 were given` (metriche) | Chiamata `(topic, payload)` invece di `DomainEvent` | Pubblicare `DomainEvent(event_type=..., source_node=..., payload=...)` |
+| Limiti memoria compose "non applicati" (falso allarme) | `free` dentro il container mostra SEMPRE la RAM host (`/proc/meminfo` non virtualizzato senza lxcfs); i parametri `cgroup_enable/disable=memory` sono knob cgroup **v1**, ignorati in v2 | Verificare con `docker stats` (LIMIT colonna) o OOM test: `docker run --rm --memory=256m alpine sh -c "tail /dev/zero"` → exit 137 |
+| Bootstrap falliva su checkout rsync senza `.git` | Script tentava `git clone` in directory esistente | Gestione branch: clone solo se dir assente |
+| Pi OS corrente è Debian 13 (Trixie), non Bookworm | L'Imager distribuisce già Trixie (kernel 6.18) | Procedure accettano 12|13; ADR-016 aggiornato |
+
+---
+
 ## 2. Procedure
 
 ### Rigenerare certificati mTLS

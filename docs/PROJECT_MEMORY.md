@@ -125,7 +125,8 @@ Dettagli completi: `governance/ARCHITECTURAL_PRINCIPLES.md`, `governance/CODING_
 - Sessione 2026-08-25 (1): conformità alla constitution (governance completata, ADR 005–015, documenti di continuità).
 - Sessione 2026-08-25 (2): CI base attiva (ruff, doc-check, docker build); CHANGELOG corretto; framework plugin riparato (`src/plugins/base.py`), bug latenti del dominio corretti, cinematica DH+IK implementata; `src/` ora importabile al 100%.
 - Sessione 2026-08-25 (3): percorso di deploy Node 1 documentato e automatizzato (`docs/deployment/DEPLOYMENT.md` + `scripts/deploy/bootstrap_rpi4.sh`); validazione su hardware reale = T-018.
-- Sessione 2026-08-25 (4): **ADR-016** — OS di riferimento Nodo 1 passa a Raspberry Pi OS Lite 64-bit (Bookworm) + storage NVMe USB3; DEPLOYMENT/bootstrap riscritti (cgroup cmdline, bootloader USB recovery, TRIM); ROS confermato container-only.
+- Sessione 2026-08-25 (4): **ADR-016** — OS di riferimento Nodo 1 passa a Raspberry Pi OS Lite 64-bit + storage NVMe USB3; DEPLOYMENT/bootstrap riscritti; ROS confermato container-only.
+- Sessione 2026-08-26: **PRIMO BOOT REALE del Robot Core su RPi4 8GB** (T-018): Pi OS Lite Trixie su NVMe, boot USB nativo, stack Docker completo healthy, API HTTPS live con {"status":"ok"}, limiti memoria cgroup v2 attivi. 10 fix reali documentati in KNOWLEDGE_BASE §1-bis (ACL anonimo mosquitto, VOLUME+containerd image store, PYTHONPATH, EventBus alias, DomainEvent metriche...). Robot Core = **OPERATIVO**.
 - v0.3.0: testing — **in corso** (T-003…T-006 da fare).
 - Firmware nodi 3–6, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 

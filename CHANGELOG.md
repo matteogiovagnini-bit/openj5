@@ -48,6 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CONTINUATION_PROMPT, SESSION_REPORT
 
 ### Fixed
+- First real-hardware deployment fixes (RPi4 8GB, Pi OS Lite Trixie, NVMe USB3):
+  mosquitto ACL global rules for anonymous clients + deterministic pub/sub
+  healthcheck; removed Dockerfile VOLUME conflicting with containerd image
+  store; PYTHONPATH=/app/src for robot-core entrypoint; EventBus=IEventBus
+  alias; system metrics published as typed DomainEvent; bootstrap handles
+  rsync-only checkouts and Debian 13 Trixie
 - `events.py`: removed `slots=True` that broke zero-arg `super()` in every event
   subclass (any instantiation would fail); `EVENT_SCHEMAS` no longer reads class
   attributes through slotted member descriptors; added missing

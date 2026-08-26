@@ -3,7 +3,7 @@
 ## Repository: `PRJ_OpenJ5`
 
 > **Last updated:** 2026-07-15
-> **Status:** 🟡 In Development (v0.2.0)
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26**
 
 ---
 
