@@ -25,7 +25,7 @@ from fastapi import FastAPI
 from robot_core.config import ConfigService, get_config_service
 from robot_core.logging import setup_logging, get_logger
 from robot_core.database import DatabaseManager
-from robot_core.eventbus import EventBus, get_event_bus
+from robot_core.eventbus import DomainEvent, EventBus, get_event_bus
 from robot_core.health import get_health_service
 from robot_core.plugins import PluginManager
 from robot_core.ota import OTAManager
@@ -192,11 +192,16 @@ class RobotCore:
         interval = self.config.get("metrics.interval", 60)
         while not self._shutdown_event.is_set():
             try:
-                await self.event_bus.publish("system.metrics", {
-                    "cpu_percent": __import__("psutil").cpu_percent(),
-                    "memory_percent": __import__("psutil").virtual_memory().percent,
-                    "disk_percent": __import__("psutil").disk_usage("/").percent,
-                })
+                psutil = __import__("psutil")
+                await self.event_bus.publish(DomainEvent(
+                    event_type="system.metrics",
+                    source_node="node1",
+                    payload={
+                        "cpu_percent": psutil.cpu_percent(),
+                        "memory_percent": psutil.virtual_memory().percent,
+                        "disk_percent": psutil.disk_usage("/").percent,
+                    },
+                ))
             except Exception as e:
                 logger.error(f"Metrics collection failed: {e}")
             await asyncio.sleep(interval)
