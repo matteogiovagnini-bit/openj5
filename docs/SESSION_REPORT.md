@@ -4,6 +4,45 @@
 
 ---
 
+## Sessione: 2026-08-26 — T-018 PRIMO DEPLOYMENT REALE su RPi4 (interattiva)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-08-26 (sessione guidata passo-passo con l'owner) |
+| Versione progetto | v0.2.0+ → Robot Core OPERATIVO su hardware |
+| Obiettivo | Preparare fisicamente il Nodo 1 e portare lo stack completo healthy |
+
+### Attività completate
+1. **Fase 1**: flash NVMe USB3 con Raspberry Pi Imager (Pi OS Lite 64-bit headless: hostname openj5-core, user openj5 UID 1000, SSH).
+2. Boot USB nativo verificato (root su sda2, nessuna SD), EEPROM aggiornata (`rpi-eeprom-update -a`).
+3. Codice trasferito via rsync; bootstrap eseguito (Docker, gruppo docker, segreti, certificati mTLS).
+4. Scoperta: Pi OS corrente = Debian 13 Trixie (kernel 6.18); script e ADR-016 allineati (12|13).
+5. **Fix reali in sequenza** (ognuno committato):
+   - bootstrap: checkout rsync senza .git gestito; guardia anti-Ubuntu
+   - Dockerfile: rimosso VOLUME (conflitto containerd image store → EROFS)
+   - force-recreate dopo rebuild (compose non ricrea al cambio immagine sotto stesso tag)
+   - Dockerfile: PYTHONPATH=/app/src (ModuleNotFoundError)
+   - eventbus: alias EventBus=IEventBus (7 moduli); OTAManager.shutdown() (non stop)
+   - metrics: publish come DomainEvent tipizzato
+   - mosquitto ACL: regole GLOBALI per anonimo (user anonymous NON matcha client senza username!) + healthcheck deterministico pub/sub retained
+   - promtail: rimosso bind ro /var/log host che rompeva mountpoint annidato (mkdirat EROFS)
+   - grafana: GF_SECURITY_ADMIN_PASSWORD__FILE (doppio underscore); login ok admin/admin (password da cambiare)
+6. **Risultato finale**: 10/10 servizi configurati e operativi, tutti healthy tranne ros2-bridge/gazebo mai avviati prima (catena dipendenze ora sbloccata, da confermare al prossimo up), API HTTPS live {"status":"ok"}, Swagger accessibile, limiti memoria cgroup v2 attivi (robot-core /3GiB; OOM test exit=137).
+7. WiFi seconda sede configurata via NVMe montato sul PC (NetworkManager .nmconnection, permessi 600) — entrambe le reti in autoconnect.
+
+### Lezioni (→ KNOWLEDGE_BASE §1-bis, 11 voci)
+ACL anonimo mosquitto · VOLUME+containerd · force-recreate · PYTHONPATH · EventBus alias · DomainEvent metrics · cgroup v2 vs knob v1/free fuorviante · bind RO parent vs mount annidati · grafana __FILE · rsync checkout · Trixie.
+
+### Debito emerso
+- ros2-bridge/gazebo: primo avvio reale ancora da verificare (certificati/modelli)
+- Password admin Grafana da cambiare (default attivo)
+- Heartbeat timeout node2-6 attesi finché firmware ESP32 non esiste (v0.4.0)
+
+### Prossimi passi consigliati
+T-003 unit test core domain (v0.3.0) · verifica containers secondari · T-014 firmware Node 2 compilabile.
+
+---
+
 ## Sessione: 2026-08-25 (5) — ADR-016: Pi OS Lite 64-bit + NVMe USB3
 
 | Campo | Valore |

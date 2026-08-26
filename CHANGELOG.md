@@ -53,7 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   healthcheck; removed Dockerfile VOLUME conflicting with containerd image
   store; PYTHONPATH=/app/src for robot-core entrypoint; EventBus=IEventBus
   alias; system metrics published as typed DomainEvent; bootstrap handles
-  rsync-only checkouts and Debian 13 Trixie
+  rsync-only checkouts and Debian 13 Trixie; Grafana admin secret uses
+  correct __FILE provider (single underscore was silently ignored)
 - `events.py`: removed `slots=True` that broke zero-arg `super()` in every event
   subclass (any instantiation would fail); `EVENT_SCHEMAS` no longer reads class
   attributes through slotted member descriptors; added missing
