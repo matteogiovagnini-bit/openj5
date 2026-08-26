@@ -255,7 +255,8 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana_password
+      # NOTE: double underscore = Grafana file provider (single underscore is ignored)
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
       GF_INSTALL_PLUGINS: "grafana-piechart-panel"
     secrets:
       - grafana_password
