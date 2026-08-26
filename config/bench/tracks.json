@@ -1,0 +1,21 @@
+{
+  "driver": "l298n",
+  "description": "OpenJ5 bench bring-up: Nodo 6 tracks prototype (2x DC gear motor via L298N)",
+  "motors": {
+    "left": {
+      "enable_gpio": 18,
+      "in_a_gpio": 23,
+      "in_b_gpio": 24
+    },
+    "right": {
+      "enable_gpio": 13,
+      "in_a_gpio": 22,
+      "in_b_gpio": 27
+    }
+  },
+  "limits": {
+    "max_velocity": 1.0,
+    "min_velocity": -1.0
+  },
+  "ramp_seconds": 0.05
+}
