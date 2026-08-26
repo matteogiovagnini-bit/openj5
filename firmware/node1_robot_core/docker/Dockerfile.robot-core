@@ -35,13 +35,11 @@ RUN groupadd -g 1000 openj5 \
     && useradd -u 1000 -g 1000 -d /app -s /bin/bash openj5 \
     && chown -R openj5:openj5 /app
 
-# Create required directories
+# Create required directories (compose mounts named volumes on these paths;
+# do NOT declare VOLUME here - with the containerd image store a declared
+# volume plus a compose named volume on the same path fails as read-only)
 RUN mkdir -p /var/log/openj5 /etc/openj5/certs /opt/openj5/firmware /opt/openj5/plugins \
     && chown -R openj5:openj5 /var/log/openj5 /etc/openj5 /opt/openj5
-
-# Declare volume mountpoints (avoids containerd mount failure over
-# directories that exist in image layers)
-VOLUME /var/log/openj5 /opt/openj5/firmware
 
 # Switch to non-root user
 USER openj5
