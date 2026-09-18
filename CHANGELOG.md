@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   variant excluded); README, ARCHITECTURE diagrams and GOALS updated accordingly
 
 ### Added
+- **First real HAL driver**: `src/hardware/drivers/l298n.py` — `L298NDriver` +
+  `L298NMotor` implementing the documented `IMotorDriver` shape
+  (initialize/set_velocity/get_velocity/brake/shutdown) for the Nodo 6 tracks
+  bench prototype; velocity normalized (-1..+1) with ramping; GPIO mapping in
+  `config/bench/tracks.json` (zero magic numbers per ADR-008)
+- Interactive bench demo: `scripts/demo/tracks_bench.py` (w/s/a/d steering,
+  +/- speed, x stop, q quit; brake automatic on exit)
+- Bench bring-up guide `docs/hardware/BENCH_TRACKS.md`: L298N↔Pi wiring tables,
+  power (LiPo 3S / 12V), safety checklist, demo usage, shutdown/restart
+  procedures, troubleshooting — added to CI doc gate
+- DEPLOYMENT.md §11 "Daily Power Off / On (quick reference)"
 - Raspberry Pi 4 deployment path rewritten for Pi OS Lite + NVMe:
   `docs/deployment/DEPLOYMENT.md` (Imager flow onto NVMe, one-time USB bootloader
   recovery via SD, memory-cgroup cmdline patch required for compose limits,

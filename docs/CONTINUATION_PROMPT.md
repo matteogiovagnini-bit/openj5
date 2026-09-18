@@ -1,7 +1,7 @@
 # CONTINUATION_PROMPT — Prompt di Continuità OpenJ5
 
 > Rigenerare a fine di OGNI sessione. Questo prompt permette a qualsiasi IA (OpenCode, ChatGPT, Claude, Gemini, Codex…) di riprendere il progetto immediatamente senza perdere contesto.
-> Generato: 2026-08-25 · Versione progetto: 0.2.0 (+ stabilizzazione Docker) · v0.3.0 pianificata
+> Generato: 2026-08-26 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 pianificata · prototipo Nodo 6 avviato
 
 ---
 
@@ -18,8 +18,10 @@ PRIMA DI QUALSIASI MODIFICA leggi questi file nel repository:
 3. governance/ARCHITECTURAL_PRINCIPLES.md e CODING_STANDARD.md
 4. docs/PROJECT_MEMORY.md              (memoria permanente: stato e decisioni)
 5. docs/NEXT_TASK.md                   (attività prioritarie con ID T-xxx)
-6. docs/adr/INDEX.md                   (15 ADR: architettura decisa, immutabile)
+6. docs/adr/INDEX.md                   (16 ADR: architettura decisa, immutabile)
 7. PROJECT_STATUS.md, ROADMAP.md, CHANGELOG.md
+8. docs/KNOWLEDGE_BASE.md              (problemi risolti sul campo)
+9. docs/hardware/BENCH_TRACKS.md       (guida banco Nodo 6: cablaggio motori)
 
 CONTESTO ESSENZIALE:
 - Architettura: esagonale + DDD + event-driven + plugin; 6 nodi distribuiti.
@@ -36,28 +38,33 @@ CONTESTO ESSENZIALE:
   ECDSA P-256 con rollback, fail-safe su ogni nodo.
 
 STATO ATTUALE (verifica con git log):
-- v0.2.0 completato: src/ (core domain, plugins, sdk, gateway, eventbus,
-  statemachine, config) + firmware/node1_robot_core/docker/ con package
-  robot_core completo (config, logging, database, eventbus, plugins, ota,
-  scheduler, statemachine, digital_twin, health), REST API 25+ endpoint,
-  WebSocket, docker-compose con 10 servizi e config infrastruttura completa.
-- Sessione 2026-08-13: ~18 commit di stabilizzazione Docker (certificati mTLS,
-  healthcheck mosquitto su $SYS/broker/version, uid/gid container per permessi
-  chiavi TLS, fix porte Loki/OTEL/rosbridge, immagine Gazebo OCI arm64).
-- Stack Docker si avvia; NESSUN test automatizzato esiste ancora.
-- Firmware: solo scheletro node2_head; nodi 3–6 assenti. CAD/elettronica: assenti.
+- v0.2.0 completato, Robot Core in DEPLOY su RPi4 8GB reale (Pi OS Lite Trixie su
+  NVMe USB3): stack Docker 10 servizi healthy, API HTTPS live {"status":"ok"},
+  limiti memoria cgroup v2 attivi. Fix reali: ACL anonimo mosquitto, VOLUME
+  +containerd, PYTHONPATH, EventBus alias, metriche DomainEvent, promtail bind RO,
+  Grafana __FILE, Trixie (vedi KNOWLEDGE_BASE §1-bis).
+- Nodi 2–6 imprevedibili da heartbeat: atteso, il firmware ESP32 non esiste ancora.
+- Nodi 3–6 firmware, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
+- v0.3.0 in corso: CI base attiva (ruff, doc-check, docker build); T-003 test da fare.
+- PROTOTIPO NODO 6 avviato: primo driver HAL reale `src/hardware/drivers/l298n.py`
+  + demo `scripts/demo/tracks_bench.py` + `config/bench/tracks.json` + guida
+  cablaggio `docs/hardware/BENCH_TRACKS.md`. Il primo movimento fisico dei motori
+  (T-025) è il prossimo step sul banco.
 
 DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
-- CHANGELOG "Unreleased" dichiara CI/test inesistenti → correggere (T-001).
-- TODO codice: firma plugin e sandbox stub, buses SDK non cablati,
-  auto-reconnect MqttGateway, persistenza config runtime, NATS non implementato.
+- Nessun test automatizzato → T-003…T-006 per v0.3.0.
+- Formatter ruff non adottato (T-016); buses SDK non cablati (T-010);
+  auto-reconnect MqttGateway (T-011); persistenza config runtime (T-012).
+- Firmware skeleton Node 2 non compilabile (T-007 bloccato da T-014).
+- Grafana ancora con password admin default.
+- Driver L298N Python = prototipo banco, NON produzione (produzione = ESP32 C++).
 
 PROSSIME ATTIVITÀ (in ordine, dettagli in docs/NEXT_TASK.md):
-1. Correggere CHANGELOG Unreleased (T-001).
-2. CI GitHub Actions: ruff+mypy, build Docker, build ESP-IDF, check doc (T-002/T-007).
-3. Unit test core domain ≥90% (T-003), integration REST/WS (T-004),
-   eventbus+statemachine (T-005), simulation parity (T-006). → rilascio v0.3.0.
-4. poi debiti codice (T-010..T-013) e firmware Node 3 (T-014).
+1. T-025: primo movimento fisico dei motori (demo sul Pi, ruote sollevate).
+2. Verifica containers secondari ros2-bridge/gazebo al prossimo `up -d`.
+3. Cambio password admin Grafana.
+4. T-003 unit test core domain → completare v0.3.0.
+5. poi debiti codice e firmware Node 3 compilabile (T-014).
 
 REGOLE OPERATIVE DI OGNI SESSIONE:
 - Workflow: Analisi → impatto architetturale → doc → ADR se serve →
@@ -70,8 +77,8 @@ REGOLE OPERATIVE DI OGNI SESSIONE:
   config, roadmap, test, firmware, CAD/elettronica (Design Authority check).
 - Non commitare mai senza richiesta esplicita dell'utente.
 
-INIZIA da: leggere i file elencati sopra, poi proporre l'esecuzione di T-001
-e procedere con la pipeline v0.3.0 secondo docs/NEXT_TASK.md.
+INIZIA da: verificare `git log` che lo stato collimi con queste docs, poi proporre
+l'esecuzione di T-025 (primo movimento motori) o T-003 secondo priorità.
 ```
 
 ---

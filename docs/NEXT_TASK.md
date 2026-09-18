@@ -1,7 +1,7 @@
 # NEXT_TASK — Prossime Attività per Priorità
 
 > Aggiornare a ogni sessione. Formato: ID, Titolo, Descrizione, Priorità, Dipendenze, Stima, Stato.
-> Ultimo aggiornamento: 2026-08-25 (sessione 2)
+> Ultimo aggiornamento: 2026-08-26 (sessione banco motori)
 
 ---
 
@@ -30,6 +30,7 @@
 | T-016 | Adottare `ruff format` | Formatter non ancora applicato (36 file da riformattare): decidere baseline, applicare in commit dedicato, aggiungere gate `ruff format --check` in CI | Media | T-015 | 0.5g | ⬜ Da fare |
 | T-017 | Deploy RPi4 Node 1 | Guida completa (`docs/deployment/DEPLOYMENT.md`) + bootstrap automatico (`scripts/deploy/bootstrap_rpi4.sh`) — aggiornati ad **ADR-016**: Pi OS Lite 64-bit Bookworm + NVMe USB3, patch cgroup cmdline per limiti memoria, recovery bootloader USB via SD | Alta | — | 2g | ✅ Fatto 2026-08-25 (doc+script; esecuzione fisica sul Pi da validare) |
 | T-019 | Guida banco Nodo 6 (cingoli) | Collegamento L298N+2 motori DC 12V al Pi, driver HAL `L298NDriver`, demo interattiva, procedure spegnimento/riaccensione (`docs/hardware/BENCH_TRACKS.md`) | Alta | — | 1g | 🟢 Fatto 2026-08-26 |
+| T-025 | Primo movimento fisico dei motori | Eseguire `scripts/demo/tracks_bench.py` sul Pi con i 2 motori cablati (w/s/a/d/x/q); verificare senso di rotazione, velocità PWM, LiPo 3S; correggere eventuali inversioni di fili. Cablaggio già documentato e driver già committato: resta il momento "vroom" sul banco | Alta | T-019 | 0.5g | ⬜ Da fare |
 | T-018 | Validare deploy su hardware reale | ✅ ESEGUITO 2026-08-26 su RPi4 8GB reale: Pi OS Lite Trixie su NVMe USB3 (boot nativo), boot USB ok, limiti memoria compose attivi via cgroup v2 (robot-core /3GiB in docker stats), stack healthy dopo reboot, robot-core API HTTPS risponde {"status":"ok"}. Fix reali emersi: ACL anonimo mosquitto, VOLUME+containerd, PYTHONPATH, EventBus alias, metrics DomainEvent (vedi KNOWLEDGE_BASE §1-bis). Restano da validare su hardware: ros2-bridge e gazebo containers (dipendono da robot-core, ora sbloccati) | Alta | T-017 | 0.5g | 🟢 Fatto 2026-08-26 — core stack; ros2-bridge/gazebo da confermare |
 
 ## Priorità Bassa — Roadmap v0.4.0+

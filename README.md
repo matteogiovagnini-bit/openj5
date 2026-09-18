@@ -152,6 +152,14 @@ idf.py menuconfig  # Imposta WiFi, MQTT broker, node ID
 idf.py build flash monitor
 ```
 
+### Banco motori (prototipo Nodo 6)
+
+```bash
+# Cablaggio e sicurezza: docs/hardware/BENCH_TRACKS.md
+sudo apt install -y python3-gpiozero
+python3 scripts/demo/tracks_bench.py   # w/s a/d +/− x q — ruote sollevate!
+```
+
 ### Genera STL da FreeCAD (Parametrico)
 
 ```bash

@@ -2,7 +2,7 @@
 
 ## Repository: `PRJ_OpenJ5`
 
-> **Last updated:** 2026-07-15
+> **Last updated:** 2026-08-26
 > **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26**
 
 ---
@@ -28,6 +28,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
 | Docker Compose (10 services) | ✅ Done | 100% | mosquitto, redis, postgres, robot-core, ros2-bridge, gazebo, prometheus, grafana, loki, otel-collector |
+| Deploy reale RPi4 8GB (T-018) | ✅ Done | 100% | Pi OS Lite Trixie su NVMe USB3, boot USB nativo, stack healthy, API live, cgroup v2 attivi (2026-08-26). **ros2-bridge/gazebo: primo avvio reale da confermare** |
 | Dockerfile (multi-stage) | ✅ Done | 100% | ARM64 optimized |
 | Robot Core Python Package | ✅ Done | 90% | config, logging, database, eventbus, plugins, ota, scheduler, statemachine, digital_twin, health |
 | REST API (25+ endpoints) | ✅ Done | 90% | robot control, config, nodes, plugins, OTA, scheduler, calibration, simulation, system |
@@ -45,7 +46,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | Node 3-6 Firmware | 🔴 Not Started | 0% | Structure defined, no implementation |
 | OTA Update Client | 🟡 Partial | 40% | Protocol defined, download logic pending |
 
-### 🟢 Architecture Decisions
+### 🟢 Architettura Decisioni
 | ADR | Status | Notes |
 |-----|--------|-------|
 | ADR-001: Hexagonal Architecture | ✅ Accepted | Core domain zero external deps |
@@ -53,6 +54,16 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | ADR-003: Communication Gateway Pattern | ✅ Accepted | Single ICommunicationGateway interface |
 | ADR-004: Event-Driven Architecture | ✅ Accepted | Redis Streams central event bus |
 | ADR-005: HAL for All Drivers | ✅ Accepted | Hardware Abstraction Layer |
+| ADR-006 .. ADR-016 | ✅ Accepted | 11 ADR aggiuntivi (SDK, plugin, config, state machine, digital twin, OTA, FreeCAD, security, Python/C++, MQTT, Pi OS Lite+NVMe) — vedi docs/adr/INDEX.md |
+
+### 🟡 Prototipo Nodo 6 (banco)
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Driver HAL `L298NDriver` | ✅ Done | `src/hardware/drivers/l298n.py`, interfaccia IMotorDriver prototipale, gpiozero/lgpio |
+| Demo motori | ✅ Done | `scripts/demo/tracks_bench.py` (w/s/a/d/x/q) |
+| Config pin | ✅ Done | `config/bench/tracks.json` |
+| Guida cablaggio | ✅ Done | `docs/hardware/BENCH_TRACKS.md` |
+| Primo movimento fisico | 🔴 To do | T-025 — cablaggio pronto, demo da lanciare sul Pi |
 
 ### 🟡 Documentation
 | Document | Status | Notes |
@@ -65,6 +76,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | CHANGELOG.md | ✅ Done | Version history |
 | ROADMAP.md | ✅ Done | Development roadmap |
 | ADR Index + 5 ADRs | ✅ Done | ADR-001 to ADR-005 |
+| ADR Index (completo) | ✅ Done | ADR-001 to ADR-016 — vedi docs/adr/INDEX.md |
+| BENCH_TRACKS (hardware) | ✅ Done | Guida banco Nodo 6: cablaggio motori, power, safety |
 | Development Constitution | ✅ Done | Level A/B/C governance |
 | VISION / MISSION / GOALS / NON_GOALS | ✅ Done | Project governance |
 | CODING_STANDARD / NAMING_CONVENTIONS | ✅ Done | Code quality rules |
@@ -95,8 +108,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | Config files (JSON/YAML) | - | 10+ |
 | Docker services | - | 10 |
 | Plugins framework | - | 14 interface types |
-| ADRs | - | 5 |
-| Documentation files | - | 20+ |
+| ADRs | - | 16 |
+| Documentation files | - | 25+ |
 
 ## Current Release: v0.2.0 (In Development)
 

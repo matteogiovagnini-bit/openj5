@@ -1,7 +1,7 @@
 # KNOWLEDGE_BASE — Base di Conoscenza OpenJ5
 
 > Problemi risolti, procedure, best practice, errori da evitare. Alimentare a ogni sessione.
-> Ultimo aggiornamento: 2026-08-25
+> Ultimo aggiornamento: 2026-08-26
 
 ---
 
@@ -51,6 +51,40 @@ Primo boot storico del Robot Core su hardware fisso (T-018). Sezione alimentata 
 | Container con mount annidati: "mkdirat ... read-only file system" sul mountpoint del volume | Una bind **read-only** del parent (`/var/log:/var/log:ro`) copre il path prima della creazione del mountpoint del volume annidato; se la dir non esiste sull'host → EROFS | Non montare in RO un parent di un volume annidato, oppure pre-creare la dir sull'host (`sudo mkdir -p /var/log/openj5`) |
 | Bootstrap falliva su checkout rsync senza `.git` | Script tentava `git clone` in directory esistente | Gestione branch: clone solo se dir assente |
 | Pi OS corrente è Debian 13 (Trixie), non Bookworm | L'Imager distribuisce già Trixie (kernel 6.18) | Procedure accettano 12|13; ADR-016 aggiornato |
+
+---
+
+## 1-ter. Problemi Risolti (banco Nodo 6 — motori, 2026-08-26)
+
+Lezioni dal bring-up prototipale L298N + 2 motoriduttori DC 12V + LiPo 3S:
+
+### Alimentazione e potenza (lezione principale)
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Regolatore 5V di bordo del L298N rischia di bruciarsi | Con tensione motori >12V (es. LiPo 3S pieno a 12,6V) il 78M05 a bordo abbatterebbe troppa tensione | **Rimuovere il jumper del regolatore 5V** e alimentare la logica del modulo dall'uscita 5V del Pi (pin 4). Con 12V fissi il jumper si può lasciare messo e NON serve il filo dal Pi |
+| Il Pi si riavvia/instabilizza quando parte il motore | Alimentazione di potenza presa dal 5V del Pi, o massa non comune | Potenza SEMPRE da fonte esterna (LiPo 3S/alim. 12V), masse GND comuni (batteria ↔ modulo ↔ Pi pin 6) |
+| Velocità a macchinetta, ignora il PWM | Jumper ENA/ENB ancora montati: tengono l'abilitazione sempre HIGH | **Rimuovere i jumper ENA ed ENB** e pilotare i pin ENA/ENB via GPIO PWM |
+
+### Software e cablaggio GPIO
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Driver servono GPIO PWM hardware | PWM software su Pi è inaffidabile per DC che richiedono 1kHz~ | Usare GPIO18 (PWM0) e GPIO13 (PWM1) per ENA/ENB |
+| GPIO14/15 non usabili per il cablaggio | Occupati dalla console seriale UART | Tenerli liberi nei mapping (config `tracks.json`) |
+| Il driver deve girare su HOST, non in container | I container Docker non hanno accesso ai GPIO del Pi | Script demo eseguito sulla shell del Pi (`python3 scripts/demo/tracks_bench.py`), non dentro `docker compose exec` |
+| Abilitare I²C/GPIO solo con `gpiozero`+`lgpio` | Pi OS Lite Trixie non ha python3-gpiozero preinstallato | `sudo apt install python3-gpiozero python3-libgpiod` |
+
+### Regole da banco (safety-first)
+- **Ruote sempre sollevate da terra** al primo test (niente fughe).
+- **Batteria collegata PER ULTIMA**, tutto già cablato.
+- Fusibile inline (5A) sul + batteria consigliato.
+- Un motore che gira al contrario: inverti i DUE fili su OUT1/OUT2 (o OUT3/OUT4).
+- Fine sessione: `q` nel demo (brake), stacca la batteria, `sudo poweroff`, attendi che il LED ACT smetta di lampeggiare, poi stacca la USB-C.
+- LiPo: se resta fermo a lungo, riportarlo a tensione di storage (~11,4V) col caricabatterie.
+
+### Cambio PC di sviluppo (migrazione)
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Tutta la conoscenza vive in queste docs, non nelle chat | Le info acquisite sono state riversate in PROJECT_MEMORY, KNOWLEDGE_BASE, NEXT_TASK, SESSION_REPORT, CONTINUATION_PROMPT, CHANGELOG | Sul nuovo PC: `git clone` del repo; l'intero stato è nel repo. `.env`, `secrets/*` e `certs/*` sono gitignored e NON si trasferiscono col clone: vanno rigenerati sul dispositivo con `./secrets/generate.sh` + `certs/generate.sh` |
 
 ---
 

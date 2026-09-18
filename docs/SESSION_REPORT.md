@@ -4,6 +4,35 @@
 
 ---
 
+## Sessione: 2026-08-26 — Banco Nodo 6: driver motori L298N + guida cablaggio
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-08-26 (seconda parte, banco hardware) |
+| Versione progetto | v0.2.0+ (Robot Core operativo); prototipo Nodo 6 avviato |
+| Obiettivo | Capire come collegare i motori (Nodo 6) e predisporre il primo movimento fisico |
+
+### Attività completate
+1. **Hardware identificato dall'owner**: 2× motoriduttore DC **12V 300rpm XD-37GB520** + modulo **L298N** + pacco **LiPo 3S** (11,1-12,6V).
+2. **Decisione architetturale operativa**: primo driver HAL reale del progetto — `L298NDriver` con interfaccia `IMotorDriver` (initialize/set_velocity/get_velocity/brake/shutdown), come da ADR-005 e NAMING_CONVENTIONS Python.
+3. **Zero numeri magici (ADR-008)**: GPIO in `config/bench/tracks.json` (ENA=GPIO18/PWM0, IN1=GPIO23, IN2=GPIO24; ENB=GPIO13/PWM1, IN3=GPIO22, IN4=GPIO27; GND comune). PWM hardware sui pin 18/13; GPIO14/15 evitati (console UART).
+4. **Demo interattiva** `scripts/demo/tracks_bench.py`: w/s avanti/indietro, a/d sterzo sul posto, +/− velocità, x stop, q uscita con brake automatico; reading tastiera raw senza premere invio.
+5. **Cablaggio documentato** `docs/hardware/BENCH_TRACKS.md`: tabelle L298N↔Pi, potenza (batteria per ultima, masse comuni, fusibile 5A), jumper ENA/ENB e regolatore 5V, checklist safety, troubleshooting.
+6. **Procedure spegnimento/riaccensione** in DEPLOYMENT §11 (poweroff, attesa LED ACT, LiPo storage; boot automatico NVMe, risalita stack `unless-stopped`, verifica health).
+7. Doc gate CI aggiornata con BENCH_TRACKS.md.
+
+### Lezioni (→ KNOWLEDGE_BASE §1-ter)
+Alimentazione mai dal Pi; jumper 5V rimosso con LiPo 12,6V (78M05 al limite); jumper ENA/ENB rimossi per PWM; GPIO PWM hardware 18/13; driver su host non in container; gpiozero+lgpio da installare.
+
+### Debito emerso
+- Il driver Python è un prototipo da banco: la produzione del Nodo 6 sarà firmware ESP32 (C++). Documentato in PROJECT_MEMORY §10.
+- `.env`, secrets e certs non viaggiano nel repo/clone: vanno rigenerati sul dispositivo.
+
+### Prossimi passi consigliati
+**T-025**: primo movimento fisico (demo sul Pi); poi T-003 unit test core domain.
+
+---
+
 ## Sessione: 2026-08-26 — T-018 PRIMO DEPLOYMENT REALE su RPi4 (interattiva)
 
 | Campo | Valore |

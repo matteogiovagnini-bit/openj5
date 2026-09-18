@@ -1,7 +1,7 @@
 # PROJECT_MEMORY — Memoria Permanente OpenJ5
 
 > **Questo documento è la memoria permanente del progetto. Mai perderlo.**
-> Aggiornare a ogni cambiamento significativo. Ultimo aggiornamento: 2026-08-25
+> Aggiornare a ogni cambiamento significativo. Ultimo aggiornamento: 2026-08-26
 
 ---
 
@@ -78,6 +78,8 @@ Regola: gli ADR sono immutabili; una decisione che li supera genera un nuovo ADR
 - Osservabilità: Prometheus, Grafana, Loki+Promtail, OpenTelemetry Collector.
 - Simulazione: Gazebo Harmonic headless (immagine OCI ufficiale arm64).
 
+**Banco Nodo 6 (in corso, T-019)**: 2× motoriduttore DC **12V 300rpm XD-37GB520** + modulo **L298N** + batteria **LiPo 3S** (11,1-12,6V). Primo driver HAL reale del progetto: `src/hardware/drivers/l298n.py` (config da `config/bench/tracks.json`, demo `scripts/demo/tracks_bench.py`). Cablaggio e procedure in `docs/hardware/BENCH_TRACKS.md`.
+
 Motivazioni chiave: costi consumer (< ~1000 €/robot), ecosistemi maturi, sostituibilità (NON_GOALS §4 elenca l'hardware NON supportato in Anno 1).
 
 ---
@@ -127,6 +129,7 @@ Dettagli completi: `governance/ARCHITECTURAL_PRINCIPLES.md`, `governance/CODING_
 - Sessione 2026-08-25 (3): percorso di deploy Node 1 documentato e automatizzato (`docs/deployment/DEPLOYMENT.md` + `scripts/deploy/bootstrap_rpi4.sh`); validazione su hardware reale = T-018.
 - Sessione 2026-08-25 (4): **ADR-016** — OS di riferimento Nodo 1 passa a Raspberry Pi OS Lite 64-bit + storage NVMe USB3; DEPLOYMENT/bootstrap riscritti; ROS confermato container-only.
 - Sessione 2026-08-26: **PRIMO BOOT REALE del Robot Core su RPi4 8GB** (T-018): Pi OS Lite Trixie su NVMe, boot USB nativo, stack Docker completo healthy, API HTTPS live con {"status":"ok"}, limiti memoria cgroup v2 attivi. 10 fix reali documentati in KNOWLEDGE_BASE §1-bis (ACL anonimo mosquitto, VOLUME+containerd image store, PYTHONPATH, EventBus alias, DomainEvent metriche...). Robot Core = **OPERATIVO**.
+- Sessione 2026-08-26 (banco Nodo 6): **primo driver HAL reale** `L298NDriver` (`src/hardware/drivers/l298n.py`, velocià normalizzata -1..+1 con rampe), demo interattiva `scripts/demo/tracks_bench.py` (w/s/a/d/x/q + velocità), config GPIO in `config/bench/tracks.json` (zero numeri magici), guida cablaggio completa `docs/hardware/BENCH_TRACKS.md` (L298N+2 motori DC 12V 300rpm+LiPo 3S), procedure spegnimento/riaccensione in DEPLOYMENT §11. **Il primo movimento fisico dei motori è ancora da eseguire** (cablaggio pronto, demo da lanciare).
 - v0.3.0: testing — **in corso** (T-003…T-006 da fare).
 - Firmware nodi 3–6, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 
@@ -154,3 +157,4 @@ Roadmap completa in `ROADMAP.md`; idee in `future/future.md`: riconoscimento fac
 | Config | set() runtime non persistito su file/DB | Hot-reload completo |
 | Firmware | Solo scheletro Node 2, NON compilabile (header/sorgenti/CMakeLists mancanti); OTA client parziale | T-014 poi ROADMAP v0.4.0 |
 | Certificati | Rinnovo automatico mancante | ROADMAP v0.4.0 |
+| Driver Nodo 6 Python | `L298NDriver` è un prototipo da banco (host Pi, NON container): la versione finale del Nodo 6 sarà il firmware ESP32 in C++; il driver Python documenta l'interfaccia IMotorDriver ma non va in produzione sul Pi | Solo riferimento prototipale; produzione = firmware ESP32 |
