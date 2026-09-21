@@ -1,7 +1,7 @@
 # CONTINUATION_PROMPT — Prompt di Continuità OpenJ5
 
 > Rigenerare a fine di OGNI sessione. Questo prompt permette a qualsiasi IA (OpenCode, ChatGPT, Claude, Gemini, Codex…) di riprendere il progetto immediatamente senza perdere contesto.
-> Generato: 2026-08-26 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 pianificata · prototipo Nodo 6 avviato
+> Generato: 2026-09-21 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 pianificata · prototipo Nodo 6 avviato · **design Node 7 Balance (ADR-017) consegnato**
 
 ---
 
@@ -18,18 +18,20 @@ PRIMA DI QUALSIASI MODIFICA leggi questi file nel repository:
 3. governance/ARCHITECTURAL_PRINCIPLES.md e CODING_STANDARD.md
 4. docs/PROJECT_MEMORY.md              (memoria permanente: stato e decisioni)
 5. docs/NEXT_TASK.md                   (attività prioritarie con ID T-xxx)
-6. docs/adr/INDEX.md                   (16 ADR: architettura decisa, immutabile)
+6. docs/adr/INDEX.md                   (17 ADR: architettura decisa, immutabile)
 7. PROJECT_STATUS.md, ROADMAP.md, CHANGELOG.md
 8. docs/KNOWLEDGE_BASE.md              (problemi risolti sul campo)
 9. docs/hardware/BENCH_TRACKS.md       (guida banco Nodo 6: cablaggio motori)
 
 CONTESTO ESSENZIALE:
-- Architettura: esagonale + DDD + event-driven + plugin; 6 nodi distribuiti.
+- Architettura: esagonale + DDD + event-driven + plugin; 7 nodi distribuiti.
   Nodo 1 = Raspberry Pi 4 8GB (Robot Core Python/FastAPI, broker Mosquitto,
   Redis Streams, PostgreSQL, Gazebo headless, stack Prometheus/Grafana/Loki/OTEL).
   Nodi 2–6 = ESP32-S3/ESP32 (ESP-IDF C++20): head, braccio dx/sx, torso, cingoli.
+  Nodo 7 = ESP32-S3: **Balance Controller** (NEMA17+A4988+MPU6050, corpo livellato
+  vs gravità sui cingoli — ADR-017, design completato).
 - Regole non negoziabili: nessun accesso hardware fuori dalla HAL
-  (IServoDriver, IMotorDriver...); nessun MQTT diretto (solo ICommunicationGateway);
+  (IServoDriver, IMotorDriver, IStepperDriver...); nessun MQTT diretto (solo ICommunicationGateway);
   applicazioni usano solo Robot SDK (robot.head.look_at()...); zero numeri hardcoded
   (tutto da JSON/YAML); state machine per nodo BOOT→INIT→READY→RUNNING↔ERROR→
   RECOVERY→SHUTDOWN; comandi LOGICI verso gli ESP32, mai angoli servo;
@@ -50,6 +52,17 @@ STATO ATTUALE (verifica con git log):
   + demo `scripts/demo/tracks_bench.py` + `config/bench/tracks.json` + guida
   cablaggio `docs/hardware/BENCH_TRACKS.md`. Il primo movimento fisico dei motori
   (T-025) è il prossimo step sul banco.
+- **NODO 7 BALANCE (ADR-017) — design COMPLETATO e testato**: nuovo Node 7
+  (ESP32-S3 dedicato) per il livellamento attivo del corpo vs gravità:
+  NEMA17+A4988 (STEP/DIR/ENABLE), riduzione cinghia/pulegge 20T→80T (±35°),
+  IMU MPU6050 sul corpo, PID ~100 Hz **sul nodo**, comandi SOLO logici
+  (level/tilt/stow/stop). Software Python consegnato: HAL `IStepperDriver`,
+  driver bench `src/hardware/drivers/a4988.py` + mock `mock_stepper.py`,
+  simulatore loop `src/hardware/sim/leveling.py`, config
+  `config/node7_balance/node.json` + `config/bench/balance.json` (hal.json
+  stepper_driver + topics node7), `BodyAPI` in SDK (`robot.body`), node7
+  nell'orchestratore robot_core; 8 unit test verdi, ruff clean. Firmware
+  ESP-IDF (T-026) e CAD (T-027): follow-up.
 
 DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
 - Nessun test automatizzato → T-003…T-006 per v0.3.0.
@@ -58,6 +71,11 @@ DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
 - Firmware skeleton Node 2 non compilabile (T-007 bloccato da T-014).
 - Grafana ancora con password admin default.
 - Driver L298N Python = prototipo banco, NON produzione (produzione = ESP32 C++).
+- Driver A4988 Python (`a4988.py`) = prototipo banco che documenta `IStepperDriver`;
+  il loop di livellamento gira sul Node 7 ESP32, NON sul Pi (T-026).
+- Sessione 2026-09-21: il PID di livellamento è validato SOLO in simulazione
+  (mock); i guadagni (kp=15, ki=1, kd=0.3 in `config/node7_balance/node.json`)
+  andranno ratificati/ritarati al primo banco reale con l'IMU.
 
 PROSSIME ATTIVITÀ (in ordine, dettagli in docs/NEXT_TASK.md):
 1. T-025: primo movimento fisico dei motori (demo sul Pi, ruote sollevate).
@@ -65,6 +83,7 @@ PROSSIME ATTIVITÀ (in ordine, dettagli in docs/NEXT_TASK.md):
 3. Cambio password admin Grafana.
 4. T-003 unit test core domain → completare v0.3.0.
 5. poi debiti codice e firmware Node 3 compilabile (T-014).
+6. T-026 firmware Node 7 + T-027 CAD giunto body pitch (design guidato da ADR-017).
 
 REGOLE OPERATIVE DI OGNI SESSIONE:
 - Workflow: Analisi → impatto architetturale → doc → ADR se serve →

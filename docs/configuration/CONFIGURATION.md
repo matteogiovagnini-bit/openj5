@@ -75,6 +75,16 @@ config/
     ├── collision.yaml         # IR Bumpers
     ├── pid.yaml               # Velocity/Position PID
     └── motion_primitives.yaml # MoveForward, Rotate, Arc, Stop, Dock
+
+# Node 7: Balance Controller (ADR-017, ESP32-S3)
+├── node7_balance/            # ESP32-S3 Balance Controller
+    ├── node.json             # Node 7: A4988 + NEMA17, IMU MPU6050, PID leveling
+    ├── stepper_driver.yaml   # A4988 STEP/DIR/ENABLE pins + microstepping
+    ├── stepper.yaml          # NEMA17, 200 steps/rev, gear ratio, limits
+    ├── imu.yaml              # MPU6050 on body (Madgwick, 200 Hz)
+    ├── pid.yaml              # Leveling PID (kp/ki/kd, output +-1600 steps/s)
+    ├── balance.yaml          # target_pitch_deg, deadband, control_hz, reference
+    └── motion_primitives.yaml# Level, Tilt, Stow, Stop
 ```
 
 ---
@@ -618,6 +628,51 @@ primitives:
         type: "string"
     implementation: "nav2_docking"
 ```
+
+---
+
+### Node 7: Balance Controller (`config/node7_balance/`, ADR-017)
+
+Levels the body against gravity on the tracks: NEMA17 via A4988
+(STEP/DIR/ENABLE) with a 1:4 belt/pulley reduction and a body IMU (MPU6050).
+The PID loop runs on the ESP32-S3 at 100 Hz; the joint is open-loop actuated
+(steps), closed-loop only on the IMU pitch.
+
+```yaml
+# balance.yaml
+balance:
+  target_pitch_deg: 0.0       # body pitch vs gravity
+  max_tilt_deg: 35.0          # physical joint travel, +/- (4445 microsteps)
+  deadband_deg: 0.5           # no command inside deadband (no micro-oscillation)
+  control_hz: 100             # PID rate
+  imu_sample_hz: 200          # MPU6050 + Madgwick
+  reference: "gravity"        # "gravity" | "tracks"
+  enabled_on_boot: false      # safety: never self-levels on power-on
+  pid:
+    kp: 15.0                  # steps/s per degree
+    ki: 1.0
+    kd: 0.3
+    output_min: -1600         # steps/s, from motor limits
+    output_max: 1600
+    integral_min: -4000
+    integral_max: 4000
+
+# stepper.yaml
+steppers:
+  - id: "balance_joint"
+    type: "nema17"
+    steps_per_rev: 200
+    microsteps: 16            # A4988 MS1/MS2/MS3
+    gear_ratio: 4.0           # belt/pulley 20T -> 80T
+    max_speed_steps_s: 1600
+    max_accel_steps_s2: 800
+    limits:
+      min_steps: -4445        # -35 deg
+      max_steps: 4445         # +35 deg
+```
+
+Topics follow the same versioned schema: `openj5/v1/balance/{cmd,evt,telemetry,state}`
+(see `config/common/topics.json`, node 7).
 
 ---
 

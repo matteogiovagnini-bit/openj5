@@ -1,0 +1,23 @@
+{
+  "driver": "a4988",
+  "description": "OpenJ5 bench bring-up: Node 7 balance prototype (NEMA17 via A4988, STEP/DIR/ENABLE)",
+  "stepper": {
+    "name": "balance_joint",
+    "pins": {
+      "step_gpio": 16,
+      "dir_gpio": 20,
+      "enable_gpio": 21
+    },
+    "microsteps": 16,
+    "steps_per_rev": 200,
+    "gear_ratio": 4.0,
+    "inverted": false
+  },
+  "limits": {
+    "min_steps": -4445,
+    "max_steps": 4445,
+    "max_velocity_steps_s": 1600,
+    "max_acceleration_steps_s2": 800
+  },
+  "control_dt_s": 0.02
+}

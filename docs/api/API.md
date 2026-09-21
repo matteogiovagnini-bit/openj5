@@ -441,6 +441,37 @@ class Odometry:
 
 ---
 
+## Body API (`robot.body`) — Node 7 Balance Controller (ADR-017)
+
+Levels the robot body against gravity on the tracks via a NEMA17 + A4988 and a
+body IMU (MPU6050). Commands are logical: the ESP32-S3 turns them into stepper
+trajectories.
+
+```python
+class BodyAPI:
+    """Body leveling joint control"""
+
+    async def level(self, target_pitch_deg: float = 0.0, blocking: bool = True) -> Result:
+        """Enable automatic leveling of the body vs gravity (PID on body IMU)."""
+
+    async def tilt(self, angle_deg: float, speed: float = 0.5, blocking: bool = True) -> Result:
+        """Hold the body at a fixed tilt angle (degrees, max +/-35)."""
+
+    async def stow(self, blocking: bool = True) -> Result:
+        """Return the joint to 0 deg (track-aligned)."""
+
+    async def stop(self) -> Result:
+        """Stop the joint immediately and hold position."""
+
+    async def get_tilt(self) -> Result[float]:
+        """Current body-to-tracks joint tilt (degrees)."""
+
+    async def get_balance_state(self) -> Result[dict]:
+        """Balance state: enabled, target_pitch_deg, residual_error_deg."""
+```
+
+---
+
 ## Speech API (`robot.speech`)
 
 ```python

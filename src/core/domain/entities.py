@@ -11,7 +11,7 @@ import uuid
 
 from .value_objects import (
     NodeIdentity, NodeState, NodeHealth, RobotState,
-    ServoConfig, MotorConfig, CalibrationData,
+    ServoConfig, MotorConfig, StepperConfig, CalibrationData,
     PluginMetadata
 )
 
@@ -60,6 +60,7 @@ class Node(Entity):
     config: dict = field(default_factory=dict)
     servos: dict[str, Servo] = field(default_factory=dict)
     motors: dict[str, Motor] = field(default_factory=dict)
+    steppers: dict[str, Stepper] = field(default_factory=dict)
 
     def update_health(self, health: NodeHealth) -> None:
         self.health = health
@@ -71,6 +72,10 @@ class Node(Entity):
 
     def add_motor(self, motor: Motor) -> None:
         self.motors[motor.config.motor_id] = motor
+        self.touch()
+
+    def add_stepper(self, stepper: Stepper) -> None:
+        self.steppers[stepper.config.name] = stepper
         self.touch()
 
 
@@ -117,6 +122,39 @@ class Motor(Entity):
         self.odometry_y = y
         self.odometry_theta = theta
         self.touch()
+
+
+@dataclass
+class Stepper(Entity):
+    """Stepper motor entity (ADR-017, STEP/DIR driver + optional reduction)."""
+    node_id: str = field(kw_only=True)
+    config: StepperConfig = field(kw_only=True)
+    current_position_steps: int = 0
+    target_position_steps: int = 0
+    enabled: bool = False
+    is_moving: bool = False
+
+    def move_relative_deg(self, deg: float) -> None:
+        """Move by a relative joint angle (handles inverted + reduction)."""
+        steps = self.config.deg_to_steps(deg)
+        if self.config.inverted:
+            steps = -steps
+        self.move_to_steps(self.current_position_steps + steps)
+
+    def move_to_steps(self, target_steps: int) -> None:
+        self.target_position_steps = target_steps
+        self.is_moving = self.current_position_steps != target_steps
+        self.touch()
+
+    def update_position_steps(self, steps: int) -> None:
+        self.current_position_steps = steps
+        self.is_moving = abs(self.current_position_steps - self.target_position_steps) > 0
+        self.touch()
+
+    @property
+    def current_angle_deg(self) -> float:
+        deg = self.config.steps_to_deg(self.current_position_steps)
+        return -deg if self.config.inverted else deg
 
 
 @dataclass

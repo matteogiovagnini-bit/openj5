@@ -26,7 +26,7 @@
 - OTA firmware management
 - Plugin lifecycle management
 - Digital twin / simulation bridge
-- State machine orchestrator (6 nodes)
+- State machine orchestrator (6 nodes, +1 balance in ADR-017)
 
 ---
 
@@ -83,6 +83,13 @@
   - Odometry calculation
   - IMU-based heading correction (MPU6050/ICM20948)
   - Speed PID control
+- [ ] Complete firmware for Node 7 (Balance, ADR-017):
+  - NEMA17 + A4988 STEP/DIR control (trapezoid profiling)
+  - Body leveling PID loop @ 100 Hz against gravity (MPU6050 + Madgwick)
+  - Logical commands: level / tilt / stow / stop over `openj5/v1/balance/cmd`
+  - Hard stops + watchdog, fail-safe disable on error
+- [ ] CAD/mechanics for body pitch joint (ADR-012/ADR-017):
+  - Belt/pulley reduction 20T -> 80T, tilt range +-35 deg
 - [ ] OTA client implementation (all nodes):
   - HTTPS firmware download
   - Signature verification

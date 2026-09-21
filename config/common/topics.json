@@ -37,6 +37,12 @@
       "evt": "openj5/v1/tracks/evt",
       "telemetry": "openj5/v1/tracks/telemetry",
       "state": "openj5/v1/tracks/state"
+    },
+    "node7": {
+      "cmd": "openj5/v1/balance/cmd",
+      "evt": "openj5/v1/balance/evt",
+      "telemetry": "openj5/v1/balance/telemetry",
+      "state": "openj5/v1/balance/state"
     }
   },
   "system": {

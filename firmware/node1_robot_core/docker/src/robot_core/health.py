@@ -108,7 +108,7 @@ class HealthService:
         self._register_builtin_checks()
         
         # Initialize node health
-        for node_id in ["node1", "node2", "node3", "node4", "node5", "node6"]:
+        for node_id in ["node1", "node2", "node3", "node4", "node5", "node6", "node7"]:
             self._node_health[node_id] = NodeHealth(
                 node_id=node_id,
                 state="unknown",

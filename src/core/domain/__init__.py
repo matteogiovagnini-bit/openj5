@@ -5,6 +5,7 @@ from .value_objects import (
     Angle, AngleUnit,
     Position3D, Quaternion, Pose3D, Twist,
     JointAngles, ServoConfig, MotorConfig, PIDConfig,
+    StepperConfig, BalanceConfig,
     CalibrationData,
     BatteryState, BatteryHealth,
     TemperatureReading, DistanceReading, IMUReading, Odometry,
@@ -16,11 +17,14 @@ from .events import (
     # Commands
     MoveHeadCommandEvent, MoveArmCommandEvent, MoveTracksCommandEvent,
     SayTextCommandEvent, BehaviorCommandEvent, EmergencyStopCommandEvent,
+    BodyCommandEvent,
     # Telemetry
     ServoTelemetryEvent, MotorTelemetryEvent, BatteryTelemetryEvent,
     IMUTelemetryEvent, DistanceTelemetryEvent, OdometryTelemetryEvent,
+    BodyTelemetryEvent,
     # State
     NodeStateChangedEvent, RobotStateChangedEvent, PluginStateChangedEvent,
+    BalanceStateChangedEvent,
     # Errors
     HardwareFaultEvent, CommunicationLostEvent, SafetyViolationEvent,
     # Business
@@ -36,6 +40,7 @@ from .commands import (
     CommandHandler, QueryHandler,
     # Commands
     MoveHeadCommand, MoveArmCommand, MoveTracksCommand,
+    BodyCommand,
     SayTextCommand, SetExpressionCommand, SetLEDCommand,
     BehaviorCommand, EmergencyStopCommand, DeployOTACommand,
     LoadPluginCommand, UnloadPluginCommand,
@@ -45,6 +50,7 @@ from .commands import (
     GetPluginListQuery, GetFirmwareVersionsQuery,
     GetHeadAnglesQuery, GetHeadMovingQuery, GetArmJointAnglesQuery,
     GetTracksVelocityQuery, GetCollisionStatusQuery,
+    GetBodyTiltQuery, GetBalanceStateQuery,
     GetSpeakingStatusQuery, GetListeningStatusQuery,
     GetCurrentBehaviorQuery, GetEmotionalStateQuery,
     GetFaceDetectionsQuery, GetFaceRecognitionsQuery,
@@ -56,7 +62,7 @@ from .commands import (
 )
 
 from .entities import (
-    Entity, Robot, Node, Servo, Motor, Plugin, Calibration,
+    Entity, Robot, Node, Servo, Motor, Stepper, Plugin, Calibration,
 )
 
 from .services import (
@@ -76,6 +82,7 @@ __all__ = [
     "Angle", "AngleUnit",
     "Position3D", "Quaternion", "Pose3D", "Twist",
     "JointAngles", "ServoConfig", "MotorConfig", "PIDConfig",
+    "StepperConfig", "BalanceConfig",
     "CalibrationData",
     "BatteryState", "BatteryHealth",
     "TemperatureReading", "DistanceReading", "IMUReading", "Odometry",
@@ -84,9 +91,12 @@ __all__ = [
     "DomainEvent", "EventCategory",
     "MoveHeadCommandEvent", "MoveArmCommandEvent", "MoveTracksCommandEvent",
     "SayTextCommandEvent", "BehaviorCommandEvent", "EmergencyStopCommandEvent",
+    "BodyCommandEvent",
     "ServoTelemetryEvent", "MotorTelemetryEvent", "BatteryTelemetryEvent",
     "IMUTelemetryEvent", "DistanceTelemetryEvent", "OdometryTelemetryEvent",
+    "BodyTelemetryEvent",
     "NodeStateChangedEvent", "RobotStateChangedEvent", "PluginStateChangedEvent",
+    "BalanceStateChangedEvent",
     "HardwareFaultEvent", "CommunicationLostEvent", "SafetyViolationEvent",
     "FaceDetectedEvent", "FaceRecognizedEvent", "ObjectDetectedEvent",
     "ObjectGraspedEvent", "SpeechRecognizedEvent", "PersonFollowedEvent",
@@ -97,6 +107,7 @@ __all__ = [
     "CommandBus", "QueryBus",
     "CommandHandler", "QueryHandler",
     "MoveHeadCommand", "MoveArmCommand", "MoveTracksCommand",
+    "BodyCommand",
     "SayTextCommand", "SetExpressionCommand", "SetLEDCommand",
     "BehaviorCommand", "EmergencyStopCommand", "DeployOTACommand",
     "LoadPluginCommand", "UnloadPluginCommand",
@@ -105,6 +116,7 @@ __all__ = [
     "GetPluginListQuery", "GetFirmwareVersionsQuery",
     "GetHeadAnglesQuery", "GetHeadMovingQuery", "GetArmJointAnglesQuery",
     "GetTracksVelocityQuery", "GetCollisionStatusQuery",
+    "GetBodyTiltQuery", "GetBalanceStateQuery",
     "GetSpeakingStatusQuery", "GetListeningStatusQuery",
     "GetCurrentBehaviorQuery", "GetEmotionalStateQuery",
     "GetFaceDetectionsQuery", "GetFaceRecognitionsQuery",
@@ -114,7 +126,7 @@ __all__ = [
     "GetBatteryTimeRemainingQuery", "GetBatteryChargingQuery", "GetBatteryHealthQuery",
     "GetTemperaturesQuery", "GetCPUUsageQuery", "GetMemoryUsageQuery",
     # Entities
-    "Entity", "Robot", "Node", "Servo", "Motor", "Plugin", "Calibration",
+    "Entity", "Robot", "Node", "Servo", "Motor", "Stepper", "Plugin", "Calibration",
     # Services
     "IKinematicsService", "KinematicsService",
     "IMotionPlanner", "MotionPlannerService",

@@ -53,6 +53,7 @@ Any specific implementation details, migration paths, or follow-up tasks.
 | [ADR-014](ADR-014-python-core-cpp-firmware.md) | Python for Robot Core, C++ for Firmware | Accepted | 2026-07-15 |
 | [ADR-015](ADR-015-mqtt-primary-transport.md) | MQTT as Primary Transport Protocol | Accepted | 2026-07-15 |
 | [ADR-016](ADR-016-pios-lite-nvme-node1.md) | Raspberry Pi OS Lite 64-bit (Bookworm) as Node 1 Reference OS, NVMe-over-USB3 Storage | Accepted | 2026-08-25 |
+| [ADR-017](ADR-017-node7-balance-controller.md) | Node 7 Balance Controller (Self-Leveling Body: NEMA17 + A4988 + MPU6050) — extends ADR-002 to 7 nodes, adds IStepperDriver to the HAL | Accepted | 2026-09-21 |
 
 ## Governance
 

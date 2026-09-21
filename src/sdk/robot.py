@@ -12,12 +12,13 @@ import asyncio
 
 from ..core.domain import (
     Result, CommandBus, QueryBus,
-    MoveHeadCommand, MoveArmCommand, MoveTracksCommand,
+    MoveHeadCommand, MoveArmCommand, MoveTracksCommand, BodyCommand,
     SayTextCommand, SetExpressionCommand, SetLEDCommand,
     BehaviorCommand, EmergencyStopCommand, DeployOTACommand,
     GetRobotStateQuery, GetNodeHealthQuery, GetBatteryStateQuery,
     GetHeadAnglesQuery, GetHeadMovingQuery, GetArmJointAnglesQuery,
     GetArmPoseQuery, GetOdometryQuery, GetTracksVelocityQuery,
+    GetBodyTiltQuery, GetBalanceStateQuery,
     GetCollisionStatusQuery, GetSpeakingStatusQuery, GetListeningStatusQuery,
     GetCurrentBehaviorQuery, GetEmotionalStateQuery,
     GetFaceDetectionsQuery, GetFaceRecognitionsQuery,
@@ -404,6 +405,45 @@ class TracksAPI:
         return await self._qry.dispatch(GetCollisionStatusQuery())
 
 
+class BodyAPI:
+    """Body leveling joint API (Node 7 Balance Controller, ADR-017).
+
+    Logical commands only: the ESP32-S3 turns them into stepper trajectories.
+    """
+
+    def __init__(self, command_bus: CommandBus, query_bus: QueryBus):
+        self._cmd = command_bus
+        self._qry = query_bus
+
+    async def level(self, target_pitch_deg: float = 0.0, blocking: bool = True) -> Result:
+        """Enable automatic leveling of the body vs gravity on the tracks."""
+        return await self._cmd.dispatch(BodyCommand(
+            action="level", angle_deg=target_pitch_deg, blocking=blocking
+        ))
+
+    async def tilt(self, angle_deg: float, speed: float = 0.5, blocking: bool = True) -> Result:
+        """Hold the body at a fixed tilt angle (degrees, max +/-35)."""
+        return await self._cmd.dispatch(BodyCommand(
+            action="tilt", angle_deg=angle_deg, speed=speed, blocking=blocking
+        ))
+
+    async def stow(self, blocking: bool = True) -> Result:
+        """Return the joint to 0 deg (track-aligned) and level from there."""
+        return await self._cmd.dispatch(BodyCommand(action="stow", blocking=blocking))
+
+    async def stop(self) -> Result:
+        """Stop the joint immediately and hold position."""
+        return await self._cmd.dispatch(BodyCommand(action="stop", blocking=False))
+
+    async def get_tilt(self) -> Result[float]:
+        """Current body-to-tracks joint tilt (degrees)."""
+        return await self._qry.dispatch(GetBodyTiltQuery())
+
+    async def get_balance_state(self) -> Result[dict]:
+        """Balance control state (enabled, target pitch, residual error)."""
+        return await self._qry.dispatch(GetBalanceStateQuery())
+
+
 class SpeechAPI:
     """Speech API."""
 
@@ -690,6 +730,7 @@ class Robot:
         self._left_arm: ArmAPI = None
         self._torso: TorsoAPI = None
         self._tracks: TracksAPI = None
+        self._body: BodyAPI = None
         self._speech: SpeechAPI = None
         self._behavior: BehaviorAPI = None
         self._vision: VisionAPI = None
@@ -731,6 +772,12 @@ class Robot:
         if self._tracks is None:
             self._tracks = TracksAPI(self._command_bus, self._query_bus)
         return self._tracks
+
+    @property
+    def body(self) -> BodyAPI:
+        if self._body is None:
+            self._body = BodyAPI(self._command_bus, self._query_bus)
+        return self._body
 
     @property
     def speech(self) -> SpeechAPI:
@@ -840,6 +887,10 @@ class SyncRobot:
     @property
     def tracks(self) -> TracksAPI:
         return self._robot.tracks
+
+    @property
+    def body(self) -> BodyAPI:
+        return self._robot.body
 
     @property
     def speech(self) -> SpeechAPI:

@@ -122,6 +122,28 @@ class MoveTracksCommand(Command[Result]):
 
 
 @dataclass
+class BodyCommand(Command[Result]):
+    """Control the body leveling joint (ADR-017).
+
+    action: "level" (auto-level vs gravity), "tilt" (hold a fixed tilt angle),
+            "stow" (return to 0 deg and hold), "stop".
+    angle_deg is used by "tilt" (joint-relative setpoint in degrees).
+    """
+    action: str = "level"
+    angle_deg: float = 0.0
+    speed: float = 0.5
+    blocking: bool = True
+
+    def __post_init__(self):
+        if self.action not in ("level", "tilt", "stow", "stop"):
+            raise ValueError("action must be 'level', 'tilt', 'stow' or 'stop'")
+        if not (0.0 < self.speed <= 1.0):
+            raise ValueError("speed must be in (0.0, 1.0]")
+        if abs(self.angle_deg) > 90.0:
+            raise ValueError("angle_deg must be within +/- 90")
+
+
+@dataclass
 class SayTextCommand(Command[Result]):
     """Speak text."""
     text: str = ""
@@ -290,6 +312,18 @@ class GetArmJointAnglesQuery(Query[Result]):
 @dataclass
 class GetTracksVelocityQuery(Query[Result]):
     """Get track velocities (left, right)."""
+    pass
+
+
+@dataclass
+class GetBodyTiltQuery(Query[Result]):
+    """Get current body-to-tracks joint tilt (degrees)."""
+    pass
+
+
+@dataclass
+class GetBalanceStateQuery(Query[Result]):
+    """Get body leveling state (enabled, target pitch, residual error)."""
     pass
 
 

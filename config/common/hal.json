@@ -22,6 +22,17 @@
       },
       "default": "l298n"
     },
+    "stepper_driver": {
+      "interface": "IStepperDriver",
+      "implementations": {
+        "a4988": "A4988StepperDriver",
+        "drv8825": "DRV8825Driver",
+        "tmc2209": "TMC2209Driver",
+        "mock": "MockStepperDriver",
+        "gazebo": "GazeboStepperDriver"
+      },
+      "default": "a4988"
+    },
     "distance_sensor": {
       "interface": "IDistanceSensor",
       "implementations": {

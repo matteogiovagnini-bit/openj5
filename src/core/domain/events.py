@@ -113,6 +113,23 @@ class SayTextCommandEvent(DomainEvent):
 
 
 @dataclass(frozen=True)
+class BodyCommandEvent(DomainEvent):
+    """Logical command for the body leveling joint (ADR-017).
+
+    action: "level" | "tilt" | "stow" | "stop". Only logical intent crosses
+    the bus: the ESP32 translates it into stepper trajectories.
+    """
+    action: str = "level"
+    angle_deg: float = 0.0
+    speed: float = 0.5
+    blocking: bool = True
+
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, 'category', EventCategory.COMMAND)
+
+
+@dataclass(frozen=True)
 class BehaviorCommandEvent(DomainEvent):
     behavior: str = ""
     params: dict = field(default_factory=dict)
@@ -220,6 +237,21 @@ class OdometryTelemetryEvent(DomainEvent):
         object.__setattr__(self, 'category', EventCategory.TELEMETRY)
 
 
+@dataclass(frozen=True)
+class BodyTelemetryEvent(DomainEvent):
+    """Leveling joint + body pitch telemetry (ADR-017)."""
+    body_pitch_deg: float = 0.0
+    track_pitch_deg: float = 0.0
+    joint_angle_deg: float = 0.0
+    target_angle_deg: float = 0.0
+    leveling_enabled: bool = False
+    control_hz: int = 0
+
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, 'category', EventCategory.TELEMETRY)
+
+
 # === STATE EVENTS ===
 
 @dataclass(frozen=True)
@@ -250,6 +282,18 @@ class PluginStateChangedEvent(DomainEvent):
     plugin_id: str = ""
     previous_state: str = ""
     new_state: str = ""
+
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, 'category', EventCategory.STATE)
+
+
+@dataclass(frozen=True)
+class BalanceStateChangedEvent(DomainEvent):
+    """Body leveling state change (ADR-017)."""
+    enabled: bool = False
+    target_pitch_deg: float = 0.0
+    reason: str = ""
 
     def __post_init__(self):
         super().__post_init__()
@@ -406,15 +450,18 @@ EVENT_CLASSES = {
     "SayTextCommandEvent": SayTextCommandEvent,
     "BehaviorCommandEvent": BehaviorCommandEvent,
     "EmergencyStopCommandEvent": EmergencyStopCommandEvent,
+    "BodyCommandEvent": BodyCommandEvent,
     "ServoTelemetryEvent": ServoTelemetryEvent,
     "MotorTelemetryEvent": MotorTelemetryEvent,
     "BatteryTelemetryEvent": BatteryTelemetryEvent,
     "IMUTelemetryEvent": IMUTelemetryEvent,
     "DistanceTelemetryEvent": DistanceTelemetryEvent,
     "OdometryTelemetryEvent": OdometryTelemetryEvent,
+    "BodyTelemetryEvent": BodyTelemetryEvent,
     "NodeStateChangedEvent": NodeStateChangedEvent,
     "RobotStateChangedEvent": RobotStateChangedEvent,
     "PluginStateChangedEvent": PluginStateChangedEvent,
+    "BalanceStateChangedEvent": BalanceStateChangedEvent,
     "HardwareFaultEvent": HardwareFaultEvent,
     "CommunicationLostEvent": CommunicationLostEvent,
     "SafetyViolationEvent": SafetyViolationEvent,

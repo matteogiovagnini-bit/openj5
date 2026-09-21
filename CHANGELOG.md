@@ -57,6 +57,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MQTT Primary Transport); fixed broken ADR-002 link in ADR INDEX
 - Project continuity documents: PROJECT_MEMORY, NEXT_TASK, KNOWLEDGE_BASE,
   CONTINUATION_PROMPT, SESSION_REPORT
+- **ADR-017 - Node 7 Balance Controller** (`docs/adr/ADR-017-node7-balance-controller.md`):
+  new dedicated ESP32-S3 node keeping the body leveled vs gravity on the tracks
+  (NEMA17 + A4988 STEP/DIR + MPU6050 on body, 20T->80T belt/pulley reduction,
+  PID loop ~100 Hz on-node, logical MQTT commands). Extends ADR-002 (6->7 nodes)
+  and ADR-005 (new IStepperDriver HAL port). ADR INDEX updated
+- **HAL stepper port**: `src/hardware/hal/stepper.py` — `IStepperDriver`
+  (initialize/enable/disable/set_position_steps/set_velocity_steps_s/
+  get_position_steps/get_velocity_steps_s/home/brake/shutdown),
+  `StepperMove`, `StepperState`, pure `trapezoid_velocity` ramp helper
+- **A4988 bench driver**: `src/hardware/drivers/a4988.py` (gpiozero/lgpio
+  STEP/DIR/ENABLE, acceleration-limited moves) with `config/bench/balance.json`
+  (zero magic numbers per ADR-008) and demo `scripts/demo/balance_bench.py`
+- **Mock stepper (CI-safe)**: `src/hardware/drivers/mock_stepper.py` — no GPIO
+  dependency, same IStepperDriver contract; drives all unit tests
+- **Leveling-loop simulator**: `src/hardware/sim/leveling.py` — pure-Python PID
+  loop (100 Hz, deadband, track-tilt profile) to validate gains before the C++
+  firmware exists
+- **Domain**: `StepperConfig`/`BalanceConfig` value objects, `BodyCommand`
+  (level/tilt/stow/stop), `GetBodyTiltQuery`, `GetBalanceStateQuery`,
+  `BodyCommandEvent`/`BodyTelemetryEvent`/`BalanceStateChangedEvent`,
+  `Stepper` entity, `NodeType.BALANCE`; exports updated
+- **SDK**: `BodyAPI` (`robot.body.level()/tilt()/stow()/stop()/
+  get_tilt()/get_balance_state()`) in `src/sdk/robot.py`
+- **Config**: `config/node7_balance/node.json`, `stepper_driver` entry in
+  `config/common/hal.json`, node7 topics in `config/common/topics.json`
+- **Orchestrator**: node7 (balance) in robot_core statemachine node_types,
+  health node list, API models target_node and digital_twin body joint
+- **Unit tests**: `tests/unit/test_balance_control.py` — 8 tests (step math,
+  ramp helper, mock motion, leveling convergence + ramp tracking, command
+  validation); `tests/conftest.py` path bootstrap
+- Architecture, API, CONFIGURATION, PROJECT_MEMORY, PROJECT_STATUS, ROADMAP,
+  NEXT_TASK, KNOWLEDGE_BASE and CONTINUATION_PROMPT updated for Node 7
 
 ### Fixed
 - First real-hardware deployment fixes (RPi4 8GB, Pi OS Lite Trixie, NVMe USB3):

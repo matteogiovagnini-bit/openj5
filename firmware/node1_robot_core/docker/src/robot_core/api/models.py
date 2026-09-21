@@ -47,7 +47,7 @@ class PoseCommand(BaseModel):
 
 class RobotCommand(BaseModel):
     command_id: str = Field(default="", description="Client-generated UUID for idempotency")
-    target_node: str = Field(..., description="node1-node6, or 'robot' for aggregate")
+    target_node: str = Field(..., description="node1-node7, or 'robot' for aggregate")
     command_type: str = Field(..., description="move_joints, move_pose, stop, home, grip, speak, etc")
     parameters: dict[str, Any] = Field(default_factory=dict)
     timeout: float = Field(default=10.0, ge=1.0, le=300.0)

@@ -1,7 +1,7 @@
 # PROJECT_MEMORY — Memoria Permanente OpenJ5
 
 > **Questo documento è la memoria permanente del progetto. Mai perderlo.**
-> Aggiornare a ogni cambiamento significativo. Ultimo aggiornamento: 2026-08-26
+> Aggiornare a ogni cambiamento significativo. Ultimo aggiornamento: 2026-09-21
 
 ---
 
@@ -20,7 +20,7 @@ Requisiti fondanti:
 
 ## 2. Architettura
 
-### Distribuita a 6 nodi
+### Distribuita a 7 nodi
 | Nodo | Hardware | Ruolo |
 |------|----------|-------|
 | 1 | Raspberry Pi 4 8GB (Ubuntu + Docker) | Robot Core: AI, Vision, Speech, Planning, Behavior, broker MQTT, REST/WebSocket API, DB, Event Bus, Plugin Manager, OTA Manager, Digital Twin |
@@ -29,6 +29,7 @@ Requisiti fondanti:
 | 4 | ESP32-S3 | Braccio sinistro (mirror del 3) |
 | 5 | ESP32 | Torso: 4 servi, LED, fan, INA219 + DS18B20, sensori |
 | 6 | ESP32 | Cingoli: L298N + 2 motori DC con encoder, IMU, ToF, bumper |
+| 7 | ESP32-S3 | Balance Controller (ADR-017): NEMA17 + A4988 + IMU MPU6050 sul corpo, livellamento attivo del corpo vs gravità |
 
 ### Layered (Hexagonal / Ports & Adapters)
 ```
@@ -63,6 +64,8 @@ Flusso tipico: `SDK → CommandBus → Gateway → MQTT → ESP32 (traduce coman
 | ADR-013 | Sicurezza: mTLS, JWT, OTA firmato, fail-safe |
 | ADR-014 | Python per Robot Core, C++20 per firmware |
 | ADR-015 | MQTT (Mosquitto) transport primario |
+| ADR-016 | Pi OS Lite 64-bit Bookworm + NVMe USB3 per Node 1 |
+| ADR-017 | Node 7 Balance Controller: NEMA17+A4988+MPU6050 su ESP32-S3, corpo livellato vs gravità |
 
 Regola: gli ADR sono immutabili; una decisione che li supera genera un nuovo ADR "Superseded by".
 
@@ -71,14 +74,17 @@ Regola: gli ADR sono immutabili; una decisione che li supera genera un nuovo ADR
 ## 4. Hardware Utilizzato (reference)
 
 - Raspberry Pi 4 8GB, **Raspberry Pi OS Lite 64-bit (Bookworm)** (ADR-016, sostituisce la spec Ubuntu iniziale), boot da NVMe USB3 (~300-400 MB/s), Docker Compose; cgroup memory abilitati via cmdline.txt per i limiti dei container.
-- 3× ESP32-S3 + 2× ESP32, ESP-IDF 5.2+, FreeRTOS @1kHz.
+- 4× ESP32-S3 + 2× ESP32, ESP-IDF 5.2+, FreeRTOS @1kHz.
 - PCA9685 (I2C 0x40–0x43 per nodi 2–5), servi hobby standard.
 - L298N + 2 motori DC con encoder (nodo 6), MPU6050/ICM20948, VL53L0X ×2.
+- NEMA17 + A4988 (STEP/DIR/ENABLE) + 2× MPU6050 (nodo 7, ADR-017); IMU sul corpo per il livellamento attivo.
 - Mosquitto 2.0, Redis 7 (Streams), PostgreSQL 16, FastAPI/Uvicorn, structlog.
 - Osservabilità: Prometheus, Grafana, Loki+Promtail, OpenTelemetry Collector.
 - Simulazione: Gazebo Harmonic headless (immagine OCI ufficiale arm64).
 
 **Banco Nodo 6 (in corso, T-019)**: 2× motoriduttore DC **12V 300rpm XD-37GB520** + modulo **L298N** + batteria **LiPo 3S** (11,1-12,6V). Primo driver HAL reale del progetto: `src/hardware/drivers/l298n.py` (config da `config/bench/tracks.json`, demo `scripts/demo/tracks_bench.py`). Cablaggio e procedure in `docs/hardware/BENCH_TRACKS.md`.
+
+**Nodo 7 Balance (ADR-017, design 2026-09-21)**: NEMA17 + A4988 + MPU6050 su **ESP32-S3 dedicato**; riduzione cinghia/pulegge **20T→80T** (1:4, ~−35..+35°, 12800 jsteps/giro → 35,56 jsteps/°). Il PID di livellamento gira **sul nodo** a 100 Hz (reference vs gravità); il Pi invia solo comandi logici (`level/tilt/stow/stop`). Software Python già pronto: `IStepperDriver` (HAL), driver benchmark `a4988.py`, mock `mock_stepper.py`, simulatore loop `src/hardware/sim/leveling.py`, config `config/node7_balance/node.json` + `config/bench/balance.json`, `BodyAPI` in SDK (`robot.body`). Firmware ESP-IDF e CAD = follow-up (T-026/T-027).
 
 Motivazioni chiave: costi consumer (< ~1000 €/robot), ecosistemi maturi, sostituibilità (NON_GOALS §4 elenca l'hardware NON supportato in Anno 1).
 
@@ -130,8 +136,9 @@ Dettagli completi: `governance/ARCHITECTURAL_PRINCIPLES.md`, `governance/CODING_
 - Sessione 2026-08-25 (4): **ADR-016** — OS di riferimento Nodo 1 passa a Raspberry Pi OS Lite 64-bit + storage NVMe USB3; DEPLOYMENT/bootstrap riscritti; ROS confermato container-only.
 - Sessione 2026-08-26: **PRIMO BOOT REALE del Robot Core su RPi4 8GB** (T-018): Pi OS Lite Trixie su NVMe, boot USB nativo, stack Docker completo healthy, API HTTPS live con {"status":"ok"}, limiti memoria cgroup v2 attivi. 10 fix reali documentati in KNOWLEDGE_BASE §1-bis (ACL anonimo mosquitto, VOLUME+containerd image store, PYTHONPATH, EventBus alias, DomainEvent metriche...). Robot Core = **OPERATIVO**.
 - Sessione 2026-08-26 (banco Nodo 6): **primo driver HAL reale** `L298NDriver` (`src/hardware/drivers/l298n.py`, velocià normalizzata -1..+1 con rampe), demo interattiva `scripts/demo/tracks_bench.py` (w/s/a/d/x/q + velocità), config GPIO in `config/bench/tracks.json` (zero numeri magici), guida cablaggio completa `docs/hardware/BENCH_TRACKS.md` (L298N+2 motori DC 12V 300rpm+LiPo 3S), procedure spegnimento/riaccensione in DEPLOYMENT §11. **Il primo movimento fisico dei motori è ancora da eseguire** (cablaggio pronto, demo da lanciare).
+- Sessione 2026-09-21 (design Nodo 7 Balance): **ADR-017** — nuovo Node 7 (ESP32-S3 dedicato) con NEMA17+A4988+MPU6050 per il livellamento attivo del corpo vs gravità sui cingoli (±35°, riduzione 1:4 cinghia/pulegge, PID 100 Hz sul nodo, comandi logici). Software Python consegnato e testato: `IStepperDriver` (HAL), `A4988StepperDriver` bench + `MockStepperDriver`, simulatore `src/hardware/sim/leveling.py`, config (`node7_balance/node.json`, `bench/balance.json`, `hal.json`, `topics.json` node7), `BodyAPI` in SDK (`robot.body.level/tilt/stow/stop`), nodo 7 nell'orchestratore robot_core; 8 unit test verdi (ruff clean). Firmware ESP-IDF Node 7 (T-026) e CAD/meccanica (T-027): follow-up design Lifecycle B/C.
 - v0.3.0: testing — **in corso** (T-003…T-006 da fare).
-- Firmware nodi 3–6, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
+- Firmware nodi 3–7, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 
 Stato dettagliato: `PROJECT_STATUS.md`. Prossime attività: `docs/NEXT_TASK.md`.
 
@@ -158,3 +165,4 @@ Roadmap completa in `ROADMAP.md`; idee in `future/future.md`: riconoscimento fac
 | Firmware | Solo scheletro Node 2, NON compilabile (header/sorgenti/CMakeLists mancanti); OTA client parziale | T-014 poi ROADMAP v0.4.0 |
 | Certificati | Rinnovo automatico mancante | ROADMAP v0.4.0 |
 | Driver Nodo 6 Python | `L298NDriver` è un prototipo da banco (host Pi, NON container): la versione finale del Nodo 6 sarà il firmware ESP32 in C++; il driver Python documenta l'interfaccia IMotorDriver ma non va in produzione sul Pi | Solo riferimento prototipale; produzione = firmware ESP32 |
+| Driver Nodo 7 Python | Stessa regola: `A4988StepperDriver`/`MockStepperDriver` = prototipo da banco/simulatore (documentano `IStepperDriver`); produzione = firmware ESP32 Node 7 (T-026). Il loop PID di livello gira sul nodo, non sul Pi | Solo riferimento prototipale; produzione = firmware ESP32 |

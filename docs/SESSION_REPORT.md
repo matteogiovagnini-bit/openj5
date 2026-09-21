@@ -4,6 +4,48 @@
 
 ---
 
+## Sessione: 2026-09-21 — Design Node 7 Balance Controller (ADR-017)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-09-21 |
+| Versione progetto | v0.2.0+ (Robot Core operativo); prototipo Nodo 6 avviato; **ADR-017 accettato** |
+| Obiettivo | Aggiungere al robot il mantenimento del corpo in equilibrio rispetto ai cingoli: NEMA17 + A4988 + IMU su nuovo Node 7 (ESP32-S3) |
+
+### Decisioni (Level C, approvate)
+1. **Nuovo Node 7 dedicato ESP32-S3** "Balance Controller" (estende ADR-002 da 6 a 7 nodi).
+2. Driver stepper **A4988 (STEP/DIR/ENABLE)**; richiesto dall'owner come "A488" — interpretato A4988, da confermare.
+3. IMU **MPU6050** sul corpo (Madgwick, 200 Hz).
+4. Riduzione meccanica **cinghia/pulegge 20T→80T (1:4)**, corsa ±35° (4445 jsteps).
+5. Scope consegnato: **ADR-017 + design + software Python testabile**. Firmware ESP-IDF (T-026) e CAD/meccanica (T-027) = follow-up.
+
+### Attività completate
+1. **ADR-017** (`docs/adr/ADR-017-node7-balance-controller.md`) + `docs/adr/INDEX.md`: estende ADR-002 e ADR-005; 5 alternative valutate e rifiutate; topic MQTT `openj5/v1/balance/{cmd,evt,telemetry,state}`; il PID vive sul nodo, il Pi invia comandi logici.
+2. **HAL Python** `src/hardware/hal/stepper.py`: `IStepperDriver` (port puro), `StepperMove`, `StepperState`, `trapezoid_velocity` (helper di rampa senza I/O, testabile).
+3. **Driver bench** `src/hardware/drivers/a4988.py` (gpiozero/lgpio, move accel-limitati) + `config/bench/balance.json`; demo `scripts/demo/balance_bench.py`.
+4. **Mock CI-safe** `src/hardware/drivers/mock_stepper.py` (nessuna dipendenza GPIO) — semantica di integrazione della velocity separata dalla rampa (`step(dt)` vs `set_position_steps`).
+5. **Simulatore livellamento** `src/hardware/sim/leveling.py`: loop PID 100 Hz, deadband 0,5°, profilo di pendenza del cingolo; guadagni validati (convergenza e ramp tracking ~0,5° di lag).
+6. **Domain**: `StepperConfig` (`steps_per_joint_rev` = 12800, `steps_per_deg` = 35,556), `BalanceConfig`, `BodyCommand` (level/tilt/stow/stop), `GetBodyTiltQuery`/`GetBalanceStateQuery`, `BodyCommandEvent`/`BodyTelemetryEvent`/`BalanceStateChangedEvent`, entità `Stepper`, `NodeType.BALANCE`; export package aggiornati.
+7. **SDK**: `BodyAPI` + `robot.body` (level/tilt/stow/stop/get_tilt/get_balance_state).
+8. **Config**: `config/node7_balance/node.json` (complete), entry `stepper_driver` in `config/common/hal.json`, node7 in `config/common/topics.json`.
+9. **Orchestratore robot_core**: node7 in statemachine node_types, health node list, API models target_node, digital_twin joint body_pitch.
+10. **Test**: `tests/unit/test_balance_control.py` — 8 test verdi su Python 3.11 (venv uv); `ruff check` pulito (incluso fix F401 preesistente in `l298n.py`).
+11. **Docs**: README, ARCHITECTURE (C4 + HAL diagram con IStepperDriver), API (Body API), CONFIGURATION (Node 7), PROJECT_MEMORY, PROJECT_STATUS, ROADMAP, CHANGELOG (Unreleased), NEXT_TASK (T-026/T-027), KNOWLEDGE_BASE (§1-quater), CONTINUATION_PROMPT.
+
+### Lezioni (→ KNOWLEDGE_BASE §1-quater)
+Separare la logica di moto (rampe) dall'I/O (GPIO): il mock non deve importare gpiozero; helper nel port HAL. Nel mock, "velocity comandata" e "posizione tramite rampa" sono due semantiche distinte (errore → hang infinito). Il lag di tracking dipende da kp in step/s per grado: ~71 step/s per 2°/s. Math: 200×16×4/360 = 35,556 jsteps/°.
+
+### Debito emerso
+- "A488" ≠ componente commerciale noto (interpretato A4988): conferma in T-026.
+- PID configurato (kp=15, ki=1, kd=0.3) validato solo in simulazione; ratifica al primo banco con IMU.
+- Driver Python = prototipo banco (regola come Nodo 6); produzione = firmware ESP32 (T-026).
+- `src/hardware/__init__.py` creato: `hardware` ora package reale (import `hardware.drivers.*` invariato).
+
+### Prossimi passi consigliati
+**T-025** (primo movimento cingoli) o **T-026** (firmware Node 7); secondo priorità v0.3.0 (T-003 test domain).
+
+---
+
 ## Sessione: 2026-08-26 — Banco Nodo 6: driver motori L298N + guida cablaggio
 
 | Campo | Valore |

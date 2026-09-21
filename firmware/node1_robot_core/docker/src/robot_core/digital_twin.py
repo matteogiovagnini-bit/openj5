@@ -111,6 +111,8 @@ class DigitalTwinBridge:
             # Tracks
             "left_wheel": "openj5::tracks::left_wheel_joint",
             "right_wheel": "openj5::tracks::right_wheel_joint",
+            # Body leveling (ADR-017)
+            "body_pitch": "openj5::balance::body_pitch_joint",
         }
     
     def _load_sim_config(self) -> SimulatorConfig:

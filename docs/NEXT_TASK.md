@@ -1,7 +1,7 @@
 # NEXT_TASK — Prossime Attività per Priorità
 
 > Aggiornare a ogni sessione. Formato: ID, Titolo, Descrizione, Priorità, Dipendenze, Stima, Stato.
-> Ultimo aggiornamento: 2026-08-26 (sessione banco motori)
+> Ultimo aggiornamento: 2026-09-21 (design Node 7 Balance — ADR-017)
 
 ---
 
@@ -26,6 +26,7 @@
 | T-012 | Persistenza config runtime | `config.py`/`service.py`: persistere set() su file/DB con validazione schema | Media | — | 1g | ⬜ Da fare |
 | T-013 | Firma artefatti plugin | Implementare verifica firma crittografica e permission proxy in `src/plugins/manager.py` | Media | T-015 | 2g | ⬜ Da fare |
 | T-014 | Firmware Node 3 (Right Arm) | Controllo 6 servi con interpolazione traiettorie, gripper, collision detection base; riusare componenti `firmware/common`. Include: rendere compilabile lo skeleton Node 2 (CMakeLists valido + header/sorgenti mancanti) per sbloccare T-007 | Media | T-007 | 5g | ⬜ Da fare |
+| T-026 | Firmware Node 7 (Balance, ADR-017) | Porting ESP-IDF C++ del design testato in Python: control loop PID 100 Hz su IMU MPU6050 (Madgwick), rampe trapezoidali NEMA17/A4988 (STEP/DIR/ENABLE), primitive level/tilt/stow/stop su `openj5/v1/balance/cmd`, hard-stop + watchdog + fail-safe. La simulazione Python (`src/hardware/sim/leveling.py`) definisce il comportamento atteso 1:1 | Media | T-014 (modello CMake) | 5g | ⬜ Da fare — design pronto |
 | T-015 | Riparare contratti framework plugin (`src/plugins/`) | Completato: creato `src/plugins/base.py` con contratti unici (IPlugin, IConfigurablePlugin, ILifecyclePlugin, IPluginManager, IPluginRegistry, PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health, PluginContext unificato); rimosso l'import circolare; per-file-ignores rimossi da pyproject.toml. Bug latenti emersi e corretti di conseguenza in `src/core/domain/` (events slots/super, schemi eventi, entità dataclass, servizi mancanti KinematicsService/MotionPlanner ABC) | Media | — | 1g | ✅ Fatto 2026-08-25 |
 | T-016 | Adottare `ruff format` | Formatter non ancora applicato (36 file da riformattare): decidere baseline, applicare in commit dedicato, aggiungere gate `ruff format --check` in CI | Media | T-015 | 0.5g | ⬜ Da fare |
 | T-017 | Deploy RPi4 Node 1 | Guida completa (`docs/deployment/DEPLOYMENT.md`) + bootstrap automatico (`scripts/deploy/bootstrap_rpi4.sh`) — aggiornati ad **ADR-016**: Pi OS Lite 64-bit Bookworm + NVMe USB3, patch cgroup cmdline per limiti memoria, recovery bootloader USB via SD | Alta | — | 2g | ✅ Fatto 2026-08-25 (doc+script; esecuzione fisica sul Pi da validare) |
@@ -41,6 +42,7 @@
 | T-021 | Rinnovo automatico certificati mTLS | Script/procedura di rotazione CA e certificati nodi | Bassa | — | 1g | ⬜ Da fare |
 | T-022 | Firmware Node 4/5/6 | Mirror braccio SX; torso con BMS INA219/DS18B20; cingoli con PID+odometria+IMU | Bassa | T-014 | 8g | ⬜ Da fare |
 | T-023 | Avvio CAD parametrico FreeCAD | Spreadsheet `openj5_params` + prime parti testa secondo ADR-012 | Bassa | — | 5g | ⬜ Da fare |
+| T-027 | Meccanica giunto body pitch (ADR-017) | CAD/meccanica del livellatore: mozzo NEMA17, pulegge cinghia dentata **20T→80T** (1:4), piastra corpo oscillante ±35°, battute meccaniche + sensori. Riduzione e numeri già fissati in `config/node7_balance/node.json` | Bassa | T-023 | 4g | ⬜ Da fare |
 | T-024 | Vision/Speech plugin MVP | Camera + face detection OpenCV; TTS/STT base (ROADMAP v0.5.0) | Bassa | T-013 | 5g | ⬜ Da fare |
 
 ---

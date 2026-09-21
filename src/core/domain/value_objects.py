@@ -229,6 +229,55 @@ class PIDConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class StepperConfig:
+    """Immutable stepper motor configuration (ADR-017, driven by a STEP/DIR driver)."""
+    name: str
+    steps_per_rev: int = 200          # full steps for a complete motor revolution
+    microsteps: int = 16              # microstepping of the driver (1, 2, 4, 8, 16, 32)
+    gear_ratio: float = 1.0           # joint_rev / motor_rev (belt/pulley reduction)
+    max_speed_steps_s: float = 1600
+    max_accel_steps_s2: float = 800
+    inverted: bool = False            # reverse the direction on the joint
+
+    @property
+    def steps_per_joint_rev(self) -> int:
+        """Microsteps needed for one full joint revolution (after reduction)."""
+        return max(1, round(self.steps_per_rev * self.microsteps * self.gear_ratio))
+
+    @property
+    def steps_per_deg(self) -> float:
+        """Microsteps per joint degree."""
+        return self.steps_per_joint_rev / 360.0
+
+    def steps_to_deg(self, steps: int) -> float:
+        return steps / self.steps_per_deg
+
+    def deg_to_steps(self, deg: float) -> int:
+        return int(round(deg * self.steps_per_deg))
+
+
+@dataclass(frozen=True, slots=True)
+class BalanceConfig:
+    """Immutable configuration of the body leveling control loop (ADR-017).
+
+    The controller keeps the BODY pitch (gravity reference, from the body IMU)
+    as close as possible to ``target_pitch_deg`` regardless of track tilt.
+    """
+    target_pitch_deg: float = 0.0
+    max_tilt_deg: float = 35.0        # physical joint travel limit, plus/minus
+    deadband_deg: float = 0.5
+    control_hz: int = 100
+    imu_sample_hz: int = 200
+    reference: str = "gravity"        # "gravity" | "tracks" (track-relative)
+    enabled_on_boot: bool = False
+    pid: PIDConfig = field(default_factory=lambda: PIDConfig(
+        kp=0.0, ki=0.0, kd=0.0,
+        output_min=-1600.0, output_max=1600.0,
+        integral_min=-4000.0, integral_max=4000.0,
+    ))
+
+
+@dataclass(frozen=True, slots=True)
 class CalibrationData:
     """Immutable calibration payload for a calibrated component."""
     raw_min: int = 0
@@ -329,6 +378,7 @@ class NodeType(Enum):
     LEFT_ARM = "left_arm"
     TORSO = "torso"
     TRACKS = "tracks"
+    BALANCE = "balance"
 
 
 class NodeState(Enum):

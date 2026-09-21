@@ -16,7 +16,7 @@ OpenJ5 è una **piattaforma robotica professionale open source** ispirata a John
 
 ---
 
-## 🏗️ Architettura a 6 Nodi
+## 🏗️ Architettura a 7 Nodi
 
 | Nodo | Hardware | Responsabilità |
 |------|----------|----------------|
@@ -26,6 +26,7 @@ OpenJ5 è una **piattaforma robotica professionale open source** ispirata a John
 | **Nodo 4** | ESP32-S3 | Left Arm Controller: Identico al destro (mirrored) |
 | **Nodo 5** | ESP32 | Torso Controller: 4 Servi (Torso Rot/Pitch, Battery Door, Expansion), LED, Fan, Battery Monitor, Sensori |
 | **Nodo 6** | ESP32 | Track Controller: 2 Motori DC + Encoder (L298N), IMU, ToF, Sensori anticollisione |
+| **Nodo 7** | ESP32-S3 | Balance Controller (ADR-017): NEMA17 + A4988 (STEP/DIR) + IMU MPU6050 sul corpo — livellamento attivo del corpo vs gravità sui cingoli |
 
 ---
 
@@ -36,7 +37,7 @@ OpenJ5 è una **piattaforma robotica professionale open source** ispirata a John
 | **Hexagonal Architecture** | Core domain zero dipendenze esterne. Ports & Adapters per tutto. |
 | **Dependency Injection** | Zero `new` di servizi nel domain code. Composition root only. |
 | **Event-Driven Architecture** | Event Bus centrale. `FaceDetected` → `BehaviorEngine` → `MotionPlanner` → `HeadController`. Zero coupling diretto. |
-| **Hardware Abstraction Layer Totale** | `IServoDriver`, `IMotorDriver`, `IDistanceSensor`, `IIMU`, `ICameraDriver`, `IAudioInput`, `IDisplay`, `ILedStrip`. Zero codice applicativo tocca PCA9685, L298N, VL53L0X, ecc. |
+| **Hardware Abstraction Layer Totale** | `IServoDriver`, `IMotorDriver`, `IStepperDriver`, `IDistanceSensor`, `IIMU`, `ICameraDriver`, `IAudioInput`, `IDisplay`, `ILedStrip`. Zero codice applicativo tocca PCA9685, L298N, A4988, VL53L0X, ecc. |
 | **Communication Gateway** | Nessun modulo usa MQTT direttamente. Solo `ICommunicationGateway`. Implementazioni: MQTT, ROS 2, WebSocket, Serial, BLE, CAN, Zenoh, gRPC. |
 | **Robot SDK come Facciata Unica** | `robot.head.lookAt()`, `robot.rightArm.wave()`, `robot.tracks.moveForward()`. Mai topic MQTT o angoli servo nel codice applicativo. |
 | **Plugin Architecture** | Vision, Speech, AI, Navigation, Battery, Face Recognition, Camera, Lidar, Motion, Hardware, Communication = Plugin. Caricabili dinamicamente. |
@@ -116,7 +117,7 @@ OpenJ5/
 ### Prerequisiti
 
 - **Raspberry Pi 4 8GB** con Raspberry Pi OS Lite 64-bit (Bookworm) — ADR-016 — boot da NVMe USB3 consigliato
-- **5× ESP32-S3/ESP32** (DevKit o custom PCB)
+- **6× ESP32-S3/ESP32** (DevKit o custom PCB)
 - **Docker** + **Docker Compose**
 - **Python 3.11+** (per SDK e tooling)
 - **FreeCAD 0.21+** (per CAD parametrico)
@@ -158,6 +159,16 @@ idf.py build flash monitor
 # Cablaggio e sicurezza: docs/hardware/BENCH_TRACKS.md
 sudo apt install -y python3-gpiozero
 python3 scripts/demo/tracks_bench.py   # w/s a/d +/− x q — ruote sollevate!
+```
+
+### Design Node 7 (Balance Controller, ADR-017)
+
+```bash
+# Sviluppo in Python: HAL IStepperDriver + mock + simulatore di livellamento
+python3 -m pytest tests/unit/test_balance_control.py   # 8 test verdi
+python3 scripts/demo/balance_bench.py                  # bench A4988 (t / s / x / p / q)
+# Config: config/node7_balance/node.json · config/bench/balance.json
+# Firmware ESP-IDF (T-026) e CAD giunto (T-027): follow-up da ADR-017
 ```
 
 ### Genera STL da FreeCAD (Parametrico)

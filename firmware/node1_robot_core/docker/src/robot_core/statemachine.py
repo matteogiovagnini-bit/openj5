@@ -113,6 +113,7 @@ class StateMachineOrchestrator:
             "node4": "left_arm",
             "node5": "torso",
             "node6": "tracks",
+            "node7": "balance",
         }
         
         # Critical nodes (if these fail, robot goes to ERROR)

@@ -22,6 +22,7 @@ C4Context
         System(node4, "Node 4: Left Arm (ESP32-S3)", "6 Servos: Mirrored Right Arm")
         System(node5, "Node 5: Torso (ESP32)", "4 Servos, LED, Fan, Battery Monitor, Sensors")
         System(node6, "Node 6: Tracks (ESP32)", "2 DC Motors + Encoder, IMU, ToF, Collision Sensors")
+        System(node7, "Node 7: Balance Controller (ESP32-S3)", "NEMA17 + A4988, Body IMU MPU6050, Active Body Leveling (ADR-017)")
         System(sim, "Digital Twin (Gazebo/Isaac Sim)", "Physics Simulation, Visualization")
     }
 
@@ -37,6 +38,7 @@ C4Context
     Rel(node4, mqtt, "MQTT over TLS/mTLS")
     Rel(node5, mqtt, "MQTT over TLS/mTLS")
     Rel(node6, mqtt, "MQTT over TLS/mTLS")
+    Rel(node7, mqtt, "MQTT over TLS/mTLS")
     Rel(node1, ros2, "ROS 2 Bridge (Optional)")
     Rel(node1, sim, "Digital Twin Bridge")
     Rel(node1, cloud, "Fleet Management / OTA")
@@ -70,6 +72,7 @@ C4Container
     Container(node4, "Node 4: Left Arm", "ESP-IDF/C++", "MQTT Client")
     Container(node5, "Node 5: Torso", "ESP-IDF/C++", "MQTT Client")
     Container(node6, "Node 6: Tracks", "ESP-IDF/C++", "MQTT Client")
+    Container(node7, "Node 7: Balance", "ESP-IDF/C++", "MQTT Client")
     Container(sim, "Digital Twin", "Gazebo/Isaac Sim", "ROS 2 / gRPC")
 
     Rel(robot_core_svc, config_svc, "Gets config")
@@ -88,6 +91,7 @@ C4Container
     Rel(mqtt_broker, node4, "MQTT over TLS")
     Rel(mqtt_broker, node5, "MQTT over TLS")
     Rel(mqtt_broker, node6, "MQTT over TLS")
+    Rel(mqtt_broker, node7, "MQTT over TLS")
     Rel(ros2_bridge, sim, "ROS 2 topics")
     Rel(digital_twin, sim, "State sync")
 ```
@@ -126,6 +130,7 @@ C4Component
         Component(file_config, "File Config Adapter", "Implements IConfigProvider (JSON/YAML)")
         Component(pca9685_driver, "PCA9685 Driver Adapter", "Implements IServoDriver")
         Component(l298n_driver, "L298N Driver Adapter", "Implements IMotorDriver")
+        Component(a4988_driver, "A4988 Driver Adapter", "Implements IStepperDriver")
         Component(vl53l0x_driver, "VL53L0X Driver Adapter", "Implements IDistanceSensor")
         Component(mpu6050_driver, "MPU6050 Driver Adapter", "Implements IIMU")
         Component(plugin_loader, "Plugin Loader", "Implements IPluginManager")
@@ -137,6 +142,7 @@ C4Component
         Component(head_api, "Head API", "lookAt, home, nod, shake, blink, scan")
         Component(arm_api, "Arm API", "wave, point, grab, release, reach, home")
         Component(tracks_api, "Tracks API", "moveForward, rotate, moveTo, stop, dock")
+        Component(body_api, "Body API", "level, tilt, stow, stop")
         Component(speech_api, "Speech API", "say, listen, setVoice, setLanguage")
         Component(behavior_api, "Behavior API", "idle, followPerson, sleep, dance")
     }
@@ -144,12 +150,14 @@ C4Component
     Rel(robot_facade, head_api, "Delegates to")
     Rel(robot_facade, arm_api, "Delegates to")
     Rel(robot_facade, tracks_api, "Delegates to")
+    Rel(robot_facade, body_api, "Delegates to")
     Rel(robot_facade, speech_api, "Delegates to")
     Rel(robot_facade, behavior_api, "Delegates to")
 
     Rel(head_api, command_bus, "Sends MoveHeadCommand")
     Rel(arm_api, command_bus, "Sends MoveArmCommand")
     Rel(tracks_api, command_bus, "Sends MoveTracksCommand")
+    Rel(body_api, command_bus, "Sends BodyCommand")
     Rel(speech_api, command_bus, "Sends SayTextCommand")
     Rel(behavior_api, command_bus, "Sends BehaviorCommand")
 
@@ -474,6 +482,20 @@ classDiagram
         +setFusionAlgorithm(algo: FusionAlgo): Result
     }
 
+    class IStepperDriver {
+        <<interface>>
+        +initialize(config: StepperConfig): Result
+        +enable(): void
+        +disable(): void
+        +setPositionSteps(steps: int): Result
+        +setVelocityStepsS(steps_s: float): Result
+        +getPositionSteps(): int
+        +getVelocityStepsS(): float
+        +home(): Result
+        +brake(): Result
+        +shutdown(): void
+    }
+
     class ICameraDriver {
         <<interface>>
         +initialize(config: CameraConfig): Result
@@ -494,6 +516,11 @@ classDiagram
     IMotorDriver <|-- BTS7960Driver
     IMotorDriver <|-- ODriveDriver
     IMotorDriver <|-- GazeboMotorDriver
+
+    IStepperDriver <|-- A4988StepperDriver
+    IStepperDriver <|-- DRV8825Driver
+    IStepperDriver <|-- TMC2209Driver
+    IStepperDriver <|-- GazeboStepperDriver
 
     IDistanceSensor <|-- VL53L0XDriver
     IDistanceSensor <|-- UltrasonicDriver

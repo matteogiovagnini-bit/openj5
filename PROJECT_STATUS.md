@@ -2,14 +2,14 @@
 
 ## Repository: `PRJ_OpenJ5`
 
-> **Last updated:** 2026-08-26
-> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26**
+> **Last updated:** 2026-09-21
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21**
 
 ---
 
 ## Overview
 
-OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distributed architecture, Hexagonal Architecture, Plugin System, and full parametric CAD/KiCad electronics. The project targets professional-grade robotics development with a 10-year lifespan.
+OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distributed architecture (6 original + **Node 7 Balance Controller**, ADR-017), Hexagonal Architecture, Plugin System, and full parametric CAD/KiCad electronics. The project targets professional-grade robotics development with a 10-year lifespan.
 
 ## Status by Component
 
@@ -44,17 +44,19 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | Node 2 (Head) - CMakeLists | 🟡 Partial | 70% | Project structure, driver configs |
 | Node 2 (Head) - main.cpp | 🟡 Partial | 60% | Core loop, servo management, motion primitives |
 | Node 3-6 Firmware | 🔴 Not Started | 0% | Structure defined, no implementation |
+| Node 7 (Balance) Firmware | ⬜ Designed | 15% | ADR-017 + Python HAL/driver/sim tested; ESP-IDF pending (T-026) |
 | OTA Update Client | 🟡 Partial | 40% | Protocol defined, download logic pending |
 
 ### 🟢 Architettura Decisioni
 | ADR | Status | Notes |
 |-----|--------|-------|
 | ADR-001: Hexagonal Architecture | ✅ Accepted | Core domain zero external deps |
-| ADR-002: 6-Node Distributed Architecture | ✅ Accepted | RPi4 + 5× ESP32-S3 |
+| ADR-002: 7-Node Distributed Architecture | ✅ Accepted | RPi4 + 6× ESP32-S3/ESP32 (ADR-017 adds Node 7 Balance) |
 | ADR-003: Communication Gateway Pattern | ✅ Accepted | Single ICommunicationGateway interface |
 | ADR-004: Event-Driven Architecture | ✅ Accepted | Redis Streams central event bus |
 | ADR-005: HAL for All Drivers | ✅ Accepted | Hardware Abstraction Layer |
 | ADR-006 .. ADR-016 | ✅ Accepted | 11 ADR aggiuntivi (SDK, plugin, config, state machine, digital twin, OTA, FreeCAD, security, Python/C++, MQTT, Pi OS Lite+NVMe) — vedi docs/adr/INDEX.md |
+| ADR-017 (New) | ✅ Accepted | Node 7 Balance Controller: NEMA17 + A4988 + MPU6050, body leveled vs gravity |
 
 ### 🟡 Prototipo Nodo 6 (banco)
 | Component | Status | Notes |
@@ -64,6 +66,22 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | Config pin | ✅ Done | `config/bench/tracks.json` |
 | Guida cablaggio | ✅ Done | `docs/hardware/BENCH_TRACKS.md` |
 | Primo movimento fisico | 🔴 To do | T-025 — cablaggio pronto, demo da lanciare sul Pi |
+
+### 🟡 Prototipo Nodo 7 (design, ADR-017)
+| Component | Status | Notes |
+|-----------|--------|-------|
+| ADR-017 | ✅ Done | Node 7 Balance Controller (ESP32-S3 + NEMA17/A4988 + MPU6050) |
+| HAL `IStepperDriver` | ✅ Done | `src/hardware/hal/stepper.py` (port puro, accelerazione limitata) |
+| Driver bench A4988 | ✅ Done | `src/hardware/drivers/a4988.py` + `config/bench/balance.json` |
+| Mock stepper (CI-safe) | ✅ Done | `src/hardware/drivers/mock_stepper.py`, nessuna dipendenza GPIO |
+| Simulatore livellamento | ✅ Done | `src/hardware/sim/leveling.py` (loop PID 100 Hz, deadband, ramp track) |
+| Domain | ✅ Done | StepperConfig/BalanceConfig, BodyCommand(+Query), 3 eventi, entità Stepper |
+| Config Node 7 | ✅ Done | `config/node7_balance/node.json`, entry stepper_driver in hal.json, topics node7 |
+| SDK | ✅ Done | `BodyAPI` + `robot.body.level()/tilt()/stow()/stop()` |
+| Orchestratore | ✅ Done | node7 in statemachine/health/digital_twin/models |
+| Test | ✅ Done | `tests/unit/test_balance_control.py` — 8 test verdi (Python 3.11, ruff clean) |
+| Firmware ESP-IDF | To do | T-026 — follow-up |
+| CAD/meccanica (cinghia/pulegge) | To do | T-027 — follow-up |
 
 ### 🟡 Documentation
 | Document | Status | Notes |
@@ -88,7 +106,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | CI/CD Pipeline (GitHub Actions) | High | v0.3.0 — 🟡 base shipped (lint, doc-check, docker build); tests pending |
 | Integration Tests | High | v0.3.0 |
 | Simulation Test Suite | High | v0.3.0 |
-| Firmware Nodes 3-6 | High | v0.4.0 |
+| Firmware Nodes 3-7 | High | v0.4.0 |
 | Facial Recognition Plugin | Medium | v0.5.0 |
 | Person Following | Medium | v0.5.0 |
 | LIDAR Integration | Medium | v0.6.0 |
@@ -103,12 +121,12 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| Python files | - | 30+ |
+| Python files | - | 35+ |
 | Firmware C++ files | - | 5 |
-| Config files (JSON/YAML) | - | 10+ |
+| Config files (JSON/YAML) | - | 12+ |
 | Docker services | - | 10 |
 | Plugins framework | - | 14 interface types |
-| ADRs | - | 16 |
+| ADRs | - | 17 |
 | Documentation files | - | 25+ |
 
 ## Current Release: v0.2.0 (In Development)
@@ -122,11 +140,12 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 - Plugin architecture with dependency resolution
 - OTA firmware management with signature verification
 - Redis Streams event bus with DLQ and replay
-- State machine orchestrator for 6 nodes
+- State machine orchestrator for 7 nodes
 - Digital twin bridge (Gazebo/Isaac Sim)
 - Complete infrastructure configs (MQTT, Prometheus, Grafana, Loki, OTEL)
 - PostgreSQL schema with migrations
 - Full documentation suite
+- Node 7 Balance Controller design (ADR-017): HAL IStepperDriver, A4988 bench driver + mock, leveling-loop simulator, BodyAPI SDK, configs + topics, unit tests
 
 ### What's Next (v0.3.0)
 - CI/CD Pipeline (GitHub Actions)
@@ -145,6 +164,6 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 6-node distribu
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
 | ESP32 RAM insufficient for complex drivers | Medium | High | Use PSRAM, driver modularization |
-| MQTT latency with 6 nodes + ROS2 bridge | Low | Medium | QoS levels, topic optimization |
+| MQTT latency with 7 nodes + ROS2 bridge | Low | Medium | QoS levels, topic optimization |
 | Redis Streams memory growth | Low | Medium | Stream length limits, retention policy |
 | Python performance on RPi4 | Medium | Medium | Async everywhere, C extensions for critical paths |

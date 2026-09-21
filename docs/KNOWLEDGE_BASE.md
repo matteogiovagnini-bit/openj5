@@ -1,7 +1,7 @@
 # KNOWLEDGE_BASE — Base di Conoscenza OpenJ5
 
 > Problemi risolti, procedure, best practice, errori da evitare. Alimentare a ogni sessione.
-> Ultimo aggiornamento: 2026-08-26
+> Ultimo aggiornamento: 2026-09-21
 
 ---
 
@@ -117,6 +117,17 @@ Nota: `.env`, `secrets/*.txt|pem` e `certs/*.crt|key` sono gitignore — vanno g
 
 ### Chiusura di una sessione (obbligatoria)
 Aggiornare: `docs/SESSION_REPORT.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`, rigenerare `docs/CONTINUATION_PROMPT.md`.
+
+---
+
+## 1-quater. Problemi Risolti (design Node 7 Balance, 2026-09-21)
+
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Test di livello non convergono e poi **hang infinito** nel mock | Il mock integrava sia "velocity comandata" sia la rampa trapezoidale verso il target: nella zona di decelerazione il branch conservativo ricalcolava v con vmax=|v_prev| → non decelera mai e la posizione diverge | Separazione della semantica: `set_velocity_steps_s()` + `step(dt)` integrano la velocità comandata (il chiamante possiede il profilo); `set_position_steps()` rampa internamente con `trapezoid_velocity` fino al raggiungimento |
+| `trapezoid_velocity` non testabile nei test | Risiedeva in `a4988.py` che importa gpiozero al top-level → i test CI senza GPIO fallivano al collection | Helper **puro** spostato nell'HAL (`src/hardware/hal/stepper.py`); il driver A4988 e il mock lo importano da lì. Regola: logica di moto ≠ I/O |
+| Lag di tracking nel loop di livellamento (4,3° su rampa 2°/s) | La velocity è comandata in **steps/s** e proporzionale all'errore con kp piccolo: servono ~71 step/s per 2°/s, quindi l'errore di regime = 71/kp | Guadagni validati in simulazione (kp=120 per la rampa di test); in config node7 il PID parte da kp=15, ki=1, kd=0.3 da ritarare al primo banco con IMU |
+| ASCII/step math: 200 step/giro × 16 µstep × 4 (20T→80T) = **12800 jsteps/giro = 35,556 jsteps/°** | Convenzioni tra motore/microstepping/riduttore confuse nei commenti | Formula centralizzata nel value object `StepperConfig.steps_per_joint_rev`/`steps_per_deg` + test dedicato; stesso calcolo in `config/node7_balance/node.json` e demo bench |
 
 ---
 
