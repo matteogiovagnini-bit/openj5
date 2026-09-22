@@ -1,7 +1,7 @@
 # KNOWLEDGE_BASE — Base di Conoscenza OpenJ5
 
 > Problemi risolti, procedure, best practice, errori da evitare. Alimentare a ogni sessione.
-> Ultimo aggiornamento: 2026-09-21
+> Ultimo aggiornamento: 2026-09-22
 
 ---
 
@@ -128,6 +128,28 @@ Aggiornare: `docs/SESSION_REPORT.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.
 | `trapezoid_velocity` non testabile nei test | Risiedeva in `a4988.py` che importa gpiozero al top-level → i test CI senza GPIO fallivano al collection | Helper **puro** spostato nell'HAL (`src/hardware/hal/stepper.py`); il driver A4988 e il mock lo importano da lì. Regola: logica di moto ≠ I/O |
 | Lag di tracking nel loop di livellamento (4,3° su rampa 2°/s) | La velocity è comandata in **steps/s** e proporzionale all'errore con kp piccolo: servono ~71 step/s per 2°/s, quindi l'errore di regime = 71/kp | Guadagni validati in simulazione (kp=120 per la rampa di test); in config node7 il PID parte da kp=15, ki=1, kd=0.3 da ritarare al primo banco con IMU |
 | ASCII/step math: 200 step/giro × 16 µstep × 4 (20T→80T) = **12800 jsteps/giro = 35,556 jsteps/°** | Convenzioni tra motore/microstepping/riduttore confuse nei commenti | Formula centralizzata nel value object `StepperConfig.steps_per_joint_rev`/`steps_per_deg` + test dedicato; stesso calcolo in `config/node7_balance/node.json` e demo bench |
+
+---
+
+## 1-quinquies. Problemi Risolti (T-003 unit test core domain, 2026-09-22)
+
+Lezioni dalla creazione della prima vera suite pytest (`tests/unit/`, 149 test, 100% coverage `core.domain`). Pattern: **lo scopritore di coverage è anche scopritore di bug** — 5 difetti latenti emersi e corretti nella stessa sessione.
+
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Ogni comando concreto (`MoveHeadCommand`, `EmergencyStopCommand`…, ~50 siti SDK) risultava inistanziabile: `TypeError: Can't instantiate abstract class` | `Command.__post_init__` era dichiarato `@abstractmethod` su un dataclass non-ABC: Python lo risolve come astratto e rifiuta l'istanziazione | Hook **concreto** no-op in `Command`; i subclass che devono validare lo sovrascrivono. Lezione: `@abstractmethod` su metodi di un dataclass di supporto (non dell'interfaccia) è una trappola silenziosa — nessuno li aveva mai istanziati nei test |
+| `DomainEvent.to_dict()` restituiva solo `event_type/source_node/timestamp...` della base: il payload delle sottoclassi **spariva** (le metriche pubblicavano eventi vuoti) | Implementazione scritta a mano sui campi base, non generica | `to_dict()` itera `dataclasses.fields(self)`; `from_dict()` filtra le chiavi sconosciute e costringe i tipi dal wire (`category` stringa → Enum, `timestamp` ISO → float, `event_version` → int). Lezione: serializzazione sempre **derivata dallo schema**, mai enumerata a mano |
+| `EVENT_CATEGORIES[event_type]` dava sempre BUSINESS | Lookup costruito male (chiave costante/copiata) | Mappa da dizionario testata per ogni tipo registrato |
+| IK DLS non convergeva: oscillava a zigzag verso il target senza mai arrivarci | `dq = (J·Jᵀ + λI)⁻¹ Jᵀ e` calcolava il prodotto **sulle 3 righe cartesiane** (matrice 3×3) invece di `JᵀJ` **sui giunti** (n×n): dimensioni sbagliate = passi in direzioni errate | Gram matrix `A[i][j] = Σ_k J[k][i]·J[k][j]` (colonne·colonne). Lezione: in DLS la moltiplicazione è `JᵀJ` (n×n, uno per giunto); verificare sempre che `len(A) == len(joint_names)` |
+| Anche con la matrice giusta, near-singolarità (braccio esteso) facevano esplodere il passo → ciclo limite | DLS non limitato: un passo completo può **aumentare** l'errore | (a) cap per giunto `IK_MAX_STEP_RAD = 0.5`; (b) **backtracking line search**: accettare il passo solo se riduce l'errore, altrimenti `alpha *= 0.5` fino a `IK_MIN_STEP_ALPHA`, poi arretrare alla migliore soluzione. Test: catena DH a link zero (J=0) copre esattamente i rami "matrice singolare" e "nessun miglioramento" |
+| Il ramo **triangolare** del profilo rest-to-rest (mosse corte) terminava oltre il target | Accelerazione e decelerazione calcolate con formule diverse nel branch corto → discontinuità di posizione | Helper unico `_rest_to_rest_profile(distance, v_max, a_max)` → `(t_total, t_accel, accel_distance)` usato da entrambi i planner; il ramo trapezoidale ricalcola `accel_distance` dopo il clamp |
+| `RedisEventBus` ricostruiva eventi con `DomainEvent.from_dict` | 3 call site: usavano la classe base → il tipo concreto andava perso in pipeline/dlq | `deserialize_event` (registry) nei 3 siti |
+
+### Infrastruttura test (riuso per T-004/T-005)
+- Config in `pyproject.toml`: `[tool.pytest.ini_options]` con `testpaths=["tests"]` e `pythonpath=["src"]` (niente `sys.path` manuali), `[tool.coverage.*]` con `source=["core.domain"]` e `exclude_also` su `TYPE_CHECKING`/`NotImplementedError`.
+- Gate CI: `pytest tests/unit -q --cov=core.domain --cov-fail-under=90` (job `python-tests`).
+- Python 3.11: `typing.is_protocol` non esiste (3.12+) → helper locale; `pytest.approx` usa `abs=`, non `abs_tol=`.
+- Comandi: `python -m pytest tests/unit -q --cov=core.domain --cov-report=term-missing` (venv `.venv`, uv su `~/Library/Python/3.9/bin`).
 
 ---
 

@@ -171,6 +171,13 @@ python3 scripts/demo/balance_bench.py                  # bench A4988 (t / s / x 
 # Firmware ESP-IDF (T-026) e CAD giunto (T-027): follow-up da ADR-017
 ```
 
+### Test unitari del core domain (T-003)
+
+```bash
+# 149 test · 100% coverage su src/core/domain/ (gate CI >= 90%)
+python3 -m pytest tests/unit -q --cov=core.domain --cov-report=term-missing
+```
+
 ### Genera STL da FreeCAD (Parametrico)
 
 ```bash
@@ -397,14 +404,14 @@ openj5 ota deploy --node node2_head --firmware builds/node2_head_v1.2.3.bin --si
 | **Simulation** | Gazebo + pytest | Digital Twin parity | Ogni PR |
 
 ```bash
-# Esegui tutti i test
-./scripts/test/run_all.sh
+# Unit test (core domain, richiede pytest + pytest-cov)
+python3 -m pytest tests/unit -q --cov=core.domain --cov-report=term-missing
 
-# Solo unit
-./scripts/test/unit.sh
+# Con gate di coverage come in CI
+python3 -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90
 
 # Hardware-in-loop (richiede HW connesso)
-./scripts/test/hardware.sh --node node2_head
+./scripts/test/hardware.sh --node node2_head   # TODO T-004+: runner da creare
 ```
 
 ---

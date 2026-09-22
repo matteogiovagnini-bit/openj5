@@ -1,7 +1,7 @@
 # NEXT_TASK — Prossime Attività per Priorità
 
 > Aggiornare a ogni sessione. Formato: ID, Titolo, Descrizione, Priorità, Dipendenze, Stima, Stato.
-> Ultimo aggiornamento: 2026-09-21 (design Node 7 Balance — ADR-017)
+> Ultimo aggiornamento: 2026-09-22 (T-003 test core domain completati)
 
 ---
 
@@ -10,10 +10,10 @@
 | ID | Titolo | Descrizione | Priorità | Dipendenze | Stima | Stato |
 |----|--------|-------------|----------|------------|-------|-------|
 | T-001 | Correggere CHANGELOG "Unreleased" | La sezione Unreleased dichiarava CI/CD e test inesistenti. Sistemata: voci rimosse, lavoro reale documentato | Alta | — | 0.5h | ✅ Fatto 2026-08-25 |
-| T-002 | Pipeline GitHub Actions base | `.github/workflows/ci.yml` creato con job: python-lint (ruff), doc-check (`scripts/check_docs.sh`), docker-build robot-core. mypy e clang-tidy ancora da aggiungere quando il debito lo consente | Alta | — | 1g | 🟡 Parziale 2026-08-25 |
-| T-003 | Suite unit test core domain | pytest su `src/core/domain/` (value objects, events, commands, entities): target ≥90% coverage; usare InMemory adapters già presenti | Alta | T-002 | 2g | ⬜ Da fare |
-| T-004 | Integration test REST API + WebSocket | Test endpoint `robot_core/api/rest.py` con httpx/Testcontainers (postgres+redis); test WS bidirezionale | Alta | T-003 | 2g | ⬜ Da fare |
-| T-005 | Integration test event bus + state machine | Round-trip RedisEventBus con consumer groups/DLQ; test tabella transizioni e fault propagation orchestratore | Alta | T-003 | 1.5g | ⬜ Da fare |
+| T-002 | Pipeline GitHub Actions base | `.github/workflows/ci.yml` con job: python-lint (ruff, ora include `tests/`), python-tests (pytest + gate coverage ≥90%), doc-check (`scripts/check_docs.sh`), docker-build robot-core. mypy e clang-tidy ancora da aggiungere | Alta | — | 1g | 🟡 Parziale 2026-09-22 (test job aggiunto) |
+| T-003 | Suite unit test core domain | pytest su `src/core/domain/`: `tests/unit/conftest.py` + 6 moduli (value objects, events, commands, entities, services, repositories); **149 test, 100% coverage core.domain** (target ≥90% superato); 5 bug latenti emersi e corretti (v. SESSION_REPORT 2026-09-22) | Alta | T-002 | 2g | ✅ Fatto 2026-09-22 |
+| T-004 | Integration test REST API + WebSocket | Test endpoint `robot_core/api/rest.py` con httpx/Testcontainers (postgres+redis); test WS bidirezionale | Alta | T-003 ✅ sbloccato | 2g | ⬜ Da fare |
+| T-005 | Integration test event bus + state machine | Round-trip RedisEventBus con consumer groups/DLQ; test tabella transizioni e fault propagation orchestratore. Nota: `xadd` riceve valori non-stringa (da normalizzare nel test) | Alta | T-003 ✅ sbloccato | 1.5g | ⬜ Da fare |
 | T-006 | Simulation parity tests | Stessa suite gira contro mock driver e Gazebo headless in CI (base per GOALS G3) | Alta | T-005 | 3g | ⬜ Da fare |
 | T-007 | Build firmware ESP-IDF in CI | Job che compila `firmware/node2_head` con container ESP-IDF 5.2. **Bloccato**: skeleton non compilabile (manca `head_controller.hpp`, sorgenti elencati nel CMakeLists, `include(project.cmake)`/`project()`) — completare prima T-014 | Alta | T-014 | 1g | 🔴 Bloccato |
 
@@ -28,6 +28,7 @@
 | T-014 | Firmware Node 3 (Right Arm) | Controllo 6 servi con interpolazione traiettorie, gripper, collision detection base; riusare componenti `firmware/common`. Include: rendere compilabile lo skeleton Node 2 (CMakeLists valido + header/sorgenti mancanti) per sbloccare T-007 | Media | T-007 | 5g | ⬜ Da fare |
 | T-026 | Firmware Node 7 (Balance, ADR-017) | Porting ESP-IDF C++ del design testato in Python: control loop PID 100 Hz su IMU MPU6050 (Madgwick), rampe trapezoidali NEMA17/A4988 (STEP/DIR/ENABLE), primitive level/tilt/stow/stop su `openj5/v1/balance/cmd`, hard-stop + watchdog + fail-safe. La simulazione Python (`src/hardware/sim/leveling.py`) definisce il comportamento atteso 1:1 | Media | T-014 (modello CMake) | 5g | ⬜ Da fare — design pronto |
 | T-015 | Riparare contratti framework plugin (`src/plugins/`) | Completato: creato `src/plugins/base.py` con contratti unici (IPlugin, IConfigurablePlugin, ILifecyclePlugin, IPluginManager, IPluginRegistry, PluginMetadata/State/Type/Dependency/Permission/ConfigSchema/Health, PluginContext unificato); rimosso l'import circolare; per-file-ignores rimossi da pyproject.toml. Bug latenti emersi e corretti di conseguenza in `src/core/domain/` (events slots/super, schemi eventi, entità dataclass, servizi mancanti KinematicsService/MotionPlanner ABC) | Media | — | 1g | ✅ Fatto 2026-08-25 |
+| T-028 | Deduplicare le 3 classi `DomainEvent` | Esistono 3 copie indipendenti di `DomainEvent`: `src/core/domain/events.py` (canonica), `src/eventbus/event_bus.py`, `firmware/node1_robot_core/docker/src/robot_core/eventbus.py`. Stesso nome, serializzazione divergente (bug to_dict/from_dict scoperto da T-003 viveva in tutt'e tre le varianti). Unificare sull'host sul dominio `core.domain`; il bundle robot_core in container va allineato. Impatto: event bus, metrics, plugin | Media | T-003 ✅ | 1g | ⬜ Da fare |
 | T-016 | Adottare `ruff format` | Formatter non ancora applicato (36 file da riformattare): decidere baseline, applicare in commit dedicato, aggiungere gate `ruff format --check` in CI | Media | T-015 | 0.5g | ⬜ Da fare |
 | T-017 | Deploy RPi4 Node 1 | Guida completa (`docs/deployment/DEPLOYMENT.md`) + bootstrap automatico (`scripts/deploy/bootstrap_rpi4.sh`) — aggiornati ad **ADR-016**: Pi OS Lite 64-bit Bookworm + NVMe USB3, patch cgroup cmdline per limiti memoria, recovery bootloader USB via SD | Alta | — | 2g | ✅ Fatto 2026-08-25 (doc+script; esecuzione fisica sul Pi da validare) |
 | T-019 | Guida banco Nodo 6 (cingoli) | Collegamento L298N+2 motori DC 12V al Pi, driver HAL `L298NDriver`, demo interattiva, procedure spegnimento/riaccensione (`docs/hardware/BENCH_TRACKS.md`) | Alta | — | 1g | 🟢 Fatto 2026-08-26 |

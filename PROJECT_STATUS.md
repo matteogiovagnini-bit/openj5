@@ -2,8 +2,8 @@
 
 ## Repository: `PRJ_OpenJ5`
 
-> **Last updated:** 2026-09-21
-> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21**
+> **Last updated:** 2026-09-22
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (149 test, 100% coverage)**
 
 ---
 
@@ -16,7 +16,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 ### 🟢 Software Architecture
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
-| Domain Model (value objects, events, commands, entities, services) | ✅ Done | 95% | All value objects, events, CQRS bus, entities, repositories, kinematics service |
+| Domain Model (value objects, events, commands, entities, services) | ✅ Done | 100% | All value objects, events, CQRS bus, entities, repositories, kinematics service — **verified by `tests/unit/` (149 tests, T-003)** |
+| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 6 modules + conftest; CI gate ≥90% (`python-tests` job) |
 | Plugin Architecture | ✅ Done | 90% | PluginManager, PluginRegistry, Sandbox, dependency resolution |
 | Communication Gateway | ✅ Done | 85% | MQTT, MultiProtocol, mTLS |
 | Event Bus (Redis Streams) | ✅ Done | 85% | Streams, consumer groups, DLQ, replay |
@@ -103,9 +104,9 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 ### 🔴 Not Started (Next Releases)
 | Component | Priority | Target Release |
 |-----------|----------|----------------|
-| CI/CD Pipeline (GitHub Actions) | High | v0.3.0 — 🟡 base shipped (lint, doc-check, docker build); tests pending |
-| Integration Tests | High | v0.3.0 |
-| Simulation Test Suite | High | v0.3.0 |
+| CI/CD Pipeline (GitHub Actions) | High | v0.3.0 — 🟡 lint + unit tests (cov ≥90%) + doc-check + docker build attivi; mancano mypy/clang-tidy |
+| Integration Tests (T-004/T-005) | High | v0.3.0 — sbloccati da T-003 |
+| Simulation Test Suite (T-006) | High | v0.3.0 |
 | Firmware Nodes 3-7 | High | v0.4.0 |
 | Facial Recognition Plugin | Medium | v0.5.0 |
 | Person Following | Medium | v0.5.0 |
@@ -122,6 +123,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Metric | Target | Current |
 |--------|--------|---------|
 | Python files | - | 35+ |
+| Unit tests (core.domain) | ≥90% coverage | 149 tests, **100% coverage** |
 | Firmware C++ files | - | 5 |
 | Config files (JSON/YAML) | - | 12+ |
 | Docker services | - | 10 |
@@ -145,11 +147,11 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 - Complete infrastructure configs (MQTT, Prometheus, Grafana, Loki, OTEL)
 - PostgreSQL schema with migrations
 - Full documentation suite
+- Unit test suite for the core domain (T-003): 149 tests, 100% line coverage, CI coverage gate ≥90%
 - Node 7 Balance Controller design (ADR-017): HAL IStepperDriver, A4988 bench driver + mock, leveling-loop simulator, BodyAPI SDK, configs + topics, unit tests
 
 ### What's Next (v0.3.0)
-- CI/CD Pipeline (GitHub Actions)
-- Integration tests
+- Integration tests (REST/WS, event bus + state machine)
 - Simulation parity tests
 - Hardware-in-loop tests
 

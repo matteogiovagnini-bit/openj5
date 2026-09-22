@@ -4,6 +4,54 @@
 
 ---
 
+## Sessione: 2026-09-22 — T-003 Suite unit test core domain (100% coverage)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-09-22 |
+| Versione progetto | v0.2.0+ (Robot Core operativo su RPi4); v0.3.0 in corso |
+| Obiettivo | T-003: suite pytest su `src/core/domain/` con target ≥90% coverage; obiettivo secondario dichiarato: correggere i bug latenti scoperti dai test nella stessa sessione |
+
+### Decisioni
+1. **Copertura target raggiunta al 100%** su `src/core/domain/` (1383 stmt, 0 miss) — target formale ≥90%.
+2. Bug latenti emersi dai test → **corretti immediatamente** nello stesso commit di sessione (stesso pattern della sessione T-015 2026-08-25), documentati in CHANGELOG e KNOWLEDGE_BASE §1-quinquies.
+3. Le 3 copie duplicate di `DomainEvent` **non** sono state refactorate (fuori scope di T-003): creato debito **T-028**.
+4. Gate coverage fissato a ≥90% in CI (sotto il 100% realizzato: margine per refactoring futuri senza rompere la pipeline).
+
+### Attività completate
+1. **Ambiente**: uv + `.venv` (CPython 3.11.16), pytest 9.1.1, pytest-cov 7.1.0, ruff 0.16.8.
+2. **Suite test creata**: `tests/unit/conftest.py` (fixture robot/make_node) + 6 moduli — `test_domain_value_objects.py`, `test_domain_events.py`, `test_domain_commands.py`, `test_domain_entities.py`, `test_domain_services.py`, `test_domain_repositories.py`. **149 test verdi, 100% coverage `core.domain`**.
+3. **Fix sorgente scoperti dai test**:
+   - `commands.py`: `Command.__post_init__` era `@abstractmethod` → 9 comandi inistanziabili (~50 siti SDK, incl. `emergency_stop()`); ora hook concreto no-op.
+   - `events.py`: `EVENT_CATEGORIES` restituiva sempre BUSINESS; `to_dict()` serializzava solo i campi base (payload sottoclassi persi); `from_dict()` ora filtra chiavi sconosciute e costringe i tipi dal wire.
+   - `entities.py`: `Robot` completato con `state: Optional[NodeState]`, `battery`, `errors`, `get_errors()`.
+   - `services.py`: rimosso blocco morto `robot.tracks_odometry`; **bug matriciale IK DLS** (`J·Jᵀ` sulle righe → `JᵀJ` sui giunti, con test di convergenza <1 mm); backtracking line search (`IK_MIN_STEP_ALPHA = 1/16`) + cap `IK_MAX_STEP_RAD = 0.5`; **overshoot profilo triangolare** unificato in `_rest_to_rest_profile()`.
+   - `redis_event_bus.py`: 3 siti da `DomainEvent.from_dict` a `deserialize_event`.
+4. **Config**: `pyproject.toml` — `[tool.pytest.ini_options]` (testpaths, pythonpath) e `[tool.coverage.*]` (source core.domain, show_missing, exclude_also).
+5. **CI**: nuovo job `python-tests` (pytest `--cov=core.domain --cov-fail-under=90`) in `.github/workflows/ci.yml`; job lint esteso a `tests/`. `ruff check` e `./scripts/check_docs.sh` verdi.
+6. **Docs**: CHANGELOG (Fixed/Added), PROJECT_STATUS, PROJECT_MEMORY (§8/§10), NEXT_TASK (T-003 ✅, T-002 aggiornato, T-004/T-005 sbloccati, nuovo **T-028**), KNOWLEDGE_BASE (§1-quinquies), SESSION_REPORT (questo), CONTINUATION_PROMPT rigenerato.
+
+### Lezioni (→ KNOWLEDGE_BASE §1-quinquies)
+`@abstractmethod` su `__post_init__` di un dataclass non-ABC rende i subclass inistanziabili in silenzio fino al primo uso. Serializzazione eventi sempre derivata da `dataclasses.fields()`, mai enumerata a mano. In DLS la matrice è `JᵀJ` (n×n sui giunti), non `J·Jᵀ` (3×3 sulle righe): dimensioni sbagliate = zigzag. Line search con cap per giunto difende dalle singolarità. Il ramo corto del profilo rest-to-rest deve condividere l'helper del ramo lungo. Il coverage è uno scopritore di bug.
+
+### Debito emerso
+- **T-028**: 3 copie di `DomainEvent` (`core/domain/events.py`, `eventbus/event_bus.py`, `firmware/.../robot_core/eventbus.py`) con serializzazione divergente.
+- Redis `xadd` con valori non-stringa (attenzione in T-005).
+- 3 righe IK coperte solo da casi degenere (DH a link zero): tornarci con test di convergenza in T-006.
+- `PluginMetadata` non re-exportata da `core.domain` (scelta T-015, intenzionale).
+
+### Prossimi passi consigliati
+**T-004** (integration test REST/WS) o **T-005** (event bus + state machine) — entrambi sbloccati da T-003; oppure **T-025** (primo movimento fisico, banco).
+
+### Comandi di verifica
+```bash
+.venv/bin/python -m pytest tests/unit -q --cov=core.domain --cov-report=term-missing
+.venv/bin/ruff check src/ firmware/node1_robot_core/docker/src/ tests/
+./scripts/check_docs.sh
+```
+
+---
+
 ## Sessione: 2026-09-21 — Design Node 7 Balance Controller (ADR-017)
 
 | Campo | Valore |

@@ -1,7 +1,7 @@
 # PROJECT_MEMORY — Memoria Permanente OpenJ5
 
 > **Questo documento è la memoria permanente del progetto. Mai perderlo.**
-> Aggiornare a ogni cambiamento significativo. Ultimo aggiornamento: 2026-09-21
+> Aggiornare a ogni cambiamento significativo. Ultimo aggiornamento: 2026-09-22
 
 ---
 
@@ -137,7 +137,8 @@ Dettagli completi: `governance/ARCHITECTURAL_PRINCIPLES.md`, `governance/CODING_
 - Sessione 2026-08-26: **PRIMO BOOT REALE del Robot Core su RPi4 8GB** (T-018): Pi OS Lite Trixie su NVMe, boot USB nativo, stack Docker completo healthy, API HTTPS live con {"status":"ok"}, limiti memoria cgroup v2 attivi. 10 fix reali documentati in KNOWLEDGE_BASE §1-bis (ACL anonimo mosquitto, VOLUME+containerd image store, PYTHONPATH, EventBus alias, DomainEvent metriche...). Robot Core = **OPERATIVO**.
 - Sessione 2026-08-26 (banco Nodo 6): **primo driver HAL reale** `L298NDriver` (`src/hardware/drivers/l298n.py`, velocià normalizzata -1..+1 con rampe), demo interattiva `scripts/demo/tracks_bench.py` (w/s/a/d/x/q + velocità), config GPIO in `config/bench/tracks.json` (zero numeri magici), guida cablaggio completa `docs/hardware/BENCH_TRACKS.md` (L298N+2 motori DC 12V 300rpm+LiPo 3S), procedure spegnimento/riaccensione in DEPLOYMENT §11. **Il primo movimento fisico dei motori è ancora da eseguire** (cablaggio pronto, demo da lanciare).
 - Sessione 2026-09-21 (design Nodo 7 Balance): **ADR-017** — nuovo Node 7 (ESP32-S3 dedicato) con NEMA17+A4988+MPU6050 per il livellamento attivo del corpo vs gravità sui cingoli (±35°, riduzione 1:4 cinghia/pulegge, PID 100 Hz sul nodo, comandi logici). Software Python consegnato e testato: `IStepperDriver` (HAL), `A4988StepperDriver` bench + `MockStepperDriver`, simulatore `src/hardware/sim/leveling.py`, config (`node7_balance/node.json`, `bench/balance.json`, `hal.json`, `topics.json` node7), `BodyAPI` in SDK (`robot.body.level/tilt/stow/stop`), nodo 7 nell'orchestratore robot_core; 8 unit test verdi (ruff clean). Firmware ESP-IDF Node 7 (T-026) e CAD/meccanica (T-027): follow-up design Lifecycle B/C.
-- v0.3.0: testing — **in corso** (T-003…T-006 da fare).
+- Sessione 2026-09-22 (**T-003 — suite unit test core domain**): `tests/unit/` creato (conftest + 6 moduli: value objects, events, commands, entities, services, repositories) con **149 test e 100% coverage su `src/core/domain/`** (gate CI ≥90%); config pytest/coverage in `pyproject.toml`; job `python-tests` aggiunto a CI (ruff ora linta anche `tests/`). I test hanno scoprerto e fatto emergere **5 bug latenti tutti corretti nella stessa sessione**: (1) `Command.__post_init__` abstract → 9 comandi istanziabili (incl. `emergency_stop()`); (2) `to_dict()` perdeva i campi delle sottoclassi + `from_dict()` fragile; (3) `EVENT_CATEGORIES` sempre BUSINESS; (4) IK DLS con `J·Jᵀ` sbagliato (righe) invece di `JᵀJ` (giunti) → zigzag senza convergenza, + line search backtracking e cap `IK_MAX_STEP_RAD`; (5) profilo triangolare overshoot → helper `_rest_to_rest_profile()`. Debito emerso: **3 copie duplicate di `DomainEvent`** (dominio, eventbus host, bundle robot_core) → nuovo task **T-028**.
+- v0.3.0: testing — **in corso** (T-003 ✅; T-004…T-006 da fare).
 - Firmware nodi 3–7, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 
 Stato dettagliato: `PROJECT_STATUS.md`. Prossime attività: `docs/NEXT_TASK.md`.
@@ -154,8 +155,9 @@ Roadmap completa in `ROADMAP.md`; idee in `future/future.md`: riconoscimento fac
 
 | Area | Debito/Rischio | Mitigazione prevista |
 |------|----------------|---------------------|
-| Testing | Nessun test nel repo; CHANGELOG corretto il 2026-08-25 (non dichiara più lavoro inesistente) | v0.3.0: creare suite reale (T-003…T-006) |
-| CI | Pipeline base attiva (ruff, doc-check, docker build); mancano mypy, clang-tidy, job firmware | T-002 completamento + T-007 (bloccato da skeleton firmware) |
+| Testing | ✅ T-003 fatto 2026-09-22: 149 unit test, 100% coverage `core.domain`; restano integration/simulation | v0.3.0: T-004 (REST/WS), T-005 (event bus), T-006 (simulation parity) |
+| CI | Pipeline attiva (ruff, pytest+coverage ≥90%, doc-check, docker build); mancano mypy, clang-tidy, job firmware | T-002 completamento + T-007 (bloccato da skeleton firmware) |
+| Duplicazione `DomainEvent` | 3 copie indipendenti: `src/core/domain/events.py`, `src/eventbus/event_bus.py`, `firmware/.../robot_core/eventbus.py` — serializzazione divergente (il bug to_dict/from_dict era in tutte e 3) | T-028: unificare sul dominio `core.domain` |
 | Plugin framework `src/plugins/` | ✅ Riparato 2026-08-25: contratti unici in `base.py`, package importabile, lifecycle verificato end-to-end | — |
 | Formatter | `ruff format` non adottato (36 file da riformattare) | T-016 |
 | SDK | Buses reali non cablati (`TODO` in `src/sdk/robot.py`) | Integrazione con command bus esistente |

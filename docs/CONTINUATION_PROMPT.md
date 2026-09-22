@@ -1,7 +1,7 @@
 # CONTINUATION_PROMPT — Prompt di Continuità OpenJ5
 
 > Rigenerare a fine di OGNI sessione. Questo prompt permette a qualsiasi IA (OpenCode, ChatGPT, Claude, Gemini, Codex…) di riprendere il progetto immediatamente senza perdere contesto.
-> Generato: 2026-09-21 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 pianificata · prototipo Nodo 6 avviato · **design Node 7 Balance (ADR-017) consegnato**
+> Generato: 2026-09-22 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core domain COMPLETATI (149 test, 100% coverage)** · prototipo Nodo 6 · design Node 7 Balance (ADR-017)
 
 ---
 
@@ -47,7 +47,12 @@ STATO ATTUALE (verifica con git log):
   Grafana __FILE, Trixie (vedi KNOWLEDGE_BASE §1-bis).
 - Nodi 2–6 imprevedibili da heartbeat: atteso, il firmware ESP32 non esiste ancora.
 - Nodi 3–6 firmware, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
-- v0.3.0 in corso: CI base attiva (ruff, doc-check, docker build); T-003 test da fare.
+- v0.3.0 in corso: CI attiva (ruff, **pytest+coverage ≥90%**, doc-check, docker
+  build). **T-003 FATTO 2026-09-22**: `tests/unit/` = 149 test, 100% coverage
+  `src/core/domain/`; 5 bug latenti corretti (comandi inistanziabili, serializzazione
+  DomainEvent, EVENT_CATEGORIES, matrice IK JᵀJ, profilo triangolare) — dettagli in
+  SESSION_REPORT 2026-09-22 e KNOWLEDGE_BASE §1-quinquies. **Nota: working tree
+  contiene modifiche NON committate** (T-003) — commitare solo su richiesta.
 - PROTOTIPO NODO 6 avviato: primo driver HAL reale `src/hardware/drivers/l298n.py`
   + demo `scripts/demo/tracks_bench.py` + `config/bench/tracks.json` + guida
   cablaggio `docs/hardware/BENCH_TRACKS.md`. Il primo movimento fisico dei motori
@@ -65,9 +70,13 @@ STATO ATTUALE (verifica con git log):
   ESP-IDF (T-026) e CAD (T-027): follow-up.
 
 DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
-- Nessun test automatizzato → T-003…T-006 per v0.3.0.
+- Unit test core domain OK (T-003); mancano integration test T-004 (REST/WS),
+  T-005 (event bus + state machine), T-006 (simulation parity) per chiudere v0.3.0.
+- **T-028**: 3 copie duplicate di `DomainEvent` (core/domain, eventbus host,
+  bundle robot_core) con serializzazione divergente.
 - Formatter ruff non adottato (T-016); buses SDK non cablati (T-010);
   auto-reconnect MqttGateway (T-011); persistenza config runtime (T-012).
+- CI senza mypy/clang-tidy/job firmware (T-002 residuo; T-007 bloccato da T-014).
 - Firmware skeleton Node 2 non compilabile (T-007 bloccato da T-014).
 - Grafana ancora con password admin default.
 - Driver L298N Python = prototipo banco, NON produzione (produzione = ESP32 C++).
@@ -78,12 +87,14 @@ DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
   andranno ratificati/ritarati al primo banco reale con l'IMU.
 
 PROSSIME ATTIVITÀ (in ordine, dettagli in docs/NEXT_TASK.md):
-1. T-025: primo movimento fisico dei motori (demo sul Pi, ruote sollevate).
-2. Verifica containers secondari ros2-bridge/gazebo al prossimo `up -d`.
-3. Cambio password admin Grafana.
-4. T-003 unit test core domain → completare v0.3.0.
-5. poi debiti codice e firmware Node 3 compilabile (T-014).
-6. T-026 firmware Node 7 + T-027 CAD giunto body pitch (design guidato da ADR-017).
+1. Commitare T-003 **solo se richiesto** (working tree attualmente sporco).
+2. T-004 integration test REST/WS o T-005 event bus + state machine
+   (entrambi sbloccati da T-003) → chiudere v0.3.0 con T-006.
+3. T-025: primo movimento fisico dei motori (demo sul Pi, ruote sollevate).
+4. T-028: deduplicare le 3 `DomainEvent`.
+5. Verifica containers secondari ros2-bridge/gazebo + cambio password Grafana.
+6. T-014 firmware Node 3 compilabile (sblocca T-007) → T-026 firmware Node 7
+   + T-027 CAD giunto body pitch (guidati da ADR-017).
 
 REGOLE OPERATIVE DI OGNI SESSIONE:
 - Workflow: Analisi → impatto architetturale → doc → ADR se serve →
@@ -97,7 +108,8 @@ REGOLE OPERATIVE DI OGNI SESSIONE:
 - Non commitare mai senza richiesta esplicita dell'utente.
 
 INIZIA da: verificare `git log` che lo stato collimi con queste docs, poi proporre
-l'esecuzione di T-025 (primo movimento motori) o T-003 secondo priorità.
+l'esecuzione di T-004/T-005 (integration test, sbloccati da T-003) o T-025
+(primo movimento motori) secondo priorità.
 ```
 
 ---

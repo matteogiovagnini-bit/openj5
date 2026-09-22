@@ -10,8 +10,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned (see ROADMAP.md v0.3.0)
-- CI/CD pipeline, integration tests, simulation parity tests, hardware-in-loop tests
+- Integration tests, simulation parity tests, hardware-in-loop tests
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
+
+### Fixed
+- `Command.__post_init__` was declared `@abstractmethod` on a non-ABC dataclass:
+  all 9 concrete commands (`MoveHeadCommand`, `EmergencyStopCommand`, ...) were
+  uninstantiable (`TypeError`), breaking ~50 SDK call sites including
+  `robot.emergency_stop()`; now a concrete no-op hook
+- `DomainEvent.to_dict()` only serialized base-class fields (subclass payloads
+  were silently dropped) and `from_dict()` crashed on unknown keys and on wire
+  strings for `category`/`event_version`/`timestamp`; serializer now emits all
+  dataclass fields and deserializer filters/coerces safely
+- `EVENT_CATEGORIES` lookup returned the BUSINESS category for every event type
+- `KinematicsService.inverse_kinematics` damped-least-squares computed
+  `J·Jᵀ` over the 3 Cartesian rows instead of `JᵀJ` over the joints: wrong
+  dimensionality made IK zigzag without converging; fixed to the joint-space
+  Gram matrix, plus a backtracking line search (`IK_MIN_STEP_ALPHA`) and a
+  per-joint step cap (`IK_MAX_STEP_RAD`) so near-singular postures cannot
+  overshoot into a limit cycle
+- Triangular (short-move) branch of the rest-to-rest velocity profile
+  overshot its target: unified accel/decel math into
+  `_rest_to_rest_profile()` used by both joint and cartesian planners
+- `RedisEventBus` rebuilt events with `DomainEvent.from_dict` (base class,
+  subclass type lost): 3 sites now use `deserialize_event`
+- `Robot` aggregate lacked `state`/`battery` accessors used by
+  `SafetyPolicyService`: added `state`, `battery`, `errors`, `get_errors()`
+
+### Added
+- **T-003 unit test suite for `src/core/domain/`**: `tests/unit/conftest.py`
+  + 6 test modules (value objects, events, commands, entities, services,
+  repositories) — 149 tests, **100% line coverage of `core.domain`**
+  (gate: `--cov-fail-under=90`)
+- `pyproject.toml`: `[tool.pytest.ini_options]` (testpaths, `pythonpath=["src"]`)
+  and coverage config (`source = ["core.domain"]`, show_missing)
+- CI job `python-tests` (pytest + coverage gate ≥90%) in
+  `.github/workflows/ci.yml`; ruff now also lints `tests/`
 
 ### Changed
 - **ADR-016**: Node 1 reference OS switched from Ubuntu Server to Raspberry Pi OS
@@ -19,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   variant excluded); README, ARCHITECTURE diagrams and GOALS updated accordingly
 
 ### Added
+- `pyproject.toml` with ruff configuration (E4/E7/E9/F rules)
 - **First real HAL driver**: `src/hardware/drivers/l298n.py` — `L298NDriver` +
   `L298NMotor` implementing the documented `IMotorDriver` shape
   (initialize/set_velocity/get_velocity/brake/shutdown) for the Nodo 6 tracks
