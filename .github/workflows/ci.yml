@@ -17,8 +17,21 @@ jobs:
           python-version: "3.11"
       - name: Install ruff
         run: pip install ruff==0.16.4
-      - name: Lint platform and robot core
-        run: ruff check src/ firmware/node1_robot_core/docker/src/
+      - name: Lint platform, robot core and tests
+        run: ruff check src/ firmware/node1_robot_core/docker/src/ tests/
+
+  python-tests:
+    name: Python Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        run: pip install pytest==9.1.1 pytest-cov==7.1.0
+      - name: Run unit tests with coverage gate
+        run: pytest tests/unit -q --cov=core.domain --cov-report=term-missing --cov-fail-under=90
 
   doc-check:
     name: Documentation Check
