@@ -57,8 +57,13 @@ class Command(ABC, Generic[TResult]):
     causation_id: str = ""
     metadata: dict = field(default_factory=dict)
 
-    @abstractmethod
     def __post_init__(self):
+        """Validation hook invoked by the dataclass __init__.
+
+        Concrete commands override this to enforce invariants. It must NOT be
+        abstract: commands without validation would otherwise be uninstantiable
+        (ABC keeps them abstract through inheritance).
+        """
         pass
 
 

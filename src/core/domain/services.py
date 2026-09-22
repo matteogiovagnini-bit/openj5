@@ -48,6 +48,8 @@ class KinematicsService(IKinematicsService):
     IK_TOLERANCE_M = 0.001
     IK_DAMPING = 0.05
     IK_STEP_SCALE = 1.0
+    IK_MAX_STEP_RAD = 0.5        # cap per-joint step: near-singular J explodes
+    IK_MIN_STEP_ALPHA = 1.0 / 16  # backtracking floor: below this, give up
 
     def _dh_transform(self, theta_deg: float, d: float, a: float, alpha_deg: float) -> list[list[float]]:
         ct = math.cos(math.radians(theta_deg))
@@ -135,20 +137,50 @@ class KinematicsService(IKinematicsService):
                                  (bpos.z - pos.z) / eps))
 
             # Damped least squares: dq = (J^T J + λI)^-1 J^T e
+            # J^T J is the Gram matrix over JOINTS: entry (i, j) is the dot
+            # product of Jacobian columns i and j across all 3 coordinates.
             A = [[
-                sum(jac_cols[i][r] * jac_cols[i][c] for i in range(n))
-                + (self.IK_DAMPING if r == c else 0.0)
-                for c in range(n)
-            ] for r in range(n)]
+                sum(jac_cols[i][k] * jac_cols[j][k] for k in range(3))
+                + (self.IK_DAMPING if i == j else 0.0)
+                for j in range(n)
+            ] for i in range(n)]
             inv = self._mat_inv(A)
             if inv is None:
                 break
 
             err = [ex, ey, ez]
+            err_norm = math.sqrt(ex**2 + ey**2 + ez**2)
             jte = [sum(jac_cols[j][k] * err[k] for k in range(3)) for j in range(n)]
-            for i, name in enumerate(joint_names):
-                dq = sum(inv[i][j] * jte[j] for j in range(n))
-                current[name] = max(-math.pi, min(math.pi, current[name] + self.IK_STEP_SCALE * dq))
+            dq = {
+                name: max(
+                    -self.IK_MAX_STEP_RAD,
+                    min(self.IK_MAX_STEP_RAD, sum(inv[i][j] * jte[j] for j in range(n))),
+                )
+                for i, name in enumerate(joint_names)
+            }
+
+            # Backtracking line search: undamped DLS steps can overshoot the
+            # target and enter a limit cycle (never converging). Accept a step
+            # only if it strictly reduces the position error.
+            alpha = self.IK_STEP_SCALE
+            improved = False
+            while alpha >= self.IK_MIN_STEP_ALPHA:
+                trial = {
+                    name: max(-math.pi, min(math.pi, current[name] + alpha * dq[name]))
+                    for name in joint_names
+                }
+                tpos = fk_position(trial)
+                terr = math.sqrt(
+                    (target.x - tpos.x) ** 2 + (target.y - tpos.y) ** 2
+                    + (target.z - tpos.z) ** 2
+                )
+                if terr < err_norm:
+                    current = trial
+                    improved = True
+                    break
+                alpha *= 0.5
+            if not improved:
+                break  # stuck at a local optimum: return the best solution
 
         return JointAngles({
             name: Angle.from_degrees(math.degrees(v)) for name, v in current.items()
@@ -327,10 +359,9 @@ class SafetyPolicyService(ISafetyPolicy):
                     if "critical" in err.lower() or "fault" in err.lower():
                         reasons.append(f"Node {node_id} critical error: {err}")
 
-        # Collision detection (simplified)
-        if robot.tracks_odometry:
-            # Check ToF sensors from track node
-            pass
+        # Collision detection (simplified): ToF readings from the tracks node
+        # are not part of the aggregate yet; obstacle checks happen in the
+        # application layer once sensor telemetry is wired in.
 
         return reasons
 
@@ -368,6 +399,25 @@ class SafetyPolicyService(ISafetyPolicy):
 
 
 # === MOTION PLANNER (simplified) ===
+
+def _rest_to_rest_profile(distance: float, v_max: float, a_max: float) -> tuple[float, float, float]:
+    """Compute a rest-to-rest velocity profile.
+
+    Returns ``(t_total, t_accel, accel_distance)`` for either a triangular
+    (short move) or trapezoidal profile. Using a single source of truth for
+    the acceleration phase keeps the position function continuous and free of
+    overshoot in both branches.
+    """
+    t_accel = v_max / a_max
+    accel_distance = 0.5 * a_max * t_accel**2
+    if 2.0 * accel_distance >= distance:
+        # Triangular: accel and decel meet, never reaching v_max.
+        t_total = 2.0 * math.sqrt(distance / a_max)
+        t_accel = t_total / 2.0
+    else:
+        t_total = 2.0 * t_accel + (distance - 2.0 * accel_distance) / v_max
+    accel_distance = 0.5 * a_max * t_accel**2
+    return t_total, t_accel, accel_distance
 
 class IMotionPlanner(ABC):
     """Motion planning interface - trajectory generation."""
@@ -430,21 +480,14 @@ class MotionPlannerService(IMotionPlanner):
             v_max = max_velocity.get(name, 60.0)
             a_max = max_acceleration.get(name, 120.0)
 
-            # Trapezoidal profile time
-            t_acc = v_max / a_max
-            d_acc = 0.5 * a_max * t_acc**2
-
-            if 2 * d_acc >= delta:
-                # Triangular profile
-                t_total = 2 * math.sqrt(delta / a_max)
-            else:
-                # Trapezoidal profile
-                d_cruise = delta - 2 * d_acc
-                t_cruise = d_cruise / v_max
-                t_total = 2 * t_acc + t_cruise
+            t_total, t_accel, accel_distance = _rest_to_rest_profile(
+                delta, v_max, a_max,
+            )
 
             max_time = max(max_time, t_total)
-            joint_profiles[name] = (start_deg, goal_deg, v_max, a_max, t_total)
+            joint_profiles[name] = (
+                start_deg, goal_deg, v_max, a_max, t_total, t_accel, accel_distance,
+            )
 
         # Generate trajectory points
         num_steps = max(1, int(max_time * frequency))
@@ -459,26 +502,21 @@ class MotionPlannerService(IMotionPlanner):
                     angles[name] = start.angles[name]
                     continue
 
-                start_deg, goal_deg, v_max, a_max, t_total = profile
+                start_deg, goal_deg, v_max, a_max, t_total, t_accel, accel_distance = profile
                 delta = goal_deg - start_deg
                 direction = 1 if delta > 0 else -1
                 delta = abs(delta)
 
-                t_acc = v_max / a_max
-                d_acc = 0.5 * a_max * t_acc**2
-
-                if t <= t_acc:
+                if t <= t_accel:
                     # Acceleration phase
                     pos = 0.5 * a_max * t**2
-                elif t <= t_total - t_acc:
+                elif t <= t_total - t_accel:
                     # Cruise phase
-                    pos = d_acc + v_max * (t - t_acc)
-                elif t <= t_total:
-                    # Deceleration phase
-                    t_dec = t_total - t
-                    pos = delta - 0.5 * a_max * t_dec**2
+                    pos = accel_distance + v_max * (t - t_accel)
                 else:
-                    pos = delta
+                    # Deceleration phase (t clamped at/after t_total)
+                    t_dec = max(t_total - t, 0.0)
+                    pos = delta - 0.5 * a_max * t_dec**2
 
                 angles[name] = Angle.from_degrees(start_deg + direction * pos)
 
@@ -502,15 +540,9 @@ class MotionPlannerService(IMotionPlanner):
         if distance < 0.001:
             return [goal]
 
-        t_acc = max_velocity / max_acceleration
-        d_acc = 0.5 * max_acceleration * t_acc**2
-
-        if 2 * d_acc >= distance:
-            t_total = 2 * math.sqrt(distance / max_acceleration)
-        else:
-            d_cruise = distance - 2 * d_acc
-            t_cruise = d_cruise / max_velocity
-            t_total = 2 * t_acc + t_cruise
+        t_total, t_accel, accel_distance = _rest_to_rest_profile(
+            distance, max_velocity, max_acceleration,
+        )
 
         num_steps = max(1, int(t_total * frequency))
         dt = t_total / num_steps
@@ -518,15 +550,13 @@ class MotionPlannerService(IMotionPlanner):
         trajectory = []
         for step in range(num_steps + 1):
             t = step * dt
-            if t <= t_acc:
+            if t <= t_accel:
                 s = 0.5 * max_acceleration * t**2
-            elif t <= t_total - t_acc:
-                s = d_acc + max_velocity * (t - t_acc)
-            elif t <= t_total:
-                t_dec = t_total - t
-                s = distance - 0.5 * max_acceleration * t_dec**2
+            elif t <= t_total - t_accel:
+                s = accel_distance + max_velocity * (t - t_accel)
             else:
-                s = distance
+                t_dec = max(t_total - t, 0.0)
+                s = distance - 0.5 * max_acceleration * t_dec**2
 
             ratio = s / distance
             pos = Position3D(

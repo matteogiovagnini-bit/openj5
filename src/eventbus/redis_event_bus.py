@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 
 from ..core.domain import Result, DomainEvent, EventCategory
+from ..core.domain.events import deserialize_event
 
 
 class IEventBus(ABC):
@@ -221,9 +222,9 @@ class RedisEventBus(IEventBus):
 
     async def _process_message(self, stream: str, msg_id: str, fields: dict):
         """Process single message."""
-        # Reconstruct event
+        # Reconstruct the typed event (subclass fields are preserved)
         payload = json.loads(fields.get("payload", "{}"))
-        event = DomainEvent.from_dict({**fields, "payload": payload})
+        event = deserialize_event({**fields, "payload": payload})
 
         # Find matching subscriptions
         for sub in self._subscriptions.values():
@@ -303,7 +304,7 @@ class RedisEventBus(IEventBus):
 
                 for msg_id, fields in entries:
                     payload = json.loads(fields.get("payload", "{}"))
-                    event = DomainEvent.from_dict({**fields, "payload": payload})
+                    event = deserialize_event({**fields, "payload": payload})
                     if not event_types or event.event_type in event_types:
                         yield event
             except Exception:
@@ -321,7 +322,7 @@ class RedisEventBus(IEventBus):
                 if entries:
                     msg_id, fields = entries[0]
                     payload = json.loads(fields.get("payload", "{}"))
-                    return Result.ok(DomainEvent.from_dict({**fields, "payload": payload}))
+                    return Result.ok(deserialize_event({**fields, "payload": payload}))
             except Exception:
                 continue
 

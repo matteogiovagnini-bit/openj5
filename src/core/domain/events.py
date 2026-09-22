@@ -4,7 +4,7 @@ OpenJ5 Core Domain - Domain Events
 Immutable events for Event-Driven Architecture.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from enum import Enum
 from datetime import datetime
 import uuid
@@ -38,21 +38,33 @@ class DomainEvent:
             object.__setattr__(self, 'correlation_id', self.event_id)
 
     def to_dict(self) -> dict:
-        return {
-            "event_id": self.event_id,
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "category": self.category.value,
-            "timestamp": self.timestamp,
-            "source_node": self.source_node,
-            "correlation_id": self.correlation_id,
-            "causation_id": self.causation_id,
-            "payload": self.payload
-        }
+        """Serialize the whole event, including subclass-specific fields.
+
+        Only serializing the base fields would silently drop payload data
+        (target_x, voltage_v, ...) on every publish to the event bus.
+        """
+        data = {f.name: getattr(self, f.name) for f in fields(self)}
+        if isinstance(data.get("category"), EventCategory):
+            data["category"] = data["category"].value
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> DomainEvent:
-        return cls(**data)
+        """Rebuild an event of this class, ignoring unknown keys.
+
+        Unknown keys are dropped so the base class can safely read a dict
+        produced by a subclass (use ``deserialize_event`` for typed
+        reconstruction). Scalar wire values may arrive as strings from Redis.
+        """
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("category"), str):
+            kwargs["category"] = EventCategory(kwargs["category"])
+        if isinstance(kwargs.get("event_version"), str):
+            kwargs["event_version"] = int(kwargs["event_version"])
+        if isinstance(kwargs.get("timestamp"), str):
+            kwargs["timestamp"] = float(kwargs["timestamp"])
+        return cls(**kwargs)
 
 
 # === COMMAND EVENTS ===
@@ -475,12 +487,14 @@ EVENT_CLASSES = {
     "OTADeployedEvent": OTADeployedEvent,
 }
 
-EVENT_CATEGORIES = {name: cls.category for name, cls in EVENT_CLASSES.items()}
-
 def _event_category(cls: type[DomainEvent]) -> str:
     """Resolve the category declared by an event subclass __post_init__."""
     return cls().category.value
 
+
+# Categories are assigned per-class inside __post_init__, so the class-level
+# default (BUSINESS) is wrong here: resolve them from a default instance.
+EVENT_CATEGORIES = {name: cls().category for name, cls in EVENT_CLASSES.items()}
 
 EVENT_SCHEMAS = {
     name: {

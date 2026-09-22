@@ -10,7 +10,8 @@ from datetime import datetime
 import uuid
 
 from .value_objects import (
-    NodeIdentity, NodeState, NodeHealth, RobotState,
+    NodeIdentity, NodeState, NodeHealth,
+    BatteryState,
     ServoConfig, MotorConfig, StepperConfig, CalibrationData,
     PluginMetadata
 )
@@ -35,7 +36,9 @@ class Robot(Entity):
     name: str = "OpenJ5"
     nodes: dict[str, Node] = field(default_factory=dict)
     plugins: dict[str, Plugin] = field(default_factory=dict)
-    state: RobotState = None
+    state: Optional[NodeState] = None      # robot-level lifecycle (ADR-009 states)
+    battery: Optional[BatteryState] = None  # latest battery telemetry (safety input)
+    errors: list[str] = field(default_factory=list)  # robot-level errors (e.g. emergency stop)
 
     def add_node(self, node: Node) -> None:
         self.nodes[node.identity.node_id] = node
@@ -50,6 +53,13 @@ class Robot(Entity):
 
     def get_healthy_nodes(self) -> list[Node]:
         return [n for n in self.nodes.values() if n.health.state == NodeState.RUNNING]
+
+    def get_errors(self) -> list[str]:
+        """Robot-level errors plus every node health error (inputs to ISafetyPolicy)."""
+        errors = list(self.errors)
+        for node in self.nodes.values():
+            errors.extend(node.health.errors)
+        return errors
 
 
 @dataclass
