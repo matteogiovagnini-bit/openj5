@@ -52,3 +52,25 @@ jobs:
           -f firmware/node1_robot_core/docker/Dockerfile.robot-core
           -t openj5-robot-core:ci
           firmware/node1_robot_core/docker
+
+  firmware-host-tests:
+    name: Firmware Host Tests (g++)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run pure firmware logic tests
+        run: ./scripts/test/host_firmware.sh
+
+  firmware-node7-build:
+    name: Firmware Build (node7_balance, ESP-IDF)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build node7 balance firmware with ESP-IDF v5.2
+        run: >
+          docker run --rm
+          -v "$PWD:/project"
+          -w /project/firmware/node7_balance
+          espressif/idf:v5.2.2
+          bash -c "idf.py set-target esp32s3 && idf.py build"
