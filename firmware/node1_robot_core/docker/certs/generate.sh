@@ -5,7 +5,7 @@
 # Generates all certificates required by docker-compose.yml:
 #   - Certificate Authority (ca.crt, ca.key)
 #   - Mosquitto broker cert (mosquitto.crt, mosquitto.key)
-#   - Node certificates node1-node6 (nodeN.crt, nodeN.key)
+#   - Node certificates node1-node7 (nodeN.crt, nodeN.key)
 #   - API certificate (api.crt, api.key)
 #   - ROS2 bridge certificate (rosbridge.crt, rosbridge.key)
 #   - JWT signing keys (jwt_private.pem, jwt_public.pem)
@@ -188,7 +188,7 @@ gen_leaf "api"         "api"
 gen_leaf "rosbridge"   "rosbridge"
 gen_leaf "jwt-svc"     "jwt"
 
-for i in 1 2 3 4 5 6; do
+for i in 1 2 3 4 5 6 7; do
     gen_leaf "node$i" "node$i"
 done
 
@@ -215,7 +215,7 @@ chmod 600 "$CERT_DIR/jwt_private.pem"
 # ------------------------------------------------------------
 
 log "Verifying certificates..."
-for name in ca mosquitto api rosbridge node1 node2 node3 node4 node5 node6; do
+for name in ca mosquitto api rosbridge node1 node2 node3 node4 node5 node6 node7; do
     openssl verify -CAfile "$CERT_DIR/ca.crt" "$CERT_DIR/$name.crt" >/dev/null 2>&1 \
         || warn "Verification failed for $name"
 done
@@ -239,7 +239,7 @@ log "  - CA:           ca.crt / ca.key"
 log "  - Broker:       mosquitto.crt / mosquitto.key"
 log "  - API:          api.crt / api.key"
 log "  - ROS2 bridge:  rosbridge.crt / rosbridge.key"
-log "  - Nodes:        node1.crt ... node6.crt (each with .key)"
+log "  - Nodes:        node1.crt ... node7.crt (each with .key)"
 log "  - JWT:          jwt_public.pem / jwt_private.pem"
 log ""
 log "IMPORTANT: ca.key, all *.key and jwt_private.pem are SECRETS."

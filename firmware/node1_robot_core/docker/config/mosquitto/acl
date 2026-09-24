@@ -19,30 +19,35 @@ user node1
 topic readwrite openj5/#
 topic readwrite $SYS/#
 
-# Head node (node2) - control and status
+# Head node (node2) - control and status (topics from config/common/topics.json)
 user node2
-topic readwrite openj5/node2/#
-topic read openj5/node1/commands/#
+topic readwrite openj5/v1/head/#
+topic read openj5/v1/system/#
 
 # Right arm node (node3)
 user node3
-topic readwrite openj5/node3/#
-topic read openj5/node1/commands/#
+topic readwrite openj5/v1/right_arm/#
+topic read openj5/v1/system/#
 
 # Left arm node (node4)
 user node4
-topic readwrite openj5/node4/#
-topic read openj5/node1/commands/#
+topic readwrite openj5/v1/left_arm/#
+topic read openj5/v1/system/#
 
 # Torso node (node5)
 user node5
-topic readwrite openj5/node5/#
-topic read openj5/node1/commands/#
+topic readwrite openj5/v1/torso/#
+topic read openj5/v1/system/#
 
 # Tracks node (node6)
 user node6
-topic readwrite openj5/node6/#
-topic read openj5/node1/commands/#
+topic readwrite openj5/v1/tracks/#
+topic read openj5/v1/system/#
+
+# Balance node (node7, ADR-017) - logical commands, state, telemetry, E-stop
+user node7
+topic readwrite openj5/v1/balance/#
+topic read openj5/v1/system/#
 
 # ROS2 bridge
 user rosbridge
