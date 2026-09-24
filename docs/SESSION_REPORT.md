@@ -4,6 +4,56 @@
 
 ---
 
+## Sessione: 2026-09-23 — T-026 Firmware Node 7 Balance (ADR-017)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-09-23 |
+| Versione progetto | v0.2.0+ (Robot Core operativo su RPi4); v0.3.0 in corso |
+| Obiettivo | T-026 su richiesta utente: schema di collegamento ai pin NEMA17↔ESP32-S3, firmware ESP-IDF per il Node 7 e codice di controllo del motore — **esplicitamente saltati** i test di movimento fisico "avanti/indietro" (T-025/T-004/T-005) |
+
+### Decisioni
+1. **Verifica senza toolchain locale**: la logica di controllo è stata separata dai driver ESP (pura → host): `scripts/test/host_firmware.sh` compila e testa tutto con g++/clang (36 check); la build reale del firmware è demandata al nuovo job CI `firmware-node7-build` (container `espressif/idf:v5.2.2`). Il glue ESP (campionamento pulsanti, campi esp-mqtt v5) è accettato "CI-first": prima run potrebbe rossaggiare → iterare.
+2. **Contratto di threading senza lock**: contesto MQTT scrive solo mailbox atomiche (coda a 1 slot, "latest wins", stop con flag dedicato a priorità); il task di controllo è l'**unico** proprietario di stepper/PID/mode/state machine; il task IMU scrive solo gli atomici del pitch. Single-writer per stato e transizioni ADR-009.
+3. **Kconfig without floats/negatives**: float (kp/ki/kd/deadband/beta) come `string` + `strtof()`; limiti simmetrici come magnitudine (`POS_LIMIT_STEPS`, `PID_OUTPUT_MAX`, `PID_INTEGRAL_LIMIT` → min = −max), identici ai JSON. Sincronia garantita dal test `test_node7_config_sync.py`.
+4. **Divergenza intenzionale dal PID Python**: `BalancePid` non fa derivative kick al primo tick (`first_`); `sim/leveling.py` sì (`last_error=0`). Tenuto il firmware e allineamento Python differito a **T-029** (insieme al profilo trapezoidale stateless).
+5. **mTLS opzionale in build** (`OPENJ5_MQTT_TLS`, default n): bench con listener plain locale, produzione con cert embedded da `main/certs/` (fallimento loud se mancano). Broker 8883 = mTLS only; il listener 1883 è localhost-only → guida cablaggio aggiornata con esempi `mosquitto_*` + cert `api`.
+
+### Attività completate
+1. **Schema di collegamento**: `docs/hardware/BENCH_BALANCE.md` — tabella materiali (NEMA17 17HS08-1004S, A4988, ESP32-S3, MPU6050), pin (STEP=GPIO4, DIR=GPIO5, EN=GPIO6, SDA=GPIO8, SCL=GPIO9, AD0=GND→0x68), ponti A4988 (MS1-3=3V3 → 1/16, RESET+SLEEP=3V3), diagramma alimentazione (VMOT 12-24V + 100µF, Vref≈0,62V per 550mA), mount/assi MPU6050, vincoli pin ESP32-S3, matematica moto (12800 jsteps/rev, 35,556/°, vmax 1600, amax 800), checklist safety, sequenza bring-up, troubleshooting, riferimenti. In `scripts/check_docs.sh`.
+2. **`firmware/common/` (componente reale)**: logica pura `hal/stepper_logic` (clamp/slew/brake_bound/position target/toggle interval), port `IStepperDriver`, `imu/madgwick` (9 assi), `statemachine` (ADR-009 tabellare), `node7_balance/main/balance_pid` (parità con sim, clamp-then-increment, no D-kick) — tutti coperti da `test/host_test.cpp` (**36 check verdi**). Glue ESP: `A4988Driver` (impulsazioni esp_timer, posizione atomica, dir scambiata solo da fermo, rigetto fuori-limiti, snap ≤2 step), `Mpu6050Driver` (i2c legacy, WHO_AM_I, ±2g/±500dps 200Hz, health), `WifiStation` (auto-reconnect), `MqttClient` (esp-mqtt v5, ack/eventi/telemetry, mTLS condizionato).
+3. **`firmware/node7_balance/` progetto completo**: `CMakeLists.txt` (EXTRA_COMPONENT_DIRS + `sdkconfig.defaults` + `sdkconfig.local` opzionale gitignored), `sdkconfig.defaults`, `.gitignore`, `main/Kconfig.projbuild` (37 opzioni sincronizzate), `balance_controller` (livello/tilt/stow/stop, deadman 250 ms, watchdog 1000 ms, limite ±1244 + margine 0,5°, ripristino da Error con verifica pitch fresh), `command_handler` (cJSON, ack su `.../evt`), `app_main` (NVS→config→stato ADR-009→stepper→IMU→WiFi→MQTT→task imu 200 Hz + control 100 Hz + monitor 5 s con reboot su stall), README con procedura cert mTLS.
+4. **Fix latenti** (4 difetti scopri): `±4445 → ±1244` (era ±125°!) nei 3 punti; ACL mosquitto su path v1 + `user node7`; `generate.sh` senza cert node7; README firmware/ principale citavano strutture inesistenti (19 sorgenti fantasma in `common/CMakeLists.txt`, `install_esp_idf.sh`).
+5. **Test/CI**: `tests/unit/test_node7_config_sync.py` (8 test: step math, pin/rates/PID/safety/imu/topic sync, bench↔node, doc↔pin, cert script, platformio.ini); job `firmware-host-tests` + `firmware-node7-build` in `ci.yml`.
+6. **Docs**: CHANGELOG (Fixed ×6, Added ×4), PROJECT_STATUS (firmware table, metriche 157/21 file), PROJECT_MEMORY (§8 sessione, §10 debiti T-029 + CI/Firmware/certs), NEXT_TASK (T-026 ✅, T-002/T-007 aggiornati, T-025/T-004/T-005 saltati su richiesta, nuovo **T-029**), KNOWLEDGE_BASE (§1-sexies), README + firmware/README, SESSION_REPORT (questo), CONTINUATION_PROMPT.
+7. **VSCode + PlatformIO** (follow-up utente 2026-09-23): `firmware/node7_balance/platformio.ini` (piattaforma `espressif32` 6.12.0 = **ESP-IDF v5.5**, board `esp32-s3-devkitc-1`, `src_dir = main`) che riusa intatti CMake/Kconfig/`sdkconfig.defaults`; procedura di flash riscritta a due strade nel README Node 7 (**A** PlatformIO consigliata / **B** `idf.py`); vincolo IDF 5.5-locale ↔ 5.2.2-CI annotato in `platformio.ini` e presidiato dal nuovo test `test_platformio_ini_matches_project`; legacy `driver/i2c.h` verificato sui tag target (v5.2.2 e v5.5): presente e non deprecato → nessuna migrazione del driver MPU6050.
+8. **Gate tutti verdi**: pytest **157 test / 100% coverage** (gate ≥90), `ruff check` clean, `check_docs.sh` OK, `host_firmware.sh` 36 OK, `ci.yml` YAML valido.
+9. **Prima build reale verde** (follow-up PlatformIO): `pio run` → **`[SUCCESS]` in 137,9 s** su IDF 5.5 dopo 4 tentativi: (1) configure `esp_mqtt` → componente `mqtt`; (2) `-Wpedantic -Werror` sugli header IDF + `CONFIG_APP_PROJECT_VER`/bool Kconfig non definiti; (3) 4 errori API in `firmware/common/` (mai compilato per il target). Esito: `firmware.bin` 931 KB dentro lo slot `factory` 1 M (**88,8%**, margine ~117 KB), RAM 11,2%, bootloader + partizioni + immagine esptool con `--flash_size 8MB`, 3 bool Kconfig tutti `n` in `sdkconfig.node7`.
+
+### Lezioni (→ KNOWLEDGE_BASE §1-sexies)
+Un commento sbagliato ("= 35 deg") ha tenuto in configs/docs un limite **3,5× reale** per mesi: i numeri vanno verificati con la formula, non con il commento. Docs che citano file inesistenti = debito mascherato (causa radice T-007/T-014). Separare logica pura da glue ESP rende il firmware testabile senza toolchain. Kconfig non esprime float/interi negativi → string + magnitudini simmetriche, tenute insieme da un test di sync. ACL e certificati hanno liste nodi duplicate: quando si aggiunge un nodo, cercare "node6" nel repo è il checklist minimo. `pdMS_TO_TICKS(1000/HZ)`, mai `pdMS_TO_TICKS(HZ)`. ADR-014 (`-Wpedantic -Werror`) non convive con gli header IDF passati come `-I` → demotarli a SYSTEM (`-isystem`) dopo `project()` sul CMakeLists condiviso, tenendo `-I` sui nostri due componenti. Un Kconfig `bool` a default `n` è **assente** da sdkconfig.h (non vale 0): leggerlo con `#ifdef`. Un'API "presunta nota" va verificata su entrambi i tag prima di scriverla: la prima build reale ha smascherato 4 errori (`std::strlcpy`, member `i2c_config_t` scambiati, `esp_timer_start` inesistente, int→enum `esp_mqtt_event_id_t`) che né gli host test né la CI avevano mai visto.
+
+### Debito emerso
+- **T-029**: `trapezoid_velocity` Python stateless (nessun ramp-up) + derivative kick PID Python — allineare alla semantica C++ con test di parità.
+- Build locale **verde** (PlatformIO/IDF 5.5): resta la **prima run CI** di `firmware-node7-build` (IDF 5.2.2), non ancora eseguita perché il working tree non è committato — le fix sono state verificate anche sul tag v5.2.2 (header scaricati da raw), ma iterare su eventuali rossi alla prima push.
+- PID (kp=15, ki=1, kd=0.3) e Vref 550 mA restano valori simulati/bench: da ratificare sul banco reale con IMU.
+
+### Prossimi passi consigliati
+1. Verificare la prima run CI di `firmware-node7-build` (https://github.com/matteogiovagnini-bit/openj5/actions) e correggere eventuali rossi.
+2. Quando richiesto: T-004/T-005 (integration test) per chiudere v0.3.0, oppure T-025 (bench motori) — entrambi saltati oggi su richiesta.
+3. T-014 (Node 2 compilabile → sblocca T-007 col modello già pronto), T-029 (parità Python), T-027 (CAD giunto).
+
+### Comandi di verifica
+```bash
+scripts/test/host_firmware.sh
+.venv/bin/python -m pytest tests/unit -q --cov=core.domain --cov-report=term-missing --cov-fail-under=90
+.venv/bin/ruff check src/ firmware/node1_robot_core/docker/src/ tests/
+./scripts/check_docs.sh
+cd firmware/node7_balance && pio run    # build reale locale (IDF 5.5)
+```
+
+---
+
 ## Sessione: 2026-09-22 — T-003 Suite unit test core domain (100% coverage)
 
 | Campo | Valore |
@@ -64,7 +114,7 @@
 1. **Nuovo Node 7 dedicato ESP32-S3** "Balance Controller" (estende ADR-002 da 6 a 7 nodi).
 2. Driver stepper **A4988 (STEP/DIR/ENABLE)**; richiesto dall'owner come "A488" — interpretato A4988, da confermare.
 3. IMU **MPU6050** sul corpo (Madgwick, 200 Hz).
-4. Riduzione meccanica **cinghia/pulegge 20T→80T (1:4)**, corsa ±35° (4445 jsteps).
+4. Riduzione meccanica **cinghia/pulegge 20T→80T (1:4)**, corsa ±35° (4445 jsteps — *valore ERRATO rilevato e corretto il 2026-09-23: 4445 jsteps = ±125°; limite corretto = ±1244 jsteps, v. SESSION_REPORT 2026-09-23 e KNOWLEDGE_BASE §1-sexies*).
 5. Scope consegnato: **ADR-017 + design + software Python testabile**. Firmware ESP-IDF (T-026) e CAD/meccanica (T-027) = follow-up.
 
 ### Attività completate

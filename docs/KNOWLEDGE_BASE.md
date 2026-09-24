@@ -153,6 +153,40 @@ Lezioni dalla creazione della prima vera suite pytest (`tests/unit/`, 149 test, 
 
 ---
 
+## 1-sexies. Problemi Risolti (T-026 firmware Node 7, 2026-09-23)
+
+Lezioni dalla consegna del primo firmware ESP-IDF realmente completo e buildato in CI.
+
+| Problema | Causa reale | Soluzione |
+|----------|-------------|-----------|
+| Limiti viaggio Node 7 = `±4445` jsteps con commento "= 35 deg" (in `node.json`, `balance.json`, CONFIGURATION.md) | 4445 ÷ 35,556 jsteps/° = **±125°**, non 35°: il commento è errato da ADR-017, i configs hanno ereditato il numero | Corretto a **±1244** (= 35 × 12800/360) nei 3 punti + formula nel commento; test `test_step_math_and_travel_limits` con `assert expected == 1244 # the old 4445 must not come back` |
+| Nessun nodo `firmware/` era compilabile (T-007/T-014 alla radice) | `common/CMakeLists.txt` elencava **19 sorgenti inesistenti** (servo/pca9685/ota/... aspirazionali) e README/documenti citavano file mai creati (`install_esp_idf.sh`, `head_controller.hpp`) | CMakeLists riscritto con **solo file reali**; README firmware/ riscritto reale. Regola: ogni riferimento di build va verificato con `ls`/glob prima di dichiararlo; docs fantasma = debito mascherato da documentazione |
+| `trapezoid_velocity` Python **stateless**: da fermo salta a 1410 steps/s (`+accel*dt` non lega mai, nessun ramp-up) e il PID Python fa derivative kick al primo tick (`last_error=0`) | Profilo calcolato come funzione pura (v, dt, target) senza stato `v_prev`; PID con guardia assente | Firmware C++ usa `slew()` + `brake_bound()` con stato interno e `BalancePid::first_` senza D al primo tick; allineamento Python delegato a **T-029** (divergenza documentata, non introdotta qui) |
+| ACL Mosquitto per nodi 2–6 su `openj5/nodeN/#` e **nessun user `node7`** | Vecchio schema di topic pre-v1: i path reali sono `openj5/v1/<node>/...` (`config/common/topics.json`) — le regle non matchavano nulla e node7 non avrebbe potuto connettersi in mTLS | ACL riscritta sui path v1 + `topic read openj5/v1/system/#` per ogni nodo (E-stop) + sezione `user node7` (`openj5/v1/balance/#`); nessun nodo era ancora deployato → fix senza impatto |
+| `generate.sh` produceva cert solo per `node1..node6` | Lista nodi duplicata in 3 punti (commento, loop generazione `for i in 1..6`, verify loop, summary) | `node7` aggiunto ai loop + commento + summary; test `test_certs_script_generates_node7` |
+| Kconfig senza float né interi negativi vs config JSON con `kp=15.0`, `output_min=-1600` | Kconfig supporta solo `int`/`string`/`bool` | Float come **string** + `strtof()`; limiti simmetrici come **magnitudine** (`OPENJ5_PID_OUTPUT_MAX=1600` → `min=-max` uguale al JSON); test di parità Kconfig↔node.json↔bench↔docs |
+| Verifica firmware **senza toolchain locale** (nessun `idf.py`, nessun docker) | Ambiente di sviluppo senza ESP-IDF | Due livelli: (1) logica pura separata dai driver ESP → `scripts/test/host_firmware.sh` g++/clang, 36 check, gira subito; (2) job CI `firmware-node7-build` con container `espressif/idf:v5.2.2`. Glue ESP (pulsanti, campi esp-mqtt v5) validato solo dalla prima run CI: iterare su rossi |
+| Segno filtro Madgwick non documentato (quando il corpo si alza, quale segno ha `ax`?) | Report IMU ≠ angolo in assenza di convenzione scritta | Test host esplicito: inclinazione naso-**su** +θ legge `ax = −g·sin(θ)`; `pitch = asin(2(q0q2 − q1q3))` (ZYX). Convenzione scritta nel test, usata dal controller (`error = target − pitch`) |
+| Possibili bug di periodo nei task FreeRTOS | `pdMS_TO_TICKS(HZ)` (legge "Hz" come "ms") darebbe 100 ms invece di 10 ms | Regola: `pdMS_TO_TICKS(1000 / HZ)` con guardia `period==0 → 1`; a `FREERTOS_HZ=1000` 100 Hz = 10 tick, 200 Hz = 5 tick |
+| Caricamento richiesto da **VSCode + PlatformIO** (nessun IDF installato sul Mac) | La piattaforma ufficiale `espressif32` 6.12.x porta **IDF v5.5**, la CI resta sul container **v5.2.2**: due versioni diverse = API che compilano da una parte e non dall'altra | `platformio.ini` con pin esatto + commento che vincola le due versioni a muoversi **insieme**; presidio: `test_platformio_ini_matches_project`. Header legacy `driver/i2c.h` verificato **sul tag target** (v5.2.2 e v5.5, via GitHub API/raw) prima di dichiararlo sicuro — mai fidarsi di master/latest |
+| Prima `pio run` fallita: `Failed to resolve component 'esp_mqtt': unknown name` | Il *component* IDF si chiama **`mqtt`** (directory `components/mqtt`, sorgenti dal submodule `esp-mqtt`): `esp_mqtt` non è mai esistito come nome — la CI non era ancora partita, quindi il refuso era latente in `common/`, `node7_balance/main/` e `node2_head/` | Corretto in tutti e 3 i CMakeLists (`REQUIRES mqtt`); verificato sull'IDF 5.5 locale (esempi ufficiali usano `PRIV_REQUIRES mqtt`) e vale anche per 5.2.2; presidio: `test_platformio_ini_matches_project` rifiuta `esp_mqtt` nei CMakeLists del grafo di build Node 7 |
+| Seconda `pio run` rossa su decine di header IDF: `#include_next is a GCC extension` (newlib `platform_include/stdio.h`), array a dimensione zero/flexible member (`esp_wifi_types*.h`, `driver/gpio.h`), più `CONFIG_APP_PROJECT_VER`/bool Kconfig "undeclared identifier" | ADR-014 impone `-Wall -Wextra -Wpedantic -Werror`, ma IDF passa i **suoi** header come `-I` normali (`component.cmake:320`, niente SYSTEM): `idf.py`/CI fallirebbe allo stesso modo → il fix stava nel **CMakeLists condiviso**. Inoltre un Kconfig `bool` a default `n` è **assente** da sdkconfig.h (non vale 0) e `APP_PROJECT_VER` richiede `APP_PROJECT_VER_FROM_CONFIG=y` | Dopo `project()`: walk `SUBDIRECTORIES`+`BUILDSYSTEM_TARGETS` (proprietà `BUILTIN_TARGETS` non esiste in CMake) → ridefinire gli `INTERFACE_INCLUDE_DIRECTORIES` di tutti i `__idf_*` come `SYSTEM PRIVATE` su `__idf_main`/`__idf_common` **escludendo i nostri due** (i nostri dir restano `-I` = warnati pienamente); GCC ignora un `-I` sullo stesso dir dato anche con `-isystem` (dedup documentato, verificato con test A0-A4). I 3 bool letti con `#ifdef` → `constexpr bool` (`kDirInverted`/`kEnabledOnBoot`/`kMqttTls`); versione banner da `esp_app_get_description()->version` + `esp_app_format` in `REQUIRES`; `CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y` in `sdkconfig.defaults` |
+| Terza `pio run` rossa su `firmware/common/`: `std::strlcpy` non esiste, `i2c_config_t` senza `clk_speed`/`clk_flags`, `esp_timer_start` inesistente, int→`esp_mqtt_event_id_t` | Il glue ESP era scritto ma **mai compilato per il target**: `host_firmware.sh` compila solo la logica pura (host_test/madgwick/state_machine) e la CI non era mai partita; inoltre gli esempi IDF sono **C** (int→enum implicito lecito) mentre il firmware è C++ | Ogni API rivista su **entrambi i tag** (raw v5.2.2 + esp-mqtt@`aa6f889` + locale 5.5) prima di correggere: `std::snprintf` (stessa semantica bounded+NUL, standard C++), member riordinati (`conf.master.clk_speed` + `conf.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL`), `esp_timer_start_periodic` (e `esp_timer_restart` verificato **dalla sorgente IDF**: su timer periodic mantiene la periodicità), `MQTT_EVENT_ANY`. Esito: **`pio run` SUCCESS 137,9 s** — RAM 11,2%, flash 88,8% dello slot `factory` 1 M, immagine a 8 MB |
+
+### Comandi di verifica firmware (ripetere a ogni sessione firmware)
+
+```bash
+scripts/test/host_firmware.sh                                       # 36 check, g++
+.venv/bin/python -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90   # 157
+.venv/bin/ruff check src/ firmware/node1_robot_core/docker/src/ tests/
+./scripts/check_docs.sh                                             # include BENCH_BALANCE.md
+# build reale: CI (firmware-node7-build, IDF 5.2.2) o locale:
+#   cd firmware/node7_balance && idf.py build   (IDF 5.2.2)
+#   cd firmware/node7_balance && pio run         (PlatformIO, IDF 5.5)
+```
+
+---
+
 ## 3. Best Practice
 
 - **Prima di implementare**: cercare un componente riutilizzabile esistente (HAL? gateway adapter? value object?) — v. MASTER_PROMPT.

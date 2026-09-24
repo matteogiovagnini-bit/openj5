@@ -36,6 +36,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subclass type lost): 3 sites now use `deserialize_event`
 - `Robot` aggregate lacked `state`/`battery` accessors used by
   `SafetyPolicyService`: added `state`, `battery`, `errors`, `get_errors()`
+- Node 7 travel limits were `±4445` jsteps everywhere (configs + CONFIGURATION.md)
+  with a comment "= 35 deg": 4445 jsteps at 35.556 jsteps/° is actually **±125°**;
+  corrected to `±1244` (= ±35°) in `config/node7_balance/node.json`,
+  `config/bench/balance.json` and `docs/configuration/CONFIGURATION.md`
+- Mosquitto ACL granted nodes 2-6 the pre-v1 paths (`openj5/nodeN/#`) that match
+  no real topic (`config/common/topics.json` uses `openj5/v1/...`) and had no
+  `node7` user at all: rewritten to the v1 paths, plus `system` reads and a
+  `node7` section (ADR-017)
+- `docker/certs/generate.sh` stopped at `node6`: no `node7` certificate/key was
+  ever generated, so node7 mTLS could not have connected; now `node1..node7`
+- `firmware/README.md` and the main README documented phantom files (19 missing
+  sources in `common/CMakeLists.txt`, nonexistent `install_esp_idf.sh`): the
+  root cause of non-buildable nodes (T-007/T-014) — rewritten to reality
+- First real target build exposed four API errors in `firmware/common/` (never
+  compiled for the chip — host tests only build pure logic): `std::strlcpy`
+  (BSD/newlib, invisible under `-std=c++20`) → `std::snprintf`; transposed
+  `i2c_config_t` members (`clk_speed` belongs to `master`, `clk_flags` is
+  top-level); nonexistent `esp_timer_start` → `esp_timer_start_periodic`;
+  `ESP_EVENT_ANY_ID` (int) passed where `esp_mqtt_client_register_event` takes
+  `esp_mqtt_event_id_t` → `MQTT_EVENT_ANY` (IDF's examples are C, where the
+  int→enum conversion is legal; C++ rejects it) — every API cross-checked on
+  both target tags (v5.2.2 + v5.5) before fixing
+- ADR-014 flags (`-Wall -Wextra -Wpedantic -Werror`) failed on ESP-IDF's own
+  headers (`#include_next` in newlib `platform_include`, zero-length arrays in
+  esp_wifi): after `project()` the shared CMakeLists demotes every `__idf_*`
+  include directory (except our `main`/`common`) to SYSTEM for the two node
+  targets — GCC ignores a plain `-I` for a dir also given with `-isystem`, so
+  IDF headers stop tripping `-Werror` while OpenJ5 code stays fully checked,
+  on both the `idf.py` (CI) and PlatformIO paths
+- Kconfig `bool` symbols are absent from `sdkconfig.h` when `n` (the default),
+  so `CONFIG_OPENJ5_*` read as values did not compile: now read via `#ifdef`
+  into `constexpr bool`s; `CONFIG_APP_PROJECT_VER` requires
+  `APP_PROJECT_VER_FROM_CONFIG=y`, so the boot log prints
+  `esp_app_get_description()->version` (+ `esp_app_format` in `REQUIRES`)
+- `CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y` added to `sdkconfig.defaults` (the board
+  default of 2 MB mismatched the 8 MB flash); the generated per-env
+  `sdkconfig.node7` (can contain `sdkconfig.local` secrets) is now gitignored
 
 ### Added
 - **T-003 unit test suite for `src/core/domain/`**: `tests/unit/conftest.py`
@@ -46,6 +83,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and coverage config (`source = ["core.domain"]`, show_missing)
 - CI job `python-tests` (pytest + coverage gate ≥90%) in
   `.github/workflows/ci.yml`; ruff now also lints `tests/`
+- **T-026 Node 7 Balance firmware (ADR-017)**:
+  - wiring guide `docs/hardware/BENCH_BALANCE.md` (pin tables, A4988 bridges,
+    power diagram, MPU6050 axes, Vref procedure, motion math, safety checklist,
+    bring-up sequence, troubleshooting)
+  - pure logic in `firmware/common/`: `stepper_logic` (slew/brake/target),
+    `Madgwick`, ADR-009 state machine, balance PID (sim parity) — host-tested
+    by `scripts/test/host_firmware.sh` (36 checks, g++, no ESP-IDF needed)
+  - ESP glue in `firmware/common/`: `A4988Driver` (esp_timer STEP pulses,
+    atomic position, dir-swap only when stopped), `Mpu6050Driver`, `WifiStation`,
+    `MqttClient` (optional mTLS, ADR-013); `common/CMakeLists.txt` now lists
+    only files that exist
+  - full ESP-IDF project `firmware/node7_balance/`: 100 Hz control task +
+    200 Hz IMU task, logical commands `level/tilt/stow/stop` on
+    `openj5/v1/balance/cmd`, system E-stop subscription, deadman/watchdog/
+    travel fail-safes, coils off at boot, Kconfig.projbuild synced with
+    `node.json`, README with local `sdkconfig.local` + mTLS cert procedure
+- Config parity test `tests/unit/test_node7_config_sync.py` (8 tests):
+  Kconfig ↔ node.json ↔ balance.json ↔ wiring doc ↔ certs script ↔
+  `platformio.ini`
+- CI jobs `firmware-host-tests` (g++ logic tests) and `firmware-node7-build`
+  (`espressif/idf:v5.2.2` container, `idf.py set-target esp32s3 && idf.py build`)
+- **VSCode + PlatformIO path for the Node 7 firmware**: `platformio.ini`
+  (`espressif32` 6.12.0 = ESP-IDF v5.5, board `esp32-s3-devkitc-1`,
+  `src_dir = main`) reusing the same CMake/Kconfig/sdkconfig project as
+  `idf.py`; the README flashing procedure split into path A (PlatformIO,
+  recommended) and B (`idf.py`); the IDF-version constraint (local v5.5 vs CI
+  container v5.2.2) is documented in `platformio.ini` and pinned by the new
+  `test_platformio_ini_matches_project` test; legacy `driver/i2c.h` verified
+  present and not deprecated on both target tags (v5.2.2 and v5.5) — no
+  MPU6050 driver migration needed; path A exercised end-to-end with the first
+  green local build (`pio run`: SUCCESS in 137.9 s, RAM 11.2%, 88.8% of the
+  1 M factory slot)
 
 ### Changed
 - **ADR-016**: Node 1 reference OS switched from Ubuntu Server to Raspberry Pi OS

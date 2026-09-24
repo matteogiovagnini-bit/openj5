@@ -2,8 +2,8 @@
 
 ## Repository: `PRJ_OpenJ5`
 
-> **Last updated:** 2026-09-22
-> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (149 test, 100% coverage)**
+> **Last updated:** 2026-09-23
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (149 test, 100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build)**
 
 ---
 
@@ -17,7 +17,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
 | Domain Model (value objects, events, commands, entities, services) | ✅ Done | 100% | All value objects, events, CQRS bus, entities, repositories, kinematics service — **verified by `tests/unit/` (149 tests, T-003)** |
-| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 6 modules + conftest; CI gate ≥90% (`python-tests` job) |
+| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 7 modules + conftest; **157 tests total** (149 domain + 8 config-sync); CI gate ≥90% (`python-tests` job) |
 | Plugin Architecture | ✅ Done | 90% | PluginManager, PluginRegistry, Sandbox, dependency resolution |
 | Communication Gateway | ✅ Done | 85% | MQTT, MultiProtocol, mTLS |
 | Event Bus (Redis Streams) | ✅ Done | 85% | Streams, consumer groups, DLQ, replay |
@@ -41,11 +41,12 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 ### 🟡 Firmware (ESP32-S3 Nodes)
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
-| Common ESP-IDF Component | 🟡 Partial | 60% | CMakeLists.txt structured, HAL interfaces defined |
-| Node 2 (Head) - CMakeLists | 🟡 Partial | 70% | Project structure, driver configs |
-| Node 2 (Head) - main.cpp | 🟡 Partial | 60% | Core loop, servo management, motion primitives |
+| Common ESP-IDF Component | 🟢 Functional | 70% | Real component: stepper logic, Madgwick, ADR-009 FSM, balance PID (host-tested, 36 checks), A4988/MPU6050/WiFi/MQTT glue; CMakeLists lists only existing files |
+| Node 2 (Head) - CMakeLists | 🟡 Partial | 70% | Project structure only — not buildable (T-014) |
+| Node 2 (Head) - main.cpp | 🔴 Not Started | 0% | Never existed (phantom references removed from docs) |
 | Node 3-6 Firmware | 🔴 Not Started | 0% | Structure defined, no implementation |
-| Node 7 (Balance) Firmware | ⬜ Designed | 15% | ADR-017 + Python HAL/driver/sim tested; ESP-IDF pending (T-026) |
+| Node 7 (Balance) - Firmware | 🟢 Done | 80% | Full ESP-IDF project `node7_balance/` (T-026): control 100 Hz, IMU 200 Hz, logical commands, fail-safes; first local build green (`pio run`, IDF 5.5: SUCCESS 137.9 s, RAM 11.2%); CI (`firmware-node7-build`, IDF 5.2.2) pending first run; flashing: VSCode+PlatformIO (`platformio.ini`, IDF 5.5) or `idf.py`; **on-device validation pending (bench)** |
+| CI firmware jobs | ✅ Done | 100% | `firmware-host-tests` (g++) + `firmware-node7-build` (ESP-IDF v5.2.2 container) |
 | OTA Update Client | 🟡 Partial | 40% | Protocol defined, download logic pending |
 
 ### 🟢 Architettura Decisioni
@@ -81,7 +82,9 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | SDK | ✅ Done | `BodyAPI` + `robot.body.level()/tilt()/stow()/stop()` |
 | Orchestratore | ✅ Done | node7 in statemachine/health/digital_twin/models |
 | Test | ✅ Done | `tests/unit/test_balance_control.py` — 8 test verdi (Python 3.11, ruff clean) |
-| Firmware ESP-IDF | To do | T-026 — follow-up |
+| Firmware ESP-IDF | ✅ Done | T-026 (2026-09-23) — `firmware/node7_balance/` completo, logica host-testata (36 check), build in CI; validazione su hardware = prossimo step bench |
+| Guida cablaggio | ✅ Done | `docs/hardware/BENCH_BALANCE.md` (pin, alimentazione, Vref, safety, bring-up) |
+| Config parity test | ✅ Done | `tests/unit/test_node7_config_sync.py` — Kconfig ↔ node.json ↔ docs |
 | CAD/meccanica (cinghia/pulegge) | To do | T-027 — follow-up |
 
 ### 🟡 Documentation
@@ -97,6 +100,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | ADR Index + 5 ADRs | ✅ Done | ADR-001 to ADR-005 |
 | ADR Index (completo) | ✅ Done | ADR-001 to ADR-016 — vedi docs/adr/INDEX.md |
 | BENCH_TRACKS (hardware) | ✅ Done | Guida banco Nodo 6: cablaggio motori, power, safety |
+| BENCH_BALANCE (hardware) | ✅ Done | Guida banco Nodo 7: pin NEMA17/A4988/MPU6050, alimentazione, Vref, math, safety |
 | Development Constitution | ✅ Done | Level A/B/C governance |
 | VISION / MISSION / GOALS / NON_GOALS | ✅ Done | Project governance |
 | CODING_STANDARD / NAMING_CONVENTIONS | ✅ Done | Code quality rules |
@@ -104,10 +108,10 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 ### 🔴 Not Started (Next Releases)
 | Component | Priority | Target Release |
 |-----------|----------|----------------|
-| CI/CD Pipeline (GitHub Actions) | High | v0.3.0 — 🟡 lint + unit tests (cov ≥90%) + doc-check + docker build attivi; mancano mypy/clang-tidy |
-| Integration Tests (T-004/T-005) | High | v0.3.0 — sbloccati da T-003 |
+| CI/CD Pipeline (GitHub Actions) | High | v0.3.0 — 🟡 lint + unit tests (cov ≥90%) + doc-check + docker build + firmware host tests + node7 build attivi; mancano mypy/clang-tidy |
+| Integration Tests (T-004/T-005) | High | v0.3.0 — sbloccati da T-003 (saltati su richiesta 2026-09-23) |
 | Simulation Test Suite (T-006) | High | v0.3.0 |
-| Firmware Nodes 3-7 | High | v0.4.0 |
+| Firmware Nodes 3-6 | High | v0.4.0 (Node 7 done; Node 2 blocked by T-014) |
 | Facial Recognition Plugin | Medium | v0.5.0 |
 | Person Following | Medium | v0.5.0 |
 | LIDAR Integration | Medium | v0.6.0 |
@@ -123,8 +127,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Metric | Target | Current |
 |--------|--------|---------|
 | Python files | - | 35+ |
-| Unit tests (core.domain) | ≥90% coverage | 149 tests, **100% coverage** |
-| Firmware C++ files | - | 5 |
+| Unit tests (core.domain) | ≥90% coverage | 157 tests, **100% coverage** (149 domain + 8 config-sync) |
+| Firmware C++ files | - | 21 (10 .cpp + 11 .hpp: `firmware/common` + `node7_balance`) |
 | Config files (JSON/YAML) | - | 12+ |
 | Docker services | - | 10 |
 | Plugins framework | - | 14 interface types |
@@ -149,6 +153,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 - Full documentation suite
 - Unit test suite for the core domain (T-003): 149 tests, 100% line coverage, CI coverage gate ≥90%
 - Node 7 Balance Controller design (ADR-017): HAL IStepperDriver, A4988 bench driver + mock, leveling-loop simulator, BodyAPI SDK, configs + topics, unit tests
+- Node 7 Balance firmware (T-026): wiring guide `BENCH_BALANCE.md`, pure logic in `firmware/common/` (host-tested), complete ESP-IDF project `firmware/node7_balance/` with CI build (`firmware-host-tests` + `firmware-node7-build`), config parity test Kconfig↔node.json, flashing via VSCode+PlatformIO (`platformio.ini`) or `idf.py`
 
 ### What's Next (v0.3.0)
 - Integration tests (REST/WS, event bus + state machine)
