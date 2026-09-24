@@ -642,7 +642,7 @@ The PID loop runs on the ESP32-S3 at 100 Hz; the joint is open-loop actuated
 # balance.yaml
 balance:
   target_pitch_deg: 0.0       # body pitch vs gravity
-  max_tilt_deg: 35.0          # physical joint travel, +/- (4445 microsteps)
+  max_tilt_deg: 35.0          # physical joint travel, +/- (1244 microsteps)
   deadband_deg: 0.5           # no command inside deadband (no micro-oscillation)
   control_hz: 100             # PID rate
   imu_sample_hz: 200          # MPU6050 + Madgwick
@@ -667,8 +667,8 @@ steppers:
     max_speed_steps_s: 1600
     max_accel_steps_s2: 800
     limits:
-      min_steps: -4445        # -35 deg
-      max_steps: 4445         # +35 deg
+      min_steps: -1244        # -35 deg at 35.556 steps/deg (12800 steps/rev)
+      max_steps: 1244         # +35 deg
 ```
 
 Topics follow the same versioned schema: `openj5/v1/balance/{cmd,evt,telemetry,state}`
