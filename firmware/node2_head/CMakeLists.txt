@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 # Set component requirements
 set(COMPONENT_REQUIRES
     common
-    esp_mqtt
+    mqtt
     driver
     i2c
     spi_flash

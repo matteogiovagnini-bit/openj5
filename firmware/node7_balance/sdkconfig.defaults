@@ -1,0 +1,10 @@
+# OpenJ5 Node 7 - shared build defaults (docs/adr/ADR-014 common configuration)
+CONFIG_FREERTOS_HZ=1000
+CONFIG_COMPILER_OPTIMIZATION_PERFORMANCE=y
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MQTT_PROTOCOL_311=y
+CONFIG_PARTITION_TABLE_TWO_OTA=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+# DevKitC-1 N8 = 8 MB (board di platformio.ini): la tabella TWO_OTA non ci sta
+# in 2 MB (default IDF). Board N4/N16: override in sdkconfig.local.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y

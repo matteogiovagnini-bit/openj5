@@ -1,0 +1,6 @@
+# Device certificates for MQTT mTLS (ADR-013) - NEVER committed.
+# Copy them here from firmware/node1_robot_core/docker/certs/ (generate.sh):
+#   ca.crt  node7.crt  node7.key
+# Build with CONFIG_OPENJ5_MQTT_TLS=y (idf.py menuconfig -> OpenJ5 -> TLS).
+*
+!.gitignore

@@ -28,6 +28,7 @@ for f in \
     docs/configuration/CONFIGURATION.md \
     docs/deployment/DEPLOYMENT.md \
     docs/hardware/BENCH_TRACKS.md \
+    docs/hardware/BENCH_BALANCE.md \
     docs/adr/INDEX.md \
     docs/adr/TEMPLATE.md \
     docs/PROJECT_MEMORY.md \

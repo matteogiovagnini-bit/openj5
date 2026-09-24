@@ -67,7 +67,7 @@ OpenJ5/
 │   ├── hardware/
 │   │   ├── hal/                 # Hardware Abstraction Layer (Interfaces)
 │   │   └── drivers/             # Concrete Drivers (PCA9685, L298N, VL53L0X, etc.)
-│   └── firmware/                # ESP-IDF Firmware per 6 nodi
+│   └── firmware/                # ESP-IDF firmware per 7 nodi (v. firmware/README.md)
 ├── config/                      # File di configurazione JSON per nodo
 ├── docs/                        # Documentazione completa (obbligatoria per ogni PR)
 │   ├── adr/                     # Architecture Decision Records
@@ -140,17 +140,24 @@ docker compose up -d
 curl -fk https://localhost:8080/health
 ```
 
-### Setup Firmware ESP32 (Nodi 2-6)
+### Setup Firmware ESP32 (Nodi 2-7)
 
 ```bash
-# Installa ESP-IDF v5.2+
-cd firmware/common
-./install_esp_idf.sh
+# Installa ESP-IDF v5.2+ (https://docs.espressif.com/projects/esp-idf/)
+. $IDF_PATH/export.sh
 
-# Configura ogni nodo
-cd ../node2_head
-idf.py menuconfig  # Imposta WiFi, MQTT broker, node ID
+# Node 7 (unico progetto completo oggi — v. firmware/node7_balance/README.md)
+cd firmware/node7_balance
+
+# A) VSCode + PlatformIO (consigliata; prima build scarica IDF v5.5, ~1 GB)
+pio run -t upload -t monitor
+
+# B) ESP-IDF classico (idf.py)
+idf.py set-target esp32s3
+idf.py menuconfig  # WiFi/MQTT: opzionale, meglio sdkconfig.local (non committato)
 idf.py build flash monitor
+
+# Nodi 2-6: skeleton da completare (T-014) prima di buildare
 ```
 
 ### Banco motori (prototipo Nodo 6)
@@ -161,14 +168,22 @@ sudo apt install -y python3-gpiozero
 python3 scripts/demo/tracks_bench.py   # w/s a/d +/− x q — ruote sollevate!
 ```
 
-### Design Node 7 (Balance Controller, ADR-017)
+### Node 7 Balance Controller (ADR-017)
 
 ```bash
-# Sviluppo in Python: HAL IStepperDriver + mock + simulatore di livellamento
+# Design + software Python testabile (HAL IStepperDriver, mock, simulatore)
 python3 -m pytest tests/unit/test_balance_control.py   # 8 test verdi
 python3 scripts/demo/balance_bench.py                  # bench A4988 (t / s / x / p / q)
 # Config: config/node7_balance/node.json · config/bench/balance.json
-# Firmware ESP-IDF (T-026) e CAD giunto (T-027): follow-up da ADR-017
+
+# Cablaggio pin NEMA17/A4988/MPU6050 sul ESP32-S3:
+#   docs/hardware/BENCH_BALANCE.md
+
+# Firmware ESP-IDF (T-026 ✅): progetto completo + build in CI
+cd firmware/node7_balance && idf.py set-target esp32s3 && idf.py build
+# ...oppure da VSCode: pio run -t upload -t monitor (platformio.ini)
+# Logica pura senza ESP-IDF: scripts/test/host_firmware.sh (36 check)
+# CAD giunto (T-027): follow-up da ADR-017
 ```
 
 ### Test unitari del core domain (T-003)
@@ -412,6 +427,10 @@ python3 -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90
 
 # Hardware-in-loop (richiede HW connesso)
 ./scripts/test/hardware.sh --node node2_head   # TODO T-004+: runner da creare
+
+# Test host della logica firmware pura (g++, nessun ESP-IDF richiesto)
+./scripts/test/host_firmware.sh
+# -> rampa A4988, filtro Madgwick, PID balance (parità con sim), FSM ADR-009
 ```
 
 ---

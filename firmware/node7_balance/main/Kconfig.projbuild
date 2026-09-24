@@ -1,0 +1,161 @@
+menu "OpenJ5 Node 7 Balance Controller"
+
+    comment "Values MUST stay in sync with config/node7_balance/node.json"
+    comment "(enforced by tests/unit/test_node7_config_sync.py)"
+
+    config OPENJ5_PIN_STEP
+        int "A4988 STEP GPIO"
+        default 4
+
+    config OPENJ5_PIN_DIR
+        int "A4988 DIR GPIO"
+        default 5
+
+    config OPENJ5_PIN_ENABLE
+        int "A4988 ENABLE GPIO (active LOW)"
+        default 6
+
+    config OPENJ5_DIR_INVERTED
+        bool "Invert joint direction (instead of swapping coil pairs)"
+        default n
+
+    config OPENJ5_I2C_SDA
+        int "MPU6050 SDA GPIO"
+        default 8
+
+    config OPENJ5_I2C_SCL
+        int "MPU6050 SCL GPIO"
+        default 9
+
+    config OPENJ5_IMU_ADDR
+        int "MPU6050 I2C address (AD0=GND -> 104 = 0x68)"
+        default 104
+
+    config OPENJ5_IMU_SAMPLE_HZ
+        int "IMU sample + fusion rate (Hz)"
+        default 200
+
+    config OPENJ5_MADGWICK_BETA
+        string "Madgwick filter gain beta"
+        default "0.1"
+
+    config OPENJ5_STEPS_PER_REV
+        int "Stepper full steps per revolution"
+        default 200
+
+    config OPENJ5_MICROSTEPS
+        int "A4988 microsteps (MS1/MS2/MS3 all HIGH = 1/16)"
+        default 16
+
+    config OPENJ5_GEAR_RATIO
+        int "Belt reduction motor:joint (20T -> 80T)"
+        default 4
+
+    config OPENJ5_POS_LIMIT_STEPS
+        int "Joint position limit, symmetric, in jsteps (+/-)"
+        default 1244
+        help
+            +/-35 deg at 12800 jsteps/rev (35.556 jsteps/deg). Mechanical
+            travel of the belt drive: commands beyond this are rejected.
+
+    config OPENJ5_MAX_VELOCITY
+        int "Max joint velocity (jsteps/s)"
+        default 1600
+
+    config OPENJ5_MAX_ACCEL
+        int "Max joint acceleration (jsteps/s^2)"
+        default 800
+
+    config OPENJ5_MIN_PULSE_HZ
+        int "Pulse rate below which the axis holds instead of pulsing (Hz)"
+        default 5
+
+    config OPENJ5_CONTROL_HZ
+        int "PID control loop rate (Hz)"
+        default 100
+
+    config OPENJ5_TARGET_PITCH_DEG
+        int "Default leveling target pitch (deg, 0 = gravity)"
+        default 0
+
+    config OPENJ5_MAX_TILT_DEG
+        int "Max joint tilt (deg, mechanical)"
+        default 35
+
+    config OPENJ5_DEADBAND_DEG
+        string "Leveling deadband (deg): no command inside, no micro-oscillation"
+        default "0.5"
+
+    config OPENJ5_PID_KP
+        string "PID kp (jsteps/s per deg)"
+        default "15.0"
+
+    config OPENJ5_PID_KI
+        string "PID ki"
+        default "1.0"
+
+    config OPENJ5_PID_KD
+        string "PID kd"
+        default "0.3"
+
+    config OPENJ5_PID_OUTPUT_MAX
+        int "PID output clamp, symmetric magnitude (jsteps/s)"
+        default 1600
+
+    config OPENJ5_PID_INTEGRAL_LIMIT
+        int "PID integral clamp, symmetric magnitude"
+        default 4000
+
+    config OPENJ5_DEADMAN_TIMEOUT_MS
+        int "IMU pitch freshness deadline (ms) -> brake on violation"
+        default 250
+
+    config OPENJ5_WATCHDOG_TIMEOUT_MS
+        int "Control loop stall deadline (ms) -> brake on violation"
+        default 1000
+
+    config OPENJ5_TELEMETRY_PERIOD_MS
+        int "Telemetry publish period (ms)"
+        default 1000
+
+    config OPENJ5_ENABLED_ON_BOOT
+        bool "Energize coils at boot (NEVER for unattended benches)"
+        default n
+
+    config OPENJ5_WIFI_SSID
+        string "WiFi SSID (not committed - set locally)"
+        default ""
+
+    config OPENJ5_WIFI_PASSWORD
+        string "WiFi password (not committed - set locally)"
+        default ""
+
+    config OPENJ5_MQTT_HOST
+        string "MQTT broker host"
+        default "openj5-core"
+
+    config OPENJ5_MQTT_PORT
+        int "MQTT broker port (production: 8883 mTLS)"
+        default 8883
+
+    config OPENJ5_MQTT_TLS
+        bool "MQTT mTLS with embedded certs (ADR-013, production)"
+        default n
+        help
+            Requires ca.crt, node7.crt, node7.key in main/certs/ (see the
+            README). Without it the node still connects to a plain listener
+            for bench bring-up only.
+
+    config OPENJ5_MQTT_CLIENT_ID
+        string "MQTT client id"
+        default "openj5-node7-balance"
+
+    config OPENJ5_MQTT_KEEPALIVE
+        int "MQTT keepalive (s)"
+        default 60
+
+    config OPENJ5_TOPIC_PREFIX
+        string "MQTT topic prefix (cmd/state/evt/telemetry)"
+        default "openj5/v1/balance"
+
+endmenu

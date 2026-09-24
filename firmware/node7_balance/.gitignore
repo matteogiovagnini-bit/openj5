@@ -1,0 +1,11 @@
+build/
+sdkconfig
+sdkconfig.old
+sdkconfig.local
+# PlatformIO usa un sdkconfig per env (sdkconfig.node7): contiene gli eventuali
+# override locali di sdkconfig.local (credenziali WiFi) -> mai committato.
+sdkconfig.*
+!sdkconfig.defaults
+managed_components/
+dependencies.lock
+.pio/
