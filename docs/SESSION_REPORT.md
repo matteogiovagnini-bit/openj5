@@ -35,11 +35,11 @@ Un commento sbagliato ("= 35 deg") ha tenuto in configs/docs un limite **3,5× r
 
 ### Debito emerso
 - **T-029**: `trapezoid_velocity` Python stateless (nessun ramp-up) + derivative kick PID Python — allineare alla semantica C++ con test di parità.
-- Build locale **verde** (PlatformIO/IDF 5.5): resta la **prima run CI** di `firmware-node7-build` (IDF 5.2.2), non ancora eseguita perché il working tree non è committato — le fix sono state verificate anche sul tag v5.2.2 (header scaricati da raw), ma iterare su eventuali rossi alla prima push.
+- ~~Prima run CI~~ **chiusa**: CI #21 del 2026-09-27 (commit `8e4cf7e`) **success**, tutti e 6 i job green — incluso `firmware-node7-build` su IDF 5.2.2 e `firmware-host-tests`; build dual-version confermata (5.5 locale + 5.2.2 CI). Restano solo warning di manutenzione GitHub (Node.js 20 deprecato, `ubuntu-latest`→Ubuntu 26 dal 19/10/2026).
 - PID (kp=15, ki=1, kd=0.3) e Vref 550 mA restano valori simulati/bench: da ratificare sul banco reale con IMU.
 
 ### Prossimi passi consigliati
-1. Verificare la prima run CI di `firmware-node7-build` (https://github.com/matteogiovagnini-bit/openj5/actions) e correggere eventuali rossi.
+1. ~~Verificare la prima run CI~~ Fatto: CI #21 (2026-09-27) success, tutti i job green.
 2. Quando richiesto: T-004/T-005 (integration test) per chiudere v0.3.0, oppure T-025 (bench motori) — entrambi saltati oggi su richiesta.
 3. T-014 (Node 2 compilabile → sblocca T-007 col modello già pronto), T-029 (parità Python), T-027 (CAD giunto).
 

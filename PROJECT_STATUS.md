@@ -45,7 +45,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Node 2 (Head) - CMakeLists | 🟡 Partial | 70% | Project structure only — not buildable (T-014) |
 | Node 2 (Head) - main.cpp | 🔴 Not Started | 0% | Never existed (phantom references removed from docs) |
 | Node 3-6 Firmware | 🔴 Not Started | 0% | Structure defined, no implementation |
-| Node 7 (Balance) - Firmware | 🟢 Done | 80% | Full ESP-IDF project `node7_balance/` (T-026): control 100 Hz, IMU 200 Hz, logical commands, fail-safes; first local build green (`pio run`, IDF 5.5: SUCCESS 137.9 s, RAM 11.2%); CI (`firmware-node7-build`, IDF 5.2.2) pending first run; flashing: VSCode+PlatformIO (`platformio.ini`, IDF 5.5) or `idf.py`; **on-device validation pending (bench)** |
+| Node 7 (Balance) - Firmware | 🟢 Done | 80% | Full ESP-IDF project `node7_balance/` (T-026): control 100 Hz, IMU 200 Hz, logical commands, fail-safes; first local build green (`pio run`, IDF 5.5: SUCCESS 137.9 s, RAM 11.2%); CI (`firmware-node7-build`, IDF 5.2.2) green on first run (CI #21, 2026-09-27); flashing: VSCode+PlatformIO (`platformio.ini`, IDF 5.5) or `idf.py`; **on-device validation pending (bench)** |
 | CI firmware jobs | ✅ Done | 100% | `firmware-host-tests` (g++) + `firmware-node7-build` (ESP-IDF v5.2.2 container) |
 | OTA Update Client | 🟡 Partial | 40% | Protocol defined, download logic pending |
 

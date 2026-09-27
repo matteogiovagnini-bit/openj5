@@ -166,7 +166,7 @@ Roadmap completa in `ROADMAP.md`; idee in `future/future.md`: riconoscimento fac
 | Gateway | Auto-reconnect MQTT assente | Resilienza rete (GOALS T5) |
 | Event Bus | NATS non implementato (`NotImplementedError`) | Alternativa futura, non bloccante |
 | Config | set() runtime non persistito su file/DB | Hot-reload completo |
-| Firmware | ✅ Node 7 completo 2026-09-23 (`node7_balance/` + `firmware/common/`, **build locale verde** con VSCode+PlatformIO via `platformio.ini`, IDF 5.5 — `pio run` SUCCESS 137,9 s; CI `firmware-node7-build` su IDF 5.2.2 da confermare alla prima push); Node 2 resta skeleton NON compilabile (T-014 → T-007); OTA client parziale | T-014 poi ROADMAP v0.4.0 |
+| Firmware | ✅ Node 7 completo 2026-09-23 (`node7_balance/` + `firmware/common/`, **build locale verde** con VSCode+PlatformIO via `platformio.ini`, IDF 5.5 — `pio run` SUCCESS 137,9 s; CI `firmware-node7-build` su IDF 5.2.2 **verde alla prima run** — CI #21, 2026-09-27, tutti e 6 i job green); Node 2 resta skeleton NON compilabile (T-014 → T-007); OTA client parziale | T-014 poi ROADMAP v0.4.0 |
 | Sim/PID Python (Node 7) | `trapezoid_velocity` è stateless (da fermo salta a vmax: `+accel*dt` non lega mai) e il PID Python fa derivative kick al primo tick (firmware no, intenzionale) | **T-029**: allineare `sim/leveling.py` + `hal/stepper.py` al C++ |
 | Certificati | node7 aggiunto al `generate.sh` 2026-09-23 (prima solo node1..node6) | Rinnovo automatico: ROADMAP v0.4.0 (T-021) |
 | Driver Nodo 6 Python | `L298NDriver` è un prototipo da banco (host Pi, NON container): la versione finale del Nodo 6 sarà il firmware ESP32 in C++; il driver Python documenta l'interfaccia IMotorDriver ma non va in produzione sul Pi | Solo riferimento prototipale; produzione = firmware ESP32 |
