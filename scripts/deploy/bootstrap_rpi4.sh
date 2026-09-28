@@ -158,4 +158,6 @@ if [ "$REBOOT_REQUIRED" -eq 1 ]; then
     log "then verify memory limits: docker run --rm --memory=256m alpine sh -c 'free -m'"
     log ""
 fi
+log "Optional: WiFi hotspot for the ESP nodes (DEPLOYMENT.md section 11):"
+log "  bash scripts/deploy/setup_hotspot.sh"
 log "Full guide: docs/deployment/DEPLOYMENT.md"

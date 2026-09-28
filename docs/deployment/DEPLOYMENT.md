@@ -2,7 +2,7 @@
 
 > Target OS: **Raspberry Pi OS Lite 64-bit (Bookworm)** — decision ADR-016.
 > Primary storage: **NVMe on USB3** (SD card = bootloader recovery only).
-> Estimated time: 45-60 minutes. Last updated: 2026-08-25.
+> Estimated time: 45-60 minutes. Last updated: 2026-09-27 (hotspot section 11).
 
 ---
 
@@ -219,7 +219,95 @@ sudo ufw allow 8883/tcp        # ESP32 nodes
 sudo ufw enable
 ```
 
-## 11. Daily Power Off / On (quick reference)
+## 11. WiFi Hotspot for the ESP Nodes (single-radio AP+STA)
+
+The ESP32 nodes do **not** join your home WiFi: they connect to a hotspot
+created by the Pi's built-in WiFi, while the same radio keeps the Pi's
+internet uplink (AP+STA on one radio). WiFi credentials then live in
+exactly one place (the Pi), the robot LAN keeps working even if the home
+router is down, and dnsmasq resolves the broker hostname `openj5-core`
+(what the firmware expects by default) to the Pi.
+
+```text
+                        home router (2.4 GHz, FIXED channel)
+                                  │ STA client (wlan0)
+internet ◄── home WiFi ───── ┌────┴─────┐
+                             │ Raspberry │  same radio, same channel
+                             │  Pi (N.1) │╌╌╌╌╌╌╌╌╌╌╌╌┐
+                             │ mosquitto │              │ AP (ap0)
+                             │ robot-core│        ┌─────┴─────┐
+                             └───────────┘        │ ESP32 ×6  │
+                                                  │ SSID openj5
+                                                  └───────────┘
+```
+
+### Constraints (single radio)
+
+- **One radio = one channel**: the AP must sit on the STA's channel. The
+  installer's sync (`openj5-channel-sync.timer`, every 60 s) re-pins
+  hostapd automatically — but **pin the router's 2.4 GHz channel** (e.g. 6)
+  so it never hops.
+- **2.4 GHz only**: ESP32 have no 5 GHz radio, and the Pi cannot serve a
+  2.4 GHz AP while its uplink sits on 5 GHz → connect the uplink to the
+  router's **2.4 GHz** SSID.
+- Control traffic never crosses the internet link (broker and robot-core
+  are on the Pi itself): only avoid heavy downloads *while* the robot
+  runs — the radio is shared.
+
+### Install
+
+```bash
+bash scripts/deploy/setup_hotspot.sh          # prompts for the passphrase
+# options: SSID=... PASSPHRASE=... AP_IP=192.168.4.1 WIFI_IF=wlan0 DNS_UPSTREAM=...
+```
+
+Idempotent — re-run after changing SSID/passphrase. What it configures:
+
+| Piece | File / unit | Role |
+|-------|-------------|------|
+| hostapd AP (WPA2) | `/etc/hostapd/openj5.conf` (0600) | `ap0` interface + passphrase |
+| dnsmasq | `/etc/dnsmasq.d/openj5.conf` | DHCP `192.168.4.50-150`, DNS `openj5-core` → `192.168.4.1` |
+| NAT | `openj5-nat.service` | share the wlan0 uplink (`ip_forward` + MASQUERADE) |
+| virtual interface | `openj5-ap-if.service` | creates `ap0`, unmanaged by NetworkManager |
+| channel sync | `openj5-channel-sync.timer` | AP channel = STA channel (60 s) |
+
+The passphrase is stored only on the Pi (`/etc/hostapd/openj5.conf`, 0600) —
+never in git.
+
+### ESP side
+
+```bash
+cd firmware/node7_balance
+cp sdkconfig.local.example sdkconfig.local   # then set SSID + passphrase
+idf.py reconfigure                           # or: pio run
+```
+
+### Verify
+
+```bash
+sudo systemctl status openj5-hostapd dnsmasq
+iw dev                                # ap0 exists, channel == wlan0 channel
+hostname -I                           # must include 192.168.4.1
+dig +short @192.168.4.1 openj5-core   # must answer 192.168.4.1
+```
+
+If you enabled `ufw` in section 10, also allow SSH from the hotspot subnet:
+
+```bash
+sudo ufw allow from 192.168.4.0/24 to any port 22 proto tcp
+```
+
+### Troubleshooting (hotspot)
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| ESP never gets an IP | wrong SSID/pass in `sdkconfig.local` → `reconfigure` + `erase-flash`; or AP down → `journalctl -u openj5-hostapd -e` |
+| hostapd restart loop | channel mismatch: uplink on 5 GHz or router hopped → `iw dev wlan0 info`, pin the router's 2.4 GHz channel |
+| DHCP clash / wrong subnet | home router already on `192.168.4.0/24` → re-run with `AP_IP=192.168.14.1` |
+| Pi has no internet | uplink issue only — the robot LAN keeps working |
+| `openj5-core` unresolved | `systemctl status dnsmasq`; `dig +short @192.168.4.1 openj5-core` |
+
+## 12. Daily Power Off / On (quick reference)
 
 **Spegnimento:**
 ```bash
@@ -239,7 +327,7 @@ Se in uso, staccare anche la batteria dei motori (guida banco: `docs/hardware/BE
 4. Browser da PC: Swagger `https://openj5-core.local:8080/api/docs`,
    Grafana `http://openj5-core.local:3000`
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Symptom | Cause / Fix |
 |---------|-------------|
@@ -254,7 +342,7 @@ Se in uso, staccare anche la batteria dei motori (guida banco: `docs/hardware/BE
 
 Full lessons learned: `docs/KNOWLEDGE_BASE.md`.
 
-## 13. What's Next After Bootstrap
+## 14. What's Next After Bootstrap
 
 1. ESP32 nodes flash (ROADMAP v0.4.0) will consume `certs/nodeN.crt|key`
    generated here.

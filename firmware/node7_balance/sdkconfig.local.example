@@ -1,0 +1,22 @@
+# Local overrides for the Node 7 firmware - COPY this file to sdkconfig.local:
+#
+#   cd firmware/node7_balance && cp sdkconfig.local.example sdkconfig.local
+#
+# sdkconfig.local is gitignored (never committed); THIS example is not, so
+# keep placeholders only. CMakeLists.txt appends it to SDKCONFIG_DEFAULTS
+# only when it exists, then: idf.py reconfigure (or pio run for PlatformIO).
+#
+# Network: the ESP joins the Raspberry Pi's hotspot (single-radio AP+STA,
+# docs/deployment/DEPLOYMENT.md section 11) instead of the home WiFi, so the
+# SSID/password are configured in exactly ONE place - scripts/deploy/
+# setup_hotspot.sh on the Pi. 2.4 GHz only (ESP32 limitation).
+CONFIG_OPENJ5_WIFI_SSID="openj5"
+CONFIG_OPENJ5_WIFI_PASSWORD="changeme"
+
+# Broker hostname: the hotspot's dnsmasq answers `openj5-core` with the Pi's
+# AP IP (192.168.4.1) - keep it as-is unless you know what you are doing.
+CONFIG_OPENJ5_MQTT_HOST="openj5-core"
+
+# Production (mTLS on 8883) needs the certs first - see README.md
+# "Produzione: mTLS (ADR-013)"; the bench default is plain MQTT (TLS off):
+# CONFIG_OPENJ5_MQTT_TLS=y

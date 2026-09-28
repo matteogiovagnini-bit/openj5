@@ -148,6 +148,12 @@ Note:
 ## 6. Accensione e prova
 
 ```bash
+# 0) Rete: il RPi fa da hotspot per gli ESP (SSID `openj5`, WPA2) — setup:
+#    scripts/deploy/setup_hotspot.sh, v. DEPLOYMENT.md §11 (router: canale
+#    2.4 GHz fisso). Gli ESP: firmware/node7_balance/sdkconfig.local (cp da
+#    sdkconfig.local.example) = SSID/pass hotspot + OPENJ5_MQTT_HOST=
+#    openj5-core (risolto dal dnsmasq del Pi → 192.168.4.1).
+
 # 1) Flash del firmware — procedura completa A (VSCode+PlatformIO,
 #    consigliata) / B (idf.py): porta, boot log, riflash, troubleshooting:
 #    firmware/node7_balance/README.md §"Procedimento di caricamento (flash)";
@@ -207,3 +213,4 @@ Topic (ADR-017): `openj5/v1/balance/{cmd,evt,telemetry,state}` — comandi `leve
 - Simulazione del loop: `src/hardware/sim/leveling.py` (parità 1:1 col PID C++)
 - Bench RPi (NEMA17 via GPIO Pi, pre-firmware): `src/hardware/drivers/a4988.py` + `config/bench/balance.json`
 - Guida collegata al Nodo 6 cingoli: `BENCH_TRACKS.md`
+- Hotspot RPi per gli ESP: `scripts/deploy/setup_hotspot.sh` · `docs/deployment/DEPLOYMENT.md` §11 · `firmware/node7_balance/sdkconfig.local.example`

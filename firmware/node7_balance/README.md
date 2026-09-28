@@ -103,7 +103,8 @@ parte: tasto **BOOT** premuto durante l'upload (v. troubleshooting §6).
 #### 2. Configurazione locale (mai committata)
 
 Prima del build creare `firmware/node7_balance/sdkconfig.local` (già
-gitignored) con WiFi/MQTT — v. sezione sotto. La rete deve essere **2.4 GHz**
+gitignored; template: `cp sdkconfig.local.example sdkconfig.local`) con
+WiFi/MQTT — v. sezione sotto. La rete deve essere **2.4 GHz**
 (l'ESP32-S3 non vede le reti 5 GHz). Dopo ogni modifica eseguire
 `idf.py reconfigure`.
 
@@ -163,11 +164,19 @@ non risponde (cablato/AD0).
 ### WiFi e MQTT locale (mai committati)
 
 Le credenziali non stanno nel repo: crea `sdkconfig.local` (già gitignored)
-**prima del build** (v. procedura §2, passo 2):
+**prima del build** copiando l'esempio (v. procedura §2, passo 2):
+
+```bash
+cp sdkconfig.local.example sdkconfig.local
+```
+
+Con l'hotspot del RPi (consigliato: `scripts/deploy/setup_hotspot.sh`, v.
+`DEPLOYMENT.md` §11) SSID e pass sono quelli dell'AP e l'host broker resta
+`openj5-core` (risolto dal dnsmasq del Pi):
 
 ```ini
-CONFIG_OPENJ5_WIFI_SSID="la-tua-rete"
-CONFIG_OPENJ5_WIFI_PASSWORD="la-password"
+CONFIG_OPENJ5_WIFI_SSID="openj5"
+CONFIG_OPENJ5_WIFI_PASSWORD="la-passphrase-dell-hotspot"
 # bench con broker plain (listener locale): disattiva TLS e usa l'host giusto
 # CONFIG_OPENJ5_MQTT_HOST="192.168.1.10"
 # CONFIG_OPENJ5_MQTT_PORT=1884

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +20,8 @@ KCONFIG = ROOT / "firmware" / "node7_balance" / "main" / "Kconfig.projbuild"
 PIO_INI = ROOT / "firmware" / "node7_balance" / "platformio.ini"
 GEN_CERTS = ROOT / "firmware" / "node1_robot_core" / "docker" / "certs"
 WIRING_DOC = ROOT / "docs" / "hardware" / "BENCH_BALANCE.md"
+HOTSPOT = ROOT / "scripts" / "deploy" / "setup_hotspot.sh"
+SDKCONFIG_EXAMPLE = ROOT / "firmware" / "node7_balance" / "sdkconfig.local.example"
 
 
 def _kconfig() -> tuple[dict[str, int], dict[str, str], dict[str, str]]:
@@ -182,3 +185,35 @@ def test_platformio_ini_matches_project():
     node_gitignore = (PIO_INI.parent / ".gitignore").read_text(encoding="utf-8")
     assert "sdkconfig.*" in node_gitignore
     assert "!sdkconfig.defaults" in node_gitignore
+    assert "!sdkconfig.local.example" in node_gitignore  # committed template
+
+
+def test_hotspot_wifi_credentials_parity():
+    """Pi hotspot and ESP config must agree (DEPLOYMENT.md section 11).
+
+    The ESPs join the Pi's AP instead of the home WiFi (single-radio
+    AP+STA), so the SSID exists in exactly two places - the hotspot
+    installer and the committed sdkconfig template - and the broker
+    hostname must be one the hotspot's dnsmasq resolves to the Pi
+    (openj5-core -> AP IP). A silent mismatch bricks the bench: the ESP
+    never gets an IP or never reaches mosquitto.
+    """
+    script = HOTSPOT.read_text(encoding="utf-8")
+    ssid = re.search(r'SSID="\$\{SSID:-([^}]+)\}"', script)
+    assert ssid, "SSID default missing in setup_hotspot.sh"
+    host = re.search(r'MQTT_HOST="\$\{MQTT_HOST:-([^}]+)\}"', script)
+    assert host, "MQTT_HOST default missing in setup_hotspot.sh"
+    _, strings, _ = _kconfig()
+    # dnsmasq must resolve the exact hostname the firmware dials by default.
+    assert host.group(1) == strings["OPENJ5_MQTT_HOST"]
+    assert "address=/$MQTT_HOST/$AP_IP" in script  # the dnsmasq entry
+    example = SDKCONFIG_EXAMPLE.read_text(encoding="utf-8")
+    assert f'CONFIG_OPENJ5_WIFI_SSID="{ssid.group(1)}"' in example
+    assert "CONFIG_OPENJ5_WIFI_PASSWORD=" in example
+    assert f'CONFIG_OPENJ5_MQTT_HOST="{host.group(1)}"' in example
+    # The installer runs only on the Pi: `bash -n` is the cheapest guard
+    # against shipping a broken deploy script.
+    proc = subprocess.run(
+        ["bash", "-n", str(HOTSPOT)], capture_output=True, text=True, check=False
+    )
+    assert proc.returncode == 0, proc.stderr
