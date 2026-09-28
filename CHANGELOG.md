@@ -99,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `openj5/v1/balance/cmd`, system E-stop subscription, deadman/watchdog/
     travel fail-safes, coils off at boot, Kconfig.projbuild synced with
     `node.json`, README with local `sdkconfig.local` + mTLS cert procedure
-- Config parity test `tests/unit/test_node7_config_sync.py` (8 tests):
+- Config parity test `tests/unit/test_node7_config_sync.py` (9 tests):
   Kconfig ↔ node.json ↔ balance.json ↔ wiring doc ↔ certs script ↔
   `platformio.ini`
 - CI jobs `firmware-host-tests` (g++ logic tests) and `firmware-node7-build`
@@ -115,6 +115,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   MPU6050 driver migration needed; path A exercised end-to-end with the first
   green local build (`pio run`: SUCCESS in 137.9 s, RAM 11.2%, 88.8% of the
   1 M factory slot)
+- **WiFi hotspot for the ESP nodes** (single-radio AP+STA):
+  `scripts/deploy/setup_hotspot.sh` turns the Pi's built-in WiFi into a WPA2
+  AP (`ap0`) sharing the internet uplink — dnsmasq DHCP/DNS (broker hostname
+  `openj5-core` → `192.168.4.1`), NAT, systemd units
+  `openj5-{ap-if,hostapd,nat,channel-sync}` with a 60 s channel sync (router
+  must keep a fixed 2.4 GHz channel). WiFi credentials now live in exactly
+  one place (the Pi); the ESP side is the committed
+  `firmware/node7_balance/sdkconfig.local.example`. Docs: DEPLOYMENT.md
+  section 11, BENCH_BALANCE §6 step 0, node7 README; parity pinned by the
+  new `test_hotspot_wifi_credentials_parity` (also `bash -n`s the installer)
 
 ### Changed
 - **ADR-016**: Node 1 reference OS switched from Ubuntu Server to Raspberry Pi OS

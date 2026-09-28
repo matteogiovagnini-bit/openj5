@@ -17,7 +17,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
 | Domain Model (value objects, events, commands, entities, services) | ✅ Done | 100% | All value objects, events, CQRS bus, entities, repositories, kinematics service — **verified by `tests/unit/` (149 tests, T-003)** |
-| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 7 modules + conftest; **157 tests total** (149 domain + 8 config-sync); CI gate ≥90% (`python-tests` job) |
+| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 7 modules + conftest; **158 tests total** (149 domain + 9 config-sync); CI gate ≥90% (`python-tests` job) |
 | Plugin Architecture | ✅ Done | 90% | PluginManager, PluginRegistry, Sandbox, dependency resolution |
 | Communication Gateway | ✅ Done | 85% | MQTT, MultiProtocol, mTLS |
 | Event Bus (Redis Streams) | ✅ Done | 85% | Streams, consumer groups, DLQ, replay |
@@ -127,7 +127,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Metric | Target | Current |
 |--------|--------|---------|
 | Python files | - | 35+ |
-| Unit tests (core.domain) | ≥90% coverage | 157 tests, **100% coverage** (149 domain + 8 config-sync) |
+| Unit tests (core.domain) | ≥90% coverage | 158 tests, **100% coverage** (149 domain + 9 config-sync) |
 | Firmware C++ files | - | 21 (10 .cpp + 11 .hpp: `firmware/common` + `node7_balance`) |
 | Config files (JSON/YAML) | - | 12+ |
 | Docker services | - | 10 |
