@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
 
 ### Fixed
+- `docker-compose.yml`: Docker programs published ports (`ports:`) only for
+  containers attached to a non-internal network — mosquitto sat on
+  `robot-internal` (`internal: true`) alone, so `1883/8883/9001` had no DNAT
+  rule and no `docker-proxy` and every LAN client (the ESP nodes dialling
+  `openj5-core:8883`) got connection refused with no deploy-time warning;
+  the broker is now attached to both `robot-internal` and `robot-external`
+  (same pattern as robot-core and grafana)
+- the broker's mTLS listener is TLS1.3-only (`mosquitto.conf: tls_version
+  tlsv1.3`) but mbedTLS defaulted to TLS1.2-only, so every node7 handshake
+  died before certificate exchange (OpenSSL `unsupported protocol`, broker
+  logging `Client <unknown> ... Protocol error`); `sdkconfig.local.example`
+  now sets `CONFIG_MBEDTLS_SSL_PROTO_TLS1_3=y` (ADR-013)
+- `certs/generate.sh` leaf SAN omitted `openj5-core` (only `localhost`,
+  `<cn>`, `openj5.local`): esp-tls verifies `mqtts://openj5-core:8883` against
+  it, so every ESP mTLS handshake would have been rejected; the name is now in
+  every leaf SAN (ADR-013)
 - `Command.__post_init__` was declared `@abstractmethod` on a non-ABC dataclass:
   all 9 concrete commands (`MoveHeadCommand`, `EmergencyStopCommand`, ...) were
   uninstantiable (`TypeError`), breaking ~50 SDK call sites including
@@ -73,6 +89,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y` added to `sdkconfig.defaults` (the board
   default of 2 MB mismatched the 8 MB flash); the generated per-env
   `sdkconfig.node7` (can contain `sdkconfig.local` secrets) is now gitignored
+- First build with `OPENJ5_MQTT_TLS=y` (bench; CI compiles it off, so the path
+  was never exercised) broke in three places: IDF 5.5 made
+  `target_add_binary_data` take an explicit embed type AND PlatformIO's SCons
+  phase compiles `main`'s codemodel sources before ninja runs the custom
+  command that generates the `.S` — certs are now embedded at configure time
+  via IDF's own script (`TEXT`, NUL-terminated for mbedtls's PEM parser, with
+  the legacy `_binary_certs_*` names) and regenerated when a cert changes
+  (`CMAKE_CONFIGURE_DEPENDS`); esp-mqtt renamed
+  `broker.verification.cacert(_len)` → `certificate(_len)`; a stale
+  `sdkconfig.node7` masked `sdkconfig.local` entirely (saved kconfig values
+  win over defaults — regenerate by deleting it)
+- Bench module has 4 MB flash while the `esp32-s3-devkitc-1` board JSON
+  declares 8 MB: PlatformIO's `firmware.bin`/`bootloader.bin` carried an 8 MB
+  image header and the chip refused to boot (`Detected size(4096k) smaller
+  than the size in the binary image header(8192k)`); `board_upload.flash_size`
+  is now overridden in `platformio.ini`, kept aligned with
+  `CONFIG_ESPTOOLPY_FLASHSIZE_4MB` in `sdkconfig.local` (N8 boards: both stay
+  at the `sdkconfig.defaults`/board-JSON 8 MB)
 
 ### Added
 - **T-003 unit test suite for `src/core/domain/`**: `tests/unit/conftest.py`
@@ -124,7 +158,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one place (the Pi); the ESP side is the committed
   `firmware/node7_balance/sdkconfig.local.example`. Docs: DEPLOYMENT.md
   section 11, BENCH_BALANCE §6 step 0, node7 README; parity pinned by the
-  new `test_hotspot_wifi_credentials_parity` (also `bash -n`s the installer)
+  new `test_hotspot_wifi_credentials_parity` (also `bash -n`s the installer);
+  dual-radio mode (`AP_IF=wlan1`): a USB WiFi dongle with AP mode hosts the
+  hotspot at a fixed `AP_CHANNEL` while the uplink stays free on 5 GHz (no
+  channel sync, no router-channel coupling); `openj5-ap-if` now also assigns
+  the AP address (`$AP_PREFIX` from `NETMASK`, missing until now) and waits
+  for the dongle to enumerate at boot; dnsmasq gets `no-hosts` because
+  /etc/hosts overrides `address=` for the Pi's own hostname
 
 ### Changed
 - **ADR-016**: Node 1 reference OS switched from Ubuntu Server to Raspberry Pi OS

@@ -2,7 +2,7 @@
 
 > Target OS: **Raspberry Pi OS Lite 64-bit (Bookworm)** — decision ADR-016.
 > Primary storage: **NVMe on USB3** (SD card = bootloader recovery only).
-> Estimated time: 45-60 minutes. Last updated: 2026-09-27 (hotspot section 11).
+> Estimated time: 45-60 minutes. Last updated: 2026-10-07 (broker port publishing, hotspot band-steering warning).
 
 ---
 
@@ -209,6 +209,12 @@ manual action.
 | 4317/4318/8888 | OTEL collector | host-only usage |
 
 Internal bridge `robot-internal` has no internet; only `robot-external` egresses.
+Docker does **not** program published ports (`ports:`) for a container attached
+*only* to an `internal: true` network — no DNAT rule, no `docker-proxy`,
+connections are refused with no warning at deploy time. Mosquitto is therefore
+attached to **both** networks (`robot-internal` for container-to-container,
+`robot-external` for its LAN listeners); any future service whose ports must
+answer on the host needs the same treatment.
 
 Suggested hardening (`ufw` is not preinstalled on Pi OS Lite):
 
@@ -226,7 +232,9 @@ created by the Pi's built-in WiFi, while the same radio keeps the Pi's
 internet uplink (AP+STA on one radio). WiFi credentials then live in
 exactly one place (the Pi), the robot LAN keeps working even if the home
 router is down, and dnsmasq resolves the broker hostname `openj5-core`
-(what the firmware expects by default) to the Pi.
+(what the firmware expects by default) to the Pi. If a USB WiFi dongle is
+available, the AP moves to that second radio (`AP_IF=wlan1`, dual mode
+below) and the uplink stays free on 5 GHz.
 
 ```text
                         home router (2.4 GHz, FIXED channel)
@@ -241,24 +249,41 @@ internet ◄── home WiFi ───── ┌────┴─────�
                                                   └───────────┘
 ```
 
-### Constraints (single radio)
+### Radio constraints
 
-- **One radio = one channel**: the AP must sit on the STA's channel. The
-  installer's sync (`openj5-channel-sync.timer`, every 60 s) re-pins
-  hostapd automatically — but **pin the router's 2.4 GHz channel** (e.g. 6)
-  so it never hops.
-- **2.4 GHz only**: ESP32 have no 5 GHz radio, and the Pi cannot serve a
-  2.4 GHz AP while its uplink sits on 5 GHz → connect the uplink to the
-  router's **2.4 GHz** SSID.
+- **ESP32 are 2.4 GHz only**: the hotspot is always 2.4 GHz (`hw_mode=g`).
+- **One radio = one channel** (default, `AP_IF=ap0`): the AP must sit on the
+  STA channel. The installer's sync (`openj5-channel-sync.timer`, every 60 s)
+  re-pins hostapd automatically — but **pin the router's 2.4 GHz channel**
+  (e.g. 6) so it never hops, and connect the uplink to the **2.4 GHz** SSID:
+  on 5 GHz the single radio cannot host the AP at all (the installer stops
+  with an explicit error).
+- **Turn off the router's band/client steering** (Archer-style "band
+  steering", OneMesh, 802.11v): those routers push the STA off the 2.4 GHz
+  BSSID with WNM "Preferred List" requests and deauthenticate it. On a single
+  radio this becomes a loop (observed: disconnect every ~9 s): the channel is
+  saturated for ~2 s out of every 9 (slow link, DHCP lease churn) and hostapd
+  beacon gaps make the SSID look *invisible* while the Pi itself pings fine.
+  Symptoms: `journalctl -u wpa_supplicant` filling with
+  `Preferred List Available` and `CTRL-EVENT-DISCONNECTED ... reason=2`.
+  Fix on the router: disable steering for the 2.4 GHz network and pin its
+  channel; wpa_supplicant blacklists the steered BSSID for 30 min, so
+  re-check ~30 min after the change (the loop returns if the router is left
+  steering).
+- **Dedicated radio** (`AP_IF=wlan1`, USB WiFi dongle with AP mode): the
+  uplink stays free on 5 GHz while the dongle hosts the AP on a **fixed**
+  channel (`AP_CHANNEL`, default 6) — no channel sync, no coupling with the
+  router. Find the dongle's interface with `iw dev`; the installer refuses
+  dongles whose driver lacks AP mode. Recommended whenever a dongle exists.
 - Control traffic never crosses the internet link (broker and robot-core
-  are on the Pi itself): only avoid heavy downloads *while* the robot
-  runs — the radio is shared.
+  are on the Pi itself): only avoid heavy downloads *while* the robot runs.
 
 ### Install
 
 ```bash
-bash scripts/deploy/setup_hotspot.sh          # prompts for the passphrase
-# options: SSID=... PASSPHRASE=... AP_IP=192.168.4.1 WIFI_IF=wlan0 DNS_UPSTREAM=...
+bash scripts/deploy/setup_hotspot.sh               # single radio: prompts for passphrase
+AP_IF=wlan1 bash scripts/deploy/setup_hotspot.sh   # USB dongle: uplink free on 5 GHz
+# options: SSID=... PASSPHRASE=... AP_CHANNEL=11 AP_IP=192.168.4.1 WIFI_IF=wlan0 DNS_UPSTREAM=...
 ```
 
 Idempotent — re-run after changing SSID/passphrase. What it configures:
@@ -269,7 +294,7 @@ Idempotent — re-run after changing SSID/passphrase. What it configures:
 | dnsmasq | `/etc/dnsmasq.d/openj5.conf` | DHCP `192.168.4.50-150`, DNS `openj5-core` → `192.168.4.1` |
 | NAT | `openj5-nat.service` | share the wlan0 uplink (`ip_forward` + MASQUERADE) |
 | virtual interface | `openj5-ap-if.service` | creates `ap0`, unmanaged by NetworkManager |
-| channel sync | `openj5-channel-sync.timer` | AP channel = STA channel (60 s) |
+| channel sync | `openj5-channel-sync.timer` | single radio only: AP channel = STA channel (60 s) |
 
 The passphrase is stored only on the Pi (`/etc/hostapd/openj5.conf`, 0600) —
 never in git.
