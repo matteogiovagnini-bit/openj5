@@ -32,9 +32,12 @@ esp_err_t MqttClient::start(const Config& cfg) {
     mqtt_cfg.session.keepalive = cfg.keepalive_s;
 
 #if OPENJ5_MQTT_TLS
-    mqtt_cfg.broker.verification.cacert =
+    // CA used to verify the broker. IDF 5.5's esp-mqtt names it
+    // verification.certificate (older releases used cacert); CI never
+    // compiles this block (TLS off), only the bench build does.
+    mqtt_cfg.broker.verification.certificate =
         reinterpret_cast<const char*>(_binary_certs_ca_crt_start);
-    mqtt_cfg.broker.verification.cacert_len =
+    mqtt_cfg.broker.verification.certificate_len =
         static_cast<size_t>(_binary_certs_ca_crt_end - _binary_certs_ca_crt_start);
     mqtt_cfg.credentials.authentication.certificate =
         reinterpret_cast<const char*>(_binary_certs_node7_crt_start);
