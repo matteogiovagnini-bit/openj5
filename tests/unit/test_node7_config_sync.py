@@ -150,6 +150,8 @@ def test_certs_script_generates_node7():
     generate = (GEN_CERTS / "generate.sh").read_text(encoding="utf-8")
     assert re.search(r"for i in 1 2 3 4 5 6 7;", generate), "node7 cert missing"
     assert "node7" in generate
+    # esp-tls verifies mqtts://openj5-core:8883 against the leaf SAN
+    assert "DNS:openj5-core" in generate, "broker SAN lacks the ESP hostname"
 
 
 def test_platformio_ini_matches_project():
@@ -207,6 +209,23 @@ def test_hotspot_wifi_credentials_parity():
     # dnsmasq must resolve the exact hostname the firmware dials by default.
     assert host.group(1) == strings["OPENJ5_MQTT_HOST"]
     assert "address=/$MQTT_HOST/$AP_IP" in script  # the dnsmasq entry
+    # both topologies stay supported: virtual ap0 on the uplink radio
+    # (single radio) and a dedicated USB radio (AP_IF=wlan1) whose
+    # AP-mode capability is checked via its phy80211 sysfs node
+    assert '[ "$AP_IF" = ap0 ]' in script
+    assert "phy80211" in script
+    # the AP iface gets its gateway address: dnsmasq serves DHCP + the
+    # openj5-core name on $AP_IP, which nothing else assigns
+    assert 'ip addr replace "$AP_IP/$AP_PREFIX" dev "$AP_IF"' in script
+    # NetworkManager must release the iface BEFORE the address is set:
+    # it auto-manages new wifi ifaces within ~600 ms and flushes addresses
+    # it did not assign (observed: ap0 lost 192.168.4.1 right after creation)
+    assert script.index('nmcli dev set "$AP_IF" managed no') < script.index(
+        'ip addr replace "$AP_IP/$AP_PREFIX" dev "$AP_IF"'
+    )
+    # dnsmasq must ignore /etc/hosts: its "127.0.1.1 <hostname>" entry would
+    # override address=/openj5-core/192.168.4.1 (dnsmasq man --address)
+    assert "no-hosts" in script
     example = SDKCONFIG_EXAMPLE.read_text(encoding="utf-8")
     assert f'CONFIG_OPENJ5_WIFI_SSID="{ssid.group(1)}"' in example
     assert "CONFIG_OPENJ5_WIFI_PASSWORD=" in example
