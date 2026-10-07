@@ -193,7 +193,10 @@ cp ca.crt node7.crt node7.key ../../../node7_balance/main/certs/
 ```
 
 poi in `sdkconfig.local`: `CONFIG_OPENJ5_MQTT_TLS=y` (il build fallisce con
-messaggio esplicito se i cert mancano).
+messaggio esplicito se i cert mancano) e `CONFIG_MBEDTLS_SSL_PROTO_TLS1_3=y`
+(il broker accetta solo TLS1.3: senza questo mbedTLS offre solo TLS1.2 e il
+handshake muore con `unsupported protocol` sul lato server). Entrambe le
+impostazioni sono già nell'`sdkconfig.local.example`.
 
 ## Comandi (topic `openj5/v1/balance/cmd`)
 

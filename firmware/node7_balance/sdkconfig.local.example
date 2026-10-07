@@ -20,3 +20,9 @@ CONFIG_OPENJ5_MQTT_HOST="openj5-core"
 # Production (mTLS on 8883) needs the certs first - see README.md
 # "Produzione: mTLS (ADR-013)"; the bench default is plain MQTT (TLS off):
 # CONFIG_OPENJ5_MQTT_TLS=y
+
+# The broker's mTLS listener is TLS1.3-only (mosquitto.conf: tls_version
+# tlsv1.3). mbedTLS defaults to TLS1.2-only, and OpenSSL then rejects the
+# ClientHello with "unsupported protocol" before any certificate exchange
+# (broker log: "Client <unknown> ... Protocol error"). Harmless with TLS off.
+CONFIG_MBEDTLS_SSL_PROTO_TLS1_3=y
