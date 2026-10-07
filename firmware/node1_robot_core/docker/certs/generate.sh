@@ -154,10 +154,14 @@ gen_leaf() {
         -subj "/C=$COUNTRY/ST=$STATE/L=$LOCALITY/O=$ORG/OU=$ORG_UNIT/CN=$cn" \
         >/dev/null 2>&1
 
-    # Generate SAN file for each leaf (include hostname)
+    # Generate SAN file for each leaf (include hostname). openj5-core is the
+    # broker name the ESP nodes use (hotspot dnsmasq answers it with the AP
+    # IP): esp-tls verifies the server certificate against it on
+    # mqtts://openj5-core:8883, so it must be in the SAN or the handshake
+    # fails (ADR-013).
     local san_file="$CERT_DIR/$name.san"
     cat > "$san_file" <<EOF
-subjectAltName=DNS:localhost,DNS:$cn,DNS:openj5.local,IP:127.0.0.1
+subjectAltName=DNS:localhost,DNS:$cn,DNS:openj5-core,DNS:openj5.local,IP:127.0.0.1
 EOF
 
     openssl x509 -req \
