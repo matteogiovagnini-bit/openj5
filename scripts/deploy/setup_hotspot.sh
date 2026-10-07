@@ -2,12 +2,21 @@
 #
 # OpenJ5 WiFi hotspot - Raspberry Pi as access point for the ESP32 nodes.
 #
-# Single-radio AP+STA (docs/deployment/DEPLOYMENT.md section 11): the Pi's
-# built-in WiFi serves the robot LAN on a virtual `ap0` interface while the
-# same radio keeps the internet uplink (wlan0 client, NetworkManager).
-# One radio = one channel: openj5-channel-sync keeps the AP on the STA
-# channel, so PIN the router's 2.4 GHz channel once (it must never hop) and
-# connect the uplink to the 2.4 GHz SSID (ESP32 are 2.4 GHz only).
+# docs/deployment/DEPLOYMENT.md section 11. Two modes:
+#
+#   AP_IF=ap0 (default)  single radio (AP+STA share one channel): the
+#                        built-in WiFi serves the robot LAN on a virtual
+#                        `ap0` while the same radio keeps the uplink (wlan0
+#                        client, NetworkManager). The uplink MUST be on
+#                        2.4 GHz (ESP32 are 2.4 GHz only) and
+#                        openj5-channel-sync keeps the AP on the STA channel
+#                        -> PIN the router's 2.4 GHz channel once.
+#   AP_IF=wlan1          dedicated radio (USB WiFi dongle with AP mode):
+#                        uplink free on 5 GHz (wlan0), the AP runs on the
+#                        dongle at a FIXED channel (AP_CHANNEL), no channel
+#                        sync, no uplink/channel coupling.
+#
+# Both modes: the ESP hotspot is always 2.4 GHz (hw_mode=g).
 #
 # Generates (idempotent - re-run after changing SSID/PASSPHRASE):
 #   /etc/hostapd/openj5.conf             hostapd AP (WPA2, 0600: passphrase)
@@ -16,12 +25,13 @@
 #   /etc/systemd/system/openj5-*.service|.timer
 #   /usr/local/sbin/openj5-{ap-if,nat,channel-sync}
 #
-# Usage (on the Pi, sudo-capable user; Pi already connected to home WiFi):
-#   bash scripts/deploy/setup_hotspot.sh
-#   SSID=openj5 PASSPHRASE='...' bash scripts/deploy/setup_hotspot.sh
+# Usage (on the Pi, sudo-capable user; uplink already connected):
+#   bash scripts/deploy/setup_hotspot.sh                 # single radio (ap0)
+#   AP_IF=wlan1 bash scripts/deploy/setup_hotspot.sh     # USB dongle as AP
+#   SSID=openj5 PASSPHRASE='...' AP_CHANNEL=11 AP_IF=wlan1 bash ...
 #
-# Env options: SSID PASSPHRASE WIFI_IF AP_IF AP_IP DHCP_START DHCP_END
-#              MQTT_HOST DNS_UPSTREAM
+# Env options: SSID PASSPHRASE WIFI_IF AP_IF AP_CHANNEL AP_IP DHCP_START
+#              DHCP_END MQTT_HOST DNS_UPSTREAM
 #
 # Secrets: the passphrase ends up only in /etc/hostapd/openj5.conf (0600
 # root, on the Pi) - never in git. The ESP mirrors it in the uncommitted
@@ -36,11 +46,15 @@ SSID="${SSID:-openj5}"
 PASSPHRASE="${PASSPHRASE:-}"
 WIFI_IF="${WIFI_IF:-wlan0}"
 AP_IF="${AP_IF:-ap0}"
+AP_CHANNEL="${AP_CHANNEL:-6}"       # fixed AP channel (dual-radio mode; also single-radio start value)
 AP_IP="${AP_IP:-192.168.4.1}"
 SUBNET="${AP_IP%.*}"
 DHCP_START="${DHCP_START:-${SUBNET}.50}"
 DHCP_END="${DHCP_END:-${SUBNET}.150}"
 NETMASK="${NETMASK:-255.255.255.0}"
+# CIDR prefix for the AP address (255.255.255.0 -> 24); guard against garbage.
+AP_PREFIX="$(printf '%s' "$NETMASK" | awk -F. '{c=0; for (i=1;i<=4;i++) {x=$i; while (x>0) {c+=x%2; x=int(x/2)}} print c}')"
+case "$AP_PREFIX" in ''|*[!0-9]*|0) AP_PREFIX=24 ;; esac
 MQTT_HOST="${MQTT_HOST:-openj5-core}"
 DNS_UPSTREAM="${DNS_UPSTREAM:-1.1.1.1}"
 
@@ -76,12 +90,21 @@ fi
 [ "${#PASSPHRASE}" -ge 8 ] && [ "${#PASSPHRASE}" -le 63 ] \
     || die "passphrase must be 8-63 characters"
 
-# Single radio: with the uplink on 5 GHz the 2.4 GHz AP cannot run at all.
 sta_channel="$(iw dev "$WIFI_IF" info 2>/dev/null | awk '$1 == "channel" {print $2}' || true)"
-if [ -n "$sta_channel" ] && [ "$sta_channel" -gt 14 ] 2>/dev/null; then
-    die "$WIFI_IF uplink is on 5 GHz (channel $sta_channel): connect it to the router's 2.4 GHz SSID first (single radio + ESP32 are 2.4 GHz only)"
-elif [ -z "$sta_channel" ]; then
-    log "WARNING: $WIFI_IF not connected yet - the AP starts on channel 6 and openj5-channel-sync will follow the STA channel once connected. PIN the router's 2.4 GHz channel so it never hops."
+if [ "$AP_IF" = "ap0" ]; then
+    # Single radio: with the uplink on 5 GHz the 2.4 GHz AP cannot run at all.
+    if [ -n "$sta_channel" ] && [ "$sta_channel" -gt 14 ] 2>/dev/null; then
+        die "$WIFI_IF uplink is on 5 GHz (channel $sta_channel) and AP_IF=ap0 shares that radio: connect the uplink to the 2.4 GHz SSID, or plug a USB WiFi dongle and re-run with AP_IF=wlan1"
+    elif [ -z "$sta_channel" ]; then
+        log "WARNING: $WIFI_IF not connected yet - the AP starts on channel $AP_CHANNEL and openj5-channel-sync will follow the STA channel once connected. PIN the router's 2.4 GHz channel so it never hops."
+    fi
+    log "single-radio mode: uplink + AP share $WIFI_IF (channel sync active)"
+else
+    [ -d "/sys/class/net/$AP_IF" ] || die "AP interface '$AP_IF' not found - plug the USB dongle, check 'iw dev', then re-run with AP_IF=<iface>"
+    if [ -z "$sta_channel" ]; then
+        log "WARNING: uplink $WIFI_IF not connected yet (AP works anyway, no internet sharing until it is)"
+    fi
+    log "dedicated-radio mode: uplink $WIFI_IF (free for 5 GHz) + AP on $AP_IF (channel $AP_CHANNEL fixed)"
 fi
 
 # ------------------------------------------------------------
@@ -91,19 +114,29 @@ step "Packages (hostapd, dnsmasq, iw)"
 sudo apt-get update -qq
 sudo apt-get install -y -qq hostapd dnsmasq iw iptables
 
+# Dedicated radio: the dongle must support AP mode (iw is available only now).
+if [ "$AP_IF" != "ap0" ]; then
+    phy="$(readlink -f "/sys/class/net/$AP_IF/phy80211" 2>/dev/null || true)"
+    if [ -z "$phy" ] || ! iw phy "$(basename "$phy")" info 2>/dev/null \
+            | grep -Eq '^[[:space:]]*\*[[:space:]]+AP([[:space:]]|$)'; then
+        die "$AP_IF does not support AP mode (driver/dongle) - the hotspot cannot run on it. Check: iw phy \$(basename \$(readlink -f /sys/class/net/$AP_IF/phy80211)) info | grep -A12 'Supported interface modes'"
+    fi
+fi
+
 # ------------------------------------------------------------
 # Configuration files
 # ------------------------------------------------------------
 step "Configuration files"
 sudo tee "$HOTSPOT_CONF" >/dev/null <<EOF
 # Generated by scripts/deploy/setup_hotspot.sh - do not edit (re-run instead).
-# 0600 root: holds the WPA2 passphrase. `channel` is kept equal to the STA
-# uplink channel by openj5-channel-sync (single radio = one channel).
+# 0600 root: holds the WPA2 passphrase. Single-radio mode: the channel is
+# kept equal to the STA uplink channel by openj5-channel-sync. Dedicated
+# radio: it stays at the fixed AP_CHANNEL.
 interface=$AP_IF
 driver=nl80211
 ssid=$SSID
 hw_mode=g
-channel=6
+channel=$AP_CHANNEL
 wmm_enabled=1
 macaddr_acl=0
 auth_algs=1
@@ -130,6 +163,9 @@ address=/$MQTT_HOST/$AP_IP
 # External names go upstream; the robot LAN itself keeps working offline.
 no-resolv
 server=$DNS_UPSTREAM
+# /etc/hosts OVERRIDES address= for individual names (dnsmasq man), and Debian
+# puts "127.0.1.1 <hostname>" there - keep dnsmasq off it so $MQTT_HOST wins.
+no-hosts
 EOF
 
 # Debian ships conf-dir commented out in /etc/dnsmasq.conf: make sure drop-ins load.
@@ -148,18 +184,40 @@ echo 'net.ipv4.ip_forward=1' | sudo tee "$SYSCTL_CONF" >/dev/null
 step "Systemd units"
 sudo tee "$LIB_DIR/openj5-ap-if" >/dev/null <<EOF
 #!/usr/bin/env bash
-# Created by setup_hotspot.sh: virtual AP interface, unmanaged by NetworkManager.
+# Created by setup_hotspot.sh: AP interface up, unmanaged by NetworkManager.
 set -euo pipefail
-for _ in \$(seq 1 30); do [ -d "/sys/class/net/$WIFI_IF" ] && break; sleep 1; done
 rfkill unblock wifi 2>/dev/null || true
-ip link show "$AP_IF" >/dev/null 2>&1 || iw dev "$WIFI_IF" interface add "$AP_IF" type __ap
-ip link set "$AP_IF" up
+for _ in \$(seq 1 30); do [ -d "/sys/class/net/$WIFI_IF" ] && break; sleep 1; done
+if [ "$AP_IF" = ap0 ]; then
+    # single-radio mode: virtual AP interface on top of the uplink radio
+    ip link show "$AP_IF" >/dev/null 2>&1 || iw dev "$WIFI_IF" interface add "$AP_IF" type __ap
+else
+    # dedicated radio (USB dongle): wait for enumeration + driver probe first
+    for _ in \$(seq 1 40); do [ -d "/sys/class/net/$AP_IF" ] && break; sleep 1; done
+    [ -d "/sys/class/net/$AP_IF" ] || { echo "openj5-ap-if: $AP_IF missing after 40s (dongle not enumerated? check lsusb / powered port)"; exit 1; }
+    # drop the orphan virtual AP iface left by a previous single-radio install
+    if [ -d /sys/class/net/ap0 ]; then
+        ip link set ap0 down 2>/dev/null || true
+        iw dev ap0 del 2>/dev/null || true
+    fi
+fi
+# NetworkManager must release the iface BEFORE it gets its address: NM
+# auto-manages new wifi ifaces within ~600 ms and flushes addresses it did
+# not assign (observed: ap0 lost 192.168.4.1 right after creation).
 if command -v nmcli >/dev/null 2>&1; then
     for _ in \$(seq 1 10); do
         nmcli dev set "$AP_IF" managed no >/dev/null 2>&1 && break
         sleep 1
     done
 fi
+if ! err="\$(ip link set "$AP_IF" up 2>&1)"; then
+    echo "openj5-ap-if: cannot bring $AP_IF up: \$err"
+    rfkill list 2>/dev/null || true
+    exit 1
+fi
+# The AP needs its address (gateway/DNS for the ESP LAN): dnsmasq only hands
+# out leases and answers $MQTT_HOST on this IP.
+ip addr replace "$AP_IP/$AP_PREFIX" dev "$AP_IF"
 EOF
 sudo chmod 755 "$LIB_DIR/openj5-ap-if"
 
@@ -176,7 +234,8 @@ iptables -t nat -C POSTROUTING -o "$WIFI_IF" -j MASQUERADE 2>/dev/null \\
 EOF
 sudo chmod 755 "$LIB_DIR/openj5-nat"
 
-sudo tee "$LIB_DIR/openj5-channel-sync" >/dev/null <<EOF
+if [ "$AP_IF" = "ap0" ]; then
+    sudo tee "$LIB_DIR/openj5-channel-sync" >/dev/null <<EOF
 #!/usr/bin/env bash
 # Created by setup_hotspot.sh: keep hostapd on the STA channel (single radio).
 set -euo pipefail
@@ -192,7 +251,13 @@ if [ "\$sta" != "\$ap" ]; then
     systemctl try-restart openj5-hostapd.service || true
 fi
 EOF
-sudo chmod 755 "$LIB_DIR/openj5-channel-sync"
+    sudo chmod 755 "$LIB_DIR/openj5-channel-sync"
+else
+    # Dedicated radio: the AP channel is independent - remove/never re-enable sync.
+    sudo systemctl disable --now openj5-channel-sync.timer 2>/dev/null || true
+    sudo rm -f "$LIB_DIR/openj5-channel-sync" \
+        "$UNIT_DIR/openj5-channel-sync.service" "$UNIT_DIR/openj5-channel-sync.timer"
+fi
 
 sudo tee "$UNIT_DIR/openj5-ap-if.service" >/dev/null <<EOF
 [Unit]
@@ -203,6 +268,7 @@ After=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+TimeoutStartSec=120
 ExecStart=$LIB_DIR/openj5-ap-if
 
 [Install]
@@ -242,7 +308,8 @@ ExecStart=$LIB_DIR/openj5-nat
 WantedBy=multi-user.target
 EOF
 
-sudo tee "$UNIT_DIR/openj5-channel-sync.service" >/dev/null <<EOF
+if [ "$AP_IF" = "ap0" ]; then
+    sudo tee "$UNIT_DIR/openj5-channel-sync.service" >/dev/null <<EOF
 [Unit]
 Description=OpenJ5 hotspot - sync hostapd channel with the STA uplink
 
@@ -251,7 +318,7 @@ Type=oneshot
 ExecStart=$LIB_DIR/openj5-channel-sync
 EOF
 
-sudo tee "$UNIT_DIR/openj5-channel-sync.timer" >/dev/null <<EOF
+    sudo tee "$UNIT_DIR/openj5-channel-sync.timer" >/dev/null <<EOF
 [Unit]
 Description=OpenJ5 hotspot - channel sync every minute (router may hop)
 
@@ -263,17 +330,27 @@ AccuracySec=5s
 [Install]
 WantedBy=timers.target
 EOF
+fi
 
 # ------------------------------------------------------------
-# Enable + start (channel sync BEFORE hostapd to avoid a restart loop)
+# Enable + start (single radio: channel sync BEFORE hostapd, no restart loop)
 # ------------------------------------------------------------
 step "Enable services"
 sudo systemctl daemon-reload
-sudo systemctl enable --now openj5-ap-if.service
-sudo "$LIB_DIR/openj5-channel-sync" || true
-sudo systemctl enable --now openj5-hostapd.service
-sudo systemctl enable --now openj5-nat.service
-sudo systemctl enable --now openj5-channel-sync.timer
+# explicit enable+restart: a re-run (e.g. ap0 -> dongle switch) must re-execute
+# the helpers and reload the regenerated configs, enable --now alone would not.
+sudo systemctl enable openj5-ap-if.service
+sudo systemctl restart openj5-ap-if.service
+if [ "$AP_IF" = "ap0" ]; then
+    sudo "$LIB_DIR/openj5-channel-sync" || true
+    sudo systemctl enable --now openj5-channel-sync.timer
+else
+    log "dedicated radio: AP channel fixed at $AP_CHANNEL, channel sync not needed"
+fi
+sudo systemctl enable openj5-hostapd.service
+sudo systemctl restart openj5-hostapd.service
+sudo systemctl enable openj5-nat.service
+sudo systemctl restart openj5-nat.service
 sudo systemctl enable dnsmasq.service 2>/dev/null || true
 sudo systemctl restart dnsmasq.service || die "dnsmasq failed to start (journalctl -u dnsmasq)"
 
@@ -299,7 +376,11 @@ log ""
 log "Done. Next:"
 log "  - ESP side: cd firmware/node7_balance && cp sdkconfig.local.example sdkconfig.local"
 log "    then set SSID='$SSID' and the passphrase (never committed)."
-log "  - Router: PIN the 2.4 GHz channel (the AP follows the uplink channel; a hop breaks the AP until the sync timer catches it)."
+if [ "$AP_IF" = "ap0" ]; then
+    log "  - Router: PIN the 2.4 GHz channel (the AP follows the uplink channel; a hop breaks the AP until the sync timer catches it)."
+else
+    log "  - AP channel fixed at $AP_CHANNEL on $AP_IF (uplink $WIFI_IF independent - change anytime with AP_CHANNEL= and a re-run)."
+fi
 log "  - ufw (DEPLOYMENT.md section 10): allow the hotspot subnet for SSH, e.g."
 log "      sudo ufw allow from $SUBNET.0/24 to any port 22 proto tcp"
 log "Full guide: docs/deployment/DEPLOYMENT.md section 11"
