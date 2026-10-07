@@ -22,6 +22,7 @@ services:
       - mosquitto_logs:/mosquitto/log
     networks:
       - robot-internal
+      - robot-external   # published ports are ignored on internal-only networks (docker)
     healthcheck:
       # Deterministic MQTT roundtrip: publish retained, then read it back.
       # Does not depend on $SYS topics (not published by all mosquitto builds).
