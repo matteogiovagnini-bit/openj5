@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // OpenJ5 — configurazione di progetto OpenCode.
+  // Gli agenti sono definiti in .opencode/agents/*.md (markdown, più leggibile e versionabile).
+  // I comandi slash sono in .opencode/commands/*.md.
+  "instructions": ["AGENTS.md"],
+  "permissions": [
+    // Regole globali di sicurezza: non toccare credenziali e git push senza conferma.
+    { "action": "read", "resource": "**/.env", "effect": "deny" },
+    { "action": "edit", "resource": "**/.env", "effect": "deny" },
+    { "action": "edit", "resource": "**/*.{pem,key,crt,p12,pfx}", "effect": "deny" },
+    { "action": "shell", "resource": "git push*", "effect": "ask" },
+    { "action": "shell", "resource": "git commit*", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf*", "effect": "deny" }
+  ]
+}
