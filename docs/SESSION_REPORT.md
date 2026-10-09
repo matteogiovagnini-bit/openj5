@@ -4,6 +4,53 @@
 
 ---
 
+## Sessione: 2026-10-09 — T-025 Fase 1 Motori cingoli Node 6 (port HAL + self-test)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-10-09 |
+| Versione progetto | v0.2.0+ (Robot Core operativo su RPi4); v0.3.0 in corso |
+| Obiettivo | T-025: preparare il primo movimento fisico dei motori del Nodo 6 con un port HAL testabile e una modalità non interattiva/SSH-safe, senza hardware |
+
+### Decisioni
+1. **Il port prima del driver**: `IMotorDriver` materializzato in `src/hardware/hal/motor.py` (come `stepper.py` di ADR-017), puro e importabile; gli adattatori (L298N reale, mock) implementano lo stesso contratto. **ADR-018** (Accepted) registra la decisione — non nuova: ADR-005 già nominava `IMotorDriver`, l'ADR è una nota di materializzazione (Level A documentale, ADR-005 resta immutabile).
+2. **gpiozero lazy**: in `l298n.py` le lib GPIO sono importate solo nel `channel_factory` di default, così il modulo si importa e i test girano su Mac/CI senza gpiozero; `channel_factory` è iniettabile per i test.
+3. **Zero numeri magici**: `pwm_frequency_hz`, `ramp_step`, `ramp_seconds` e i parametri `demo` vivono in `config/bench/tracks.json`; il driver non ha costanti inline.
+4. **Self-test non interattivo**: `--selftest` non tocca termios/tty (nessuna tastiera), quindi è utilizzabile via SSH; `--mock` valida la catena comando→rampa→livelli senza GPIO.
+5. **Semantica di frizione**: `set_velocity` clampata ai limiti e rampa verso il target; `stop_all` = coast (pin direzione bassi), `brake_all` = hold (pin alti), `shutdown` idempotente — contratto coperto dai test.
+
+### Attività completate
+1. **Port** `src/hardware/hal/motor.py`: `IMotorDriver` + `MotorLevels` + helper `clamp_velocity`/`motor_levels`/`ramp_schedule`; export in `src/hardware/hal/__init__.py`.
+2. **Driver reale** `src/hardware/drivers/l298n.py` refactor: import gpiozero lazy, `channel_factory`, PWM/rampa da config, `shutdown()` idempotente, implementa `IMotorDriver`; fix del path di default (`parents[2]`→`parents[3]`).
+3. **Mock CI-safe** `src/hardware/drivers/mock_motor.py` (`MockMotorDriver`, rampe analitiche senza sleep), registrato in `config/common/hal.json`.
+4. **Config** `config/bench/tracks.json`: `pwm_frequency_hz` (1000), `ramp_step` (0.1) e sezione `demo` (speed 0.5, min_speed 0.2, max_speed 1.0, speed_step 0.1).
+5. **Demo** `scripts/demo/tracks_bench.py`: nuove modalità `--selftest` (SSH-safe) e `--mock`, più `--seconds`/`--speed`.
+6. **Test**: `tests/unit/test_motor_hal.py`, `test_l298n_driver.py`, `test_mock_motor.py`, `test_tracks_demo.py` (43 nuovi test).
+7. **Docs**: ADR-018 + INDEX; BENCH_TRACKS, API, CONFIGURATION, ARCHITECTURE (class diagram HAL), CHANGELOG, PROJECT_STATUS, NEXT_TASK, PROJECT_MEMORY, SESSION_REPORT (questo).
+
+### Debito emerso
+- **T-031** (nuovo, preesistente): `a4988.load_driver` (`src/hardware/drivers/a4988.py:157`) usa `parents[2]` invece di `parents[3]` → `scripts/demo/balance_bench.py` fallisce senza `--config`. Media / 0.25h.
+- **T-032** (nuovo): port motor C++ (`motor_driver.hpp`/`motor_logic.hpp`) + test di parità Python↔C++; oggi il port esiste solo in Python. Bassa / ~1g / legato a T-022.
+- **Non corretto in questa sessione** (fuori perimetro): T-030 (loop infinito A4988) resta aperto.
+
+### Lezioni
+Un driver che non si può importare senza l'hardware non si può testare: separare import/IO dal contratto (port puro + factory iniettabile) è ciò che ha reso possibili 43 test nuovi su Mac. La modalità `--selftest` senza tty dimostra che "verifica via SSH" è un requisito di design, non un dettaglio. La documentazione può citare file inesistenti per mesi (CONFIGURATION: `config/node6_tracks/motors.yaml`): va verificata col filesystem, non con la memoria.
+
+### Prossimi passi consigliati
+1. **T-025 bench fisico** sul Pi (ruote sollevate) → chiude il task.
+2. **T-031** (una riga) e **T-030** (loop A4988).
+3. **T-022/T-032** firmware Node 6 con parità C++.
+
+### Comandi di verifica
+```bash
+.venv/bin/python -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90   # 213, 100%
+.venv/bin/ruff check src/ firmware/node1_robot_core/docker/src/ tests/
+./scripts/check_docs.sh
+python3 scripts/demo/tracks_bench.py --selftest --mock
+```
+
+---
+
 ## Sessione: 2026-10-07 — T-029 Parità Python↔firmware (profilo trapezoidale + PID)
 
 | Campo | Valore |

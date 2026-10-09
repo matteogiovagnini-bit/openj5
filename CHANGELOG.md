@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **T-025 Fase 1 — DC motor HAL port (`IMotorDriver`)**: new pure port in
+  `src/hardware/hal/motor.py` (`motor_names`, `initialize`, `set_velocity`,
+  `get_velocity`, `stop_all`, `brake_all`, `shutdown`; signed normalized velocity
+  in `[-1, +1]`) plus shared pure helpers `clamp_velocity`, `motor_levels`
+  (`MotorLevels`) and `ramp_schedule`, re-exported from
+  `src/hardware/hal/__init__.py`. Applications/tests can now depend on the
+  abstraction instead of `L298NDriver` (ADR-005, ADR-018)
+- **`MockMotorDriver`** (`src/hardware/drivers/mock_motor.py`): CI-safe,
+  no-GPIO implementation of the same port; applies ramps analytically (no
+  sleeps) and reads `config/bench/tracks.json`, so the mock and the real driver
+  share one configuration (Digital Twin, ADR-010). Registered in
+  `config/common/hal.json` → `motor_driver.implementations.mock`
+- **Non-interactive bench demo**: `scripts/demo/tracks_bench.py` gains
+  `--selftest` (scripted forward/stop/backward/stop/spin-left/spin-right/stop
+  sequence, SSH-safe, never touches a tty) and `--mock`, plus `--seconds` and
+  `--speed` overrides; always brakes and releases on exit
+- **Config-driven PWM and ramp** for the Node 6 bench:
+  `config/bench/tracks.json` adds `pwm_frequency_hz` (1000), `ramp_step` (0.1)
+  and a `demo` section (`speed`, `min_speed`, `max_speed`, `speed_step`) — no
+  inline constants in the driver or demo
+
+### Changed
+- `src/hardware/drivers/l298n.py` refactored: `gpiozero`/`lgpio` are imported
+  lazily, so the module imports and is unit-testable without a GPIO library;
+  the per-motor channel factory (`channel_factory`) is injectable for tests;
+  `pwm_frequency_hz` and the ramp (`ramp_step`/`ramp_seconds`) now come from
+  `config/bench/tracks.json`; `L298NDriver` implements `IMotorDriver`
+
+### Fixed
+- `L298NDriver.shutdown()` is now idempotent (safe to call twice, per the
+  `IMotorDriver` contract): a second call is a no-op instead of touching closed
+  `gpiozero` devices
+- `l298n.load_driver` default config path resolved with `parents[2]`
+  (`src/hardware/…` → wrong root) so running the driver/demo without `--config`
+  pointed at a nonexistent file; corrected to `parents[3]`
+  (`config/bench/tracks.json`)
+
+### Tests
+- 4 new unit-test modules — `tests/unit/test_motor_hal.py`,
+  `test_l298n_driver.py`, `test_mock_motor.py`, `test_tracks_demo.py` (**43 new
+  tests**; suite now at **213 tests**, `core.domain` coverage still 100%)
+
+### Docs
+- **ADR-018 — Motor HAL Port (`IMotorDriver`): Contract Shape, Placement and
+  Python↔C++ Parity** (`docs/adr/ADR-018-motor-hal-port.md`), indexed in
+  `docs/adr/INDEX.md`; HAL class diagram in `docs/architecture/ARCHITECTURE.md`
+  regenerated to the implemented shape; `docs/hardware/BENCH_TRACKS.md`,
+  `docs/api/API.md`, `docs/configuration/CONFIGURATION.md`,
+  `PROJECT_STATUS.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.md` and
+  `docs/SESSION_REPORT.md` updated
+
 ### Planned (see ROADMAP.md v0.3.0)
 - Integration tests, simulation parity tests, hardware-in-loop tests
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)

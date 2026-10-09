@@ -66,15 +66,8 @@ config/
 │   ├── battery.yaml           # INA219, Voltage/Current/Temp thresholds
 │   └── sensors.yaml           # IMU, ToF, Proximity
 └── node6_tracks/              # ESP32 Tracks
-    ├── node.yaml
-    ├── motors.yaml            # 2x DC Motor + Encoder (L298N → TB6612/BTS7960/ODrive)
-    ├── motor_driver.yaml      # Driver-specific config
-    ├── encoders.yaml          # Quadrature encoder config
-    ├── imu.yaml               # MPU6050/ICM20948
-    ├── tof.yaml               # VL53L0X x2 (Front/Rear)
-    ├── collision.yaml         # IR Bumpers
-    ├── pid.yaml               # Velocity/Position PID
-    └── motion_primitives.yaml # MoveForward, Rotate, Arc, Stop, Dock
+    └── node.json              # node/network, motor_driver (L298N), motors+encoders,
+                               # odometry, imu, tof, collision, motion_primitives, safety
 
 # Node 7: Balance Controller (ADR-017, ESP32-S3)
 ├── node7_balance/            # ESP32-S3 Balance Controller
@@ -495,7 +488,16 @@ primitives:
 
 ---
 
-### Node 6: Tracks (`config/node6_tracks/motors.yaml`)
+### Node 6: Tracks (`config/node6_tracks/node.json`)
+
+Node 6 keeps its configuration in a **single JSON file**,
+`config/node6_tracks/node.json` (same layout as the other nodes). There is no
+`config/node6_tracks/motors.yaml`: earlier revisions of this document referenced
+that path, which never existed in the repository. The file carries `node`/
+`network` identity, `motor_driver` (L298N pins + PWM), `motors` (two DC geared
+motors with encoders, gear ratio and PID), `odometry`, `imu`, `tof`, `collision`,
+`motion_primitives` and `safety`. Illustrative excerpt (the file itself is JSON;
+shown here in the documented shape):
 
 ```yaml
 motor_driver:
@@ -567,7 +569,10 @@ odometry:
 
 ---
 
-### Node 6: Tracks Motion Primitives (`config/node6_tracks/motion_primitives.yaml`)
+### Node 6: Tracks Motion Primitives (inside `config/node6_tracks/node.json`)
+
+There is no standalone `motion_primitives.yaml` in the repository: the Node 6
+primitives are a key of `config/node6_tracks/node.json`. Documented shape:
 
 ```yaml
 primitives:
@@ -628,6 +633,43 @@ primitives:
         type: "string"
     implementation: "nav2_docking"
 ```
+
+---
+
+### Node 6 bench prototype (`config/bench/tracks.json`, ADR-018)
+
+The host bring-up of Node 6 (two DC gear motors via an L298N driven by Raspberry
+Pi GPIO, ADR-005/ADR-018) uses its own config, separate from the ESP32
+`node.json`. This is the file read by `L298NDriver` / `MockMotorDriver` and by
+`scripts/demo/tracks_bench.py`:
+
+```json
+{
+  "driver": "l298n",
+  "motors": {
+    "left":  { "enable_gpio": 18, "in_a_gpio": 23, "in_b_gpio": 24 },
+    "right": { "enable_gpio": 13, "in_a_gpio": 22, "in_b_gpio": 27 }
+  },
+  "limits": { "max_velocity": 1.0, "min_velocity": -1.0 },
+  "pwm_frequency_hz": 1000,
+  "ramp_seconds": 0.05,
+  "ramp_step": 0.1,
+  "demo": { "speed": 0.5, "min_speed": 0.2, "max_speed": 1.0, "speed_step": 0.1 }
+}
+```
+
+| Key | Meaning |
+|-----|---------|
+| `driver` | selected adapter (`l298n`); validated at load time |
+| `motors.<name>.{enable_gpio,in_a_gpio,in_b_gpio}` | BCM GPIO for the PWM enable and the two direction pins per side (zero magic numbers) |
+| `limits.min_velocity` / `max_velocity` | clamp bounds for the normalized signed velocity |
+| `pwm_frequency_hz` | PWM frequency (Hz) on the enable pins — config-driven (1000) |
+| `ramp_seconds` / `ramp_step` | total ramp duration and per-step velocity increment (`L298NDriver` sleeps `ramp_seconds / len(schedule)` per ramp step) |
+| `demo.speed` | default demo velocity (`--speed` overrides it) |
+| `demo.min_speed` / `max_speed` / `speed_step` | interactive `+`/`-` speed bounds and step |
+
+> Pin note: these are **Raspberry Pi BCM GPIO** numbers for the bench. The ESP32
+> Node 6 frame pins in `node.json` are a different map (`ena_pin`/`in1_pin`/…).
 
 ---
 

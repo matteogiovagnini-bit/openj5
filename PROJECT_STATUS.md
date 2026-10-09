@@ -2,8 +2,8 @@
 
 ## Repository: `PRJ_OpenJ5`
 
-> **Last updated:** 2026-10-07
-> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build); T-029 parità Python↔firmware Node 7 completata il 2026-10-07 (170 test, 100% coverage)**
+> **Last updated:** 2026-10-09
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build); T-029 parità Python↔firmware Node 7 completata il 2026-10-07 (170 test); T-025 Fase 1 (motori cingoli Node 6, port `IMotorDriver` + mock + self-test) completata il 2026-10-09 (213 test, 100% coverage)**
 
 ---
 
@@ -17,7 +17,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
 | Domain Model (value objects, events, commands, entities, services) | ✅ Done | 100% | All value objects, events, CQRS bus, entities, repositories, kinematics service — **verified by `tests/unit/` (141 test raccolti nei 6 moduli domain, T-003)** |
-| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 9 moduli + conftest; **170 test totali** (141 domain + 11 balance + 9 config-sync + 9 stepper parity, dal 2026-10-07); CI gate ≥90% (`python-tests` job) |
+| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 13 moduli + conftest; **213 test totali** (141 domain + 11 balance + 9 config-sync + 9 stepper parity + 43 motori/bench T-025, dal 2026-10-09); CI gate ≥90% (`python-tests` job) |
 | Plugin Architecture | ✅ Done | 90% | PluginManager, PluginRegistry, Sandbox, dependency resolution |
 | Communication Gateway | ✅ Done | 85% | MQTT, MultiProtocol, mTLS |
 | Event Bus (Redis Streams) | ✅ Done | 85% | Streams, consumer groups, DLQ, replay |
@@ -58,16 +58,20 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | ADR-004: Event-Driven Architecture | ✅ Accepted | Redis Streams central event bus |
 | ADR-005: HAL for All Drivers | ✅ Accepted | Hardware Abstraction Layer |
 | ADR-006 .. ADR-016 | ✅ Accepted | 11 ADR aggiuntivi (SDK, plugin, config, state machine, digital twin, OTA, FreeCAD, security, Python/C++, MQTT, Pi OS Lite+NVMe) — vedi docs/adr/INDEX.md |
-| ADR-017 (New) | ✅ Accepted | Node 7 Balance Controller: NEMA17 + A4988 + MPU6050, body leveled vs gravity |
+| ADR-017 | ✅ Accepted | Node 7 Balance Controller: NEMA17 + A4988 + MPU6050, body leveled vs gravity |
+| ADR-018 (New) | ✅ Accepted | Motor HAL Port (`IMotorDriver`): contract shape, placement in `src/hardware/hal/`, Python↔C++ parity target (2026-10-09) |
 
 ### 🟡 Prototipo Nodo 6 (banco)
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Driver HAL `L298NDriver` | ✅ Done | `src/hardware/drivers/l298n.py`, interfaccia IMotorDriver prototipale, gpiozero/lgpio |
-| Demo motori | ✅ Done | `scripts/demo/tracks_bench.py` (w/s/a/d/x/q) |
-| Config pin | ✅ Done | `config/bench/tracks.json` |
-| Guida cablaggio | ✅ Done | `docs/hardware/BENCH_TRACKS.md` |
-| Primo movimento fisico | 🔴 To do | T-025 — cablaggio pronto, demo da lanciare sul Pi |
+| Port HAL `IMotorDriver` | ✅ Done | `src/hardware/hal/motor.py`: `motor_names`/`initialize`/`set_velocity`/`get_velocity`/`stop_all`/`brake_all`/`shutdown` + helper puri `clamp_velocity`/`motor_levels`/`ramp_schedule` (ADR-018) |
+| Driver HAL `L298NDriver` | ✅ Done | `src/hardware/drivers/l298n.py`, implementa `IMotorDriver`; gpiozero/lgpio import lazy, `channel_factory` iniettabile, PWM config-driven, `shutdown()` idempotente |
+| Mock CI-safe | ✅ Done | `src/hardware/drivers/mock_motor.py` (`MockMotorDriver`, nessun GPIO, rampe analitiche) — Digital Twin del banco |
+| Demo motori | ✅ Done | `scripts/demo/tracks_bench.py`: interattiva (w/s/a/d/x/q), `--selftest` (non interattiva, SSH-safe), `--mock` |
+| Config pin + PWM/rampa | ✅ Done | `config/bench/tracks.json`: pin, `pwm_frequency_hz` (1000), `ramp_step`/`ramp_seconds`, sezione `demo` |
+| Test motori/bench | ✅ Done | `tests/unit/test_motor_hal.py`, `test_l298n_driver.py`, `test_mock_motor.py`, `test_tracks_demo.py` (43 test) |
+| Guida cablaggio | ✅ Done | `docs/hardware/BENCH_TRACKS.md` (bring-up + self-test + mock) |
+| Primo movimento fisico | 🟡 Parziale | T-025 Fase 1 offline completata 2026-10-09; **resta il bench fisico sul Pi** (ruote sollevate) |
 
 ### 🟡 Prototipo Nodo 7 (design, ADR-017)
 | Component | Status | Notes |
@@ -99,7 +103,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | CHANGELOG.md | ✅ Done | Version history |
 | ROADMAP.md | ✅ Done | Development roadmap |
 | ADR Index + 5 ADRs | ✅ Done | ADR-001 to ADR-005 |
-| ADR Index (completo) | ✅ Done | ADR-001 to ADR-016 — vedi docs/adr/INDEX.md |
+| ADR Index (completo) | ✅ Done | ADR-001 to ADR-018 — vedi docs/adr/INDEX.md |
 | BENCH_TRACKS (hardware) | ✅ Done | Guida banco Nodo 6: cablaggio motori, power, safety |
 | BENCH_BALANCE (hardware) | ✅ Done | Guida banco Nodo 7: pin NEMA17/A4988/MPU6050, alimentazione, Vref, math, safety |
 | Development Constitution | ✅ Done | Level A/B/C governance |
@@ -128,12 +132,12 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Metric | Target | Current |
 |--------|--------|---------|
 | Python files | - | 35+ |
-| Unit tests (core.domain) | ≥90% coverage | 170 tests, **100% coverage** (141 domain + 11 balance + 9 config-sync + 9 stepper parity) |
+| Unit tests (core.domain) | ≥90% coverage | **213 tests, 100% coverage** (141 domain + 11 balance + 9 config-sync + 9 stepper parity + 43 motors/bench T-025) |
 | Firmware C++ files | - | 21 (10 .cpp + 11 .hpp: `firmware/common` + `node7_balance`) |
-| Config files (JSON/YAML) | - | 12+ |
+| Config files (JSON/YAML) | - | 13 |
 | Docker services | - | 10 |
 | Plugins framework | - | 14 interface types |
-| ADRs | - | 17 |
+| ADRs | - | 18 |
 | Documentation files | - | 25+ |
 
 ## Current Release: v0.2.0 (In Development)
@@ -152,10 +156,11 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 - Complete infrastructure configs (MQTT, Prometheus, Grafana, Loki, OTEL)
 - PostgreSQL schema with migrations
 - Full documentation suite
-- Unit test suite for the core domain (T-003, evoluto): 170 unit tests (141 in `core.domain` + balance/config/parity), 100% line coverage, CI coverage gate ≥90%
+- Unit test suite for the core domain (T-003, evoluto): **213 unit tests** (141 in `core.domain` + balance/config/parity + 43 motors/bench from T-025), 100% line coverage, CI coverage gate ≥90%
 - Node 7 Balance Controller design (ADR-017): HAL IStepperDriver, A4988 bench driver + mock, leveling-loop simulator, BodyAPI SDK, configs + topics, unit tests
 - Node 7 Balance firmware (T-026): wiring guide `BENCH_BALANCE.md`, pure logic in `firmware/common/` (host-tested), complete ESP-IDF project `firmware/node7_balance/` with CI build (`firmware-host-tests` + `firmware-node7-build`), config parity test Kconfig↔node.json, flashing via VSCode+PlatformIO (`platformio.ini`) or `idf.py`
 - Python↔firmware motion parity (T-029, 2026-10-07): `slew`/`brake_bound`/`position_velocity_target` mirrored in `src/hardware/hal/stepper.py`, stateful `trapezoid_velocity` (caller-owned `v_now`), no-D-kick leveling PID + ±1600 clamp, `tests/unit/test_stepper_parity.py` (9 tests)
+- Node 6 tracks bench, Phase 1 (T-025, 2026-10-09): pure `IMotorDriver` HAL port (`src/hardware/hal/motor.py`, ADR-018), refactored `L298NDriver` (lazy gpiozero, injectable `channel_factory`, config-driven PWM/ramp, idempotent shutdown), CI-safe `MockMotorDriver`, `tracks_bench.py --selftest`/`--mock`, 43 new tests (suite 170 → 213)
 
 ### What's Next (v0.3.0)
 - Integration tests (REST/WS, event bus + state machine)

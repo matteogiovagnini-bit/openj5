@@ -17,5 +17,13 @@
     "max_velocity": 1.0,
     "min_velocity": -1.0
   },
-  "ramp_seconds": 0.05
+  "pwm_frequency_hz": 1000,
+  "ramp_seconds": 0.05,
+  "ramp_step": 0.1,
+  "demo": {
+    "speed": 0.5,
+    "min_speed": 0.2,
+    "max_speed": 1.0,
+    "speed_step": 0.1
+  }
 }

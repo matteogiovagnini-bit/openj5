@@ -18,6 +18,7 @@
         "tb6612": "TB6612Driver",
         "bts7960": "BTS7960Driver",
         "odrive": "ODriveDriver",
+        "mock": "MockMotorDriver",
         "gazebo": "GazeboMotorDriver"
       },
       "default": "l298n"

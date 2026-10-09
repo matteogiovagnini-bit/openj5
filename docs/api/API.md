@@ -441,6 +441,63 @@ class Odometry:
 
 ---
 
+## Motor HAL Port (`IMotorDriver`) — Node 6 bench (ADR-018)
+
+`IMotorDriver` is the **hardware abstraction port** for DC motors
+(`src/hardware/hal/motor.py`, ADR-005/ADR-018). Application code uses the SDK
+facade (`robot.tracks`, above); this port is what the concrete bench/firmware
+drivers implement, so the same logic runs on real GPIO and on the mock.
+
+```python
+class IMotorDriver(ABC):
+    @property
+    def motor_names(self) -> list[str]: ...
+    def initialize(self) -> None: ...
+    def set_velocity(self, motor_id: str, velocity: float) -> None:
+        """Signed normalized velocity in [-1.0, +1.0]; sign = direction.
+        Out-of-range values are clamped to the configured limits."""
+    def get_velocity(self, motor_id: str) -> float: ...
+    def stop_all(self) -> None: ...   # coast: direction pins low, PWM 0
+    def brake_all(self) -> None: ...  # brake: both direction pins high, PWM 0
+    def shutdown(self) -> None: ...   # release everything; safe to call twice
+```
+
+Pure helpers (shared by every adapter, unit-testable with no hardware):
+
+| Helper | Contract |
+|--------|----------|
+| `clamp_velocity(velocity, min_velocity, max_velocity)` | clamps into the limits; raises `ValueError` on inverted bounds |
+| `motor_levels(velocity) -> MotorLevels(forward, reverse, duty)` | maps a signed velocity to direction GPIO levels + PWM duty |
+| `ramp_schedule(current, target, step) -> list[float]` | intermediate ramp values landing exactly on target; raises `ValueError` on `step <= 0` |
+
+Adapters: `L298NDriver` / `L298NMotor` (`src/hardware/drivers/l298n.py`, real
+Raspberry Pi GPIO, `gpiozero`/`lgpio` imported lazily) and `MockMotorDriver`
+(`src/hardware/drivers/mock_motor.py`, no GPIO, no sleeps — CI/Digital Twin,
+ADR-010). Both read `config/bench/tracks.json`.
+
+> **Scope note.** This is the open-loop bench port. PID, encoder feedback and
+> odometry are the **future production/firmware** contract for the Node 6 ESP32
+> and a dedicated encoder/controller port — not part of `IMotorDriver`
+> (ADR-018 §2, T-032).
+
+### Bench demo (`scripts/demo/tracks_bench.py`)
+
+```bash
+# Self-test: scripted, non-interactive, SSH-safe (no tty). On the Pi -> real GPIO
+python3 scripts/demo/tracks_bench.py --selftest
+python3 scripts/demo/tracks_bench.py --selftest --seconds 0.5 --speed 0.5
+
+# Mock: validate command -> ramp -> levels with no hardware (any Mac / CI)
+python3 scripts/demo/tracks_bench.py --selftest --mock
+```
+
+`--seconds` is the duration of each phase (default `1.0`), `--speed` overrides the
+config `demo.speed`. Sequence: `forward → stop → backward → stop → spin-left →
+spin-right → stop`; it always ends with `brake_all()` + `shutdown()`. Run with the
+wheels off the ground (see `docs/hardware/BENCH_TRACKS.md`).
+
+---
+
 ## Body API (`robot.body`) — Node 7 Balance Controller (ADR-017)
 
 Levels the robot body against gravity on the tracks via a NEMA17 + A4988 and a

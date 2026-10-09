@@ -452,15 +452,33 @@ classDiagram
 
     class IMotorDriver {
         <<interface>>
-        +initialize(config: MotorConfig): Result
-        +setVelocity(motor: MotorId, velocity: float): Result
-        +getVelocity(motor: MotorId): float
-        +setPID(motor: MotorId, pid: PIDConfig): Result
-        +enable(motor: MotorId): Result
-        +disable(motor: MotorId): Result
-        +brake(motor: MotorId): Result
-        +getOdometry(): OdometryData
-        +shutdown(): void
+        +motor_names: list~str~
+        +initialize(): None
+        +set_velocity(motor: str, velocity: float): None
+        +get_velocity(motor: str): float
+        +stop_all(): None
+        +brake_all(): None
+        +shutdown(): None
+    }
+
+    class L298NDriver {
+        +channel_factory: ChannelFactory
+        +pwm_frequency_hz: float
+        +ramp_step: float
+        +ramp_seconds: float
+    }
+
+    class L298NMotor {
+        +name: str
+        +set_velocity(velocity: float): None
+        +get_velocity(): float
+        +brake(): None
+        +close(): None
+    }
+
+    class MockMotorDriver {
+        +last_schedule: dict
+        +get_levels(motor: str): MotorLevels
     }
 
     class IDistanceSensor {
@@ -512,10 +530,13 @@ classDiagram
     IServoDriver <|-- GazeboServoDriver
 
     IMotorDriver <|-- L298NDriver
+    IMotorDriver <|-- MockMotorDriver
     IMotorDriver <|-- TB6612Driver
     IMotorDriver <|-- BTS7960Driver
     IMotorDriver <|-- ODriveDriver
     IMotorDriver <|-- GazeboMotorDriver
+
+    L298NDriver *-- L298NMotor : channels
 
     IStepperDriver <|-- A4988StepperDriver
     IStepperDriver <|-- DRV8825Driver
@@ -534,6 +555,20 @@ classDiagram
     ICameraDriver <|-- IPCameraDriver
     ICameraDriver <|-- GazeboCameraDriver
 ```
+
+> **Motor HAL — implemented shape (ADR-018, T-025 Phase 1).** The diagram above
+> shows the port as actually implemented in Python: signed normalized velocity
+> (`set_velocity`/`get_velocity`, `[-1, +1]`), `motor_names`, `stop_all` (coast),
+> `brake_all` (hold) and idempotent `shutdown`. The value mapping is factored
+> into the pure helpers `clamp_velocity`, `motor_levels` (`MotorLevels`) and
+> `ramp_schedule` in `src/hardware/hal/motor.py`, shared by the real `L298NDriver`
+> (one `L298NMotor` channel per side) and the CI-safe `MockMotorDriver`. The
+> richer interface sketched in earlier revisions of this section — `setPID`,
+> `enable`/`disable`, `getOdometry` returning `Result` — is the **future
+> production/firmware contract** (encoders, PID, odometry belong to the Node 6
+> ESP32 firmware and a dedicated encoder/controller port), **not** the bench HAL
+> port; it is intentionally out of scope here (ADR-018 §2). The C++ counterpart
+> (`motor_driver.hpp` + `motor_logic.hpp`) is tracked as T-032.
 
 ---
 
@@ -588,7 +623,11 @@ flowchart TD
 | ADR-011 | OTA with Signed Firmware and Rollback | Accepted | 2026-07-15 |
 | ADR-012 | FreeCAD Parametric CAD with Spreadsheet Configuration | Accepted | 2026-07-15 |
 | ADR-013 | Security: mTLS, JWT, Signed OTA, Fail-Safe | Accepted | 2026-07-15 |
+| ADR-014 | Python for Robot Core, C++ for Firmware | Accepted | 2026-07-15 |
+| ADR-015 | MQTT as Primary Transport Protocol | Accepted | 2026-07-15 |
 | ADR-016 | Raspberry Pi OS Lite 64-bit (Bookworm) + NVMe-over-USB3 for Node 1 | Accepted | 2026-08-25 |
+| ADR-017 | Node 7 Balance Controller (NEMA17 + A4988 + MPU6050) | Accepted | 2026-09-21 |
+| ADR-018 | Motor HAL Port (`IMotorDriver`): Contract Shape, Placement and Python↔C++ Parity | Accepted | 2026-10-09 |
 
 ---
 

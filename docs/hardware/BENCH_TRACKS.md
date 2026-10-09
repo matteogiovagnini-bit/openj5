@@ -1,8 +1,9 @@
 # OpenJ5 Bench Bring-Up — Nodo 6 Cingoli (L298N + 2× DC Gear Motor)
 
 > Prototipo da banco del Nodo 6: due motoriduttori DC pilotati da L298N via GPIO del Pi.
-> Driver HAL: `src/hardware/drivers/l298n.py` · Demo: `scripts/demo/tracks_bench.py`
-> Config: `config/bench/tracks.json` · Ultimo aggiornamento: 2026-08-26
+> Driver HAL: `src/hardware/drivers/l298n.py` (port `IMotorDriver`, `src/hardware/hal/motor.py`)
+> Mock: `src/hardware/drivers/mock_motor.py` · Demo: `scripts/demo/tracks_bench.py`
+> Config: `config/bench/tracks.json` · Ultimo aggiornamento: 2026-10-09
 
 ---
 
@@ -69,11 +70,27 @@ del 5V RIMOSSO** e alimentare la logica dal Pi come sopra.
 
 ## 3. Software
 
+Il driver è `src/hardware/drivers/l298n.py` (`L298NDriver`), che implementa il
+port HAL `IMotorDriver` (`src/hardware/hal/motor.py`); il mock è
+`src/hardware/drivers/mock_motor.py` e il demo `scripts/demo/tracks_bench.py`.
+I pin NON sono nel codice: tutto vive in `config/bench/tracks.json` (PWM
+config-driven via `pwm_frequency_hz`).
+
+### 3.1 Dipendenze
+
 ```bash
 # una volta sola
-sudo apt install -y python3-gpiozero
+sudo apt install -y python3-gpiozero python3-libgpiod
+```
 
-# ad ogni sessione bancare (dopo che lo stack è su, vedi DEPLOYMENT §14)
+`gpiozero`/`lgpio` sono importati **lazy**: il modulo `l298n.py` si importa (e i
+test girano) anche senza librerie GPIO; servono solo per pilotare l'hardware
+reale.
+
+### 3.2 Modalità interattiva (console)
+
+```bash
+# ad ogni sessione su banco (dopo che lo stack è su, vedi DEPLOYMENT §11)
 cd ~/src/openj5
 python3 scripts/demo/tracks_bench.py        # --config per JSON alternativo
 ```
@@ -81,7 +98,43 @@ python3 scripts/demo/tracks_bench.py        # --config per JSON alternativo
 Comandi demo: `w/s` avanti/indietro · `a/d` sterzo sul posto · `+/−` velocità ·
 `x` stop · `q` esci (brake automatico sempre).
 
-I pin NON sono nel codice: tutto vive in `config/bench/tracks.json`.
+### 3.3 Self-test non interattivo (SSH-safe, senza tty)
+
+Sequenza scriptata, senza tastiera né terminale — usabile in SSH o in remoto:
+
+```bash
+python3 scripts/demo/tracks_bench.py --selftest
+python3 scripts/demo/tracks_bench.py --selftest --seconds 0.5 --speed 0.5
+```
+
+Fasi: `forward` → `stop` → `backward` → `stop` → `spin-left` → `spin-right` →
+`stop`. `--seconds` è la durata di ogni fase (default 1.0 s), `--speed` il valore
+assoluto usato (default da `demo.speed`). A fine sequenza il demo esegue sempre
+`brake_all()` + `shutdown()`.
+
+**Procedura sicura**: **ruote sollevate da terra** (checklist §2.3). Osservare
+che i due motori girino nel senso atteso in ogni fase e che la velocità vari con
+`--speed`; a fine comando devono fermarsi (freno) e non girare più. `Ctrl-C` è
+sicuro: il `finally` frena e rilascia.
+
+### 3.4 Modalità mock (senza hardware)
+
+Valida logica e config senza toccare il GPIO, su qualsiasi Mac o in CI:
+
+```bash
+python3 scripts/demo/tracks_bench.py --selftest --mock
+```
+
+`MockMotorDriver` implementa lo stesso port, applica le rampe analiticamente
+(nessuno sleep) e stampa le velocità: verifica la catena comando→rampa→livelli
+prima del banco fisico.
+
+### 3.5 PWM e rampe (config-driven)
+
+`config/bench/tracks.json` espone `pwm_frequency_hz` (1000), `ramp_step` (0.1) e
+`ramp_seconds` (0.05): il driver genera la rampa verso il target clampato ai
+limiti configurati (`limits.min_velocity`/`max_velocity`) e pilota ENA/ENB alla
+frequenza indicata. Nessuno di questi valori è hardcoded.
 
 ---
 
