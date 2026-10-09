@@ -148,8 +148,11 @@ Note:
 ## 6. Accensione e prova
 
 ```bash
-# 0) Rete: il RPi fa da hotspot per gli ESP (SSID `openj5`, WPA2) — setup:
-#    scripts/deploy/setup_hotspot.sh, v. DEPLOYMENT.md §11 (router: canale
+# 0) Rete — STATO ATTUALE (2026-10-09): hotspot DISABILITATO in attesa di un
+#    dongle USB → RPi e ESP sulla WiFi di casa (host broker
+#    openj5-core.local, fallback 192.168.1.108): DEPLOYMENT.md §12.1.
+#    Modo hotspot (vedi DEPLOYMENT.md §11): RPi fa da AP per gli ESP (SSID
+#    `openj5`, WPA2) — setup: scripts/deploy/setup_hotspot.sh (router: canale
 #    2.4 GHz fisso). Gli ESP: firmware/node7_balance/sdkconfig.local (cp da
 #    sdkconfig.local.example) = SSID/pass hotspot + OPENJ5_MQTT_HOST=
 #    openj5-core (risolto dal dnsmasq del Pi → 192.168.4.1).

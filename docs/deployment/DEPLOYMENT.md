@@ -2,7 +2,7 @@
 
 > Target OS: **Raspberry Pi OS Lite 64-bit (Bookworm)** — decision ADR-016.
 > Primary storage: **NVMe on USB3** (SD card = bootloader recovery only).
-> Estimated time: 45-60 minutes. Last updated: 2026-10-07 (broker port publishing, hotspot band-steering warning).
+> Estimated time: 45-60 minutes. Last updated: 2026-10-09 (boot checklist §12, hotspot disabled pending USB dongle).
 
 ---
 
@@ -227,6 +227,16 @@ sudo ufw enable
 
 ## 11. WiFi Hotspot for the ESP Nodes (single-radio AP+STA)
 
+> **Status 2026-10-09: hotspot DISABLED (waiting for a USB WiFi dongle).** The
+> home router's band steering cannot be switched off, and on a single radio the
+> STA→deauth→reassoc loop never settles (see "Radio constraints" below): the Pi
+> and the ESP nodes therefore join the **home WiFi directly** — current mode
+> and boot checklist in §12.1-§12.3. All AP units (`openj5-ap-if`,
+> `openj5-hostapd`, `openj5-nat`, `openj5-channel-sync.timer`, `dnsmasq`) are
+> `disabled`. With a USB dongle (dedicated radio, `AP_IF=wlan1` below) this
+> section applies again: re-run `setup_hotspot.sh` and move the ESPs back to
+> the `openj5` SSID / `openj5-core` broker name.
+
 The ESP32 nodes do **not** join your home WiFi: they connect to a hotspot
 created by the Pi's built-in WiFi, while the same radio keeps the Pi's
 internet uplink (AP+STA on one radio). WiFi credentials then live in
@@ -351,6 +361,64 @@ Se in uso, staccare anche la batteria dei motori (guida banco: `docs/hardware/BE
    `curl -fk https://localhost:8080/health`
 4. Browser da PC: Swagger `https://openj5-core.local:8080/api/docs`,
    Grafana `http://openj5-core.local:3000`
+
+### 12.1 Stato di rete (transitorio, 2026-10-09)
+
+**Hotspot disabilitato in attesa di un dongle USB** (§11): Pi e nodi ESP
+stanno sulla WiFi di casa `Piano_Terra_WIFI`.
+
+- Uplink del Pi a **5 GHz** (profilo NetworkManager `Piano24`, `band=a`,
+  `autoconnect=yes`): con lo steering del router non configurabile, la
+  2.4 GHz scatena il loop deauth descritto in §11 (ora eliminato:
+  `deauth = 0` in 2 h).
+- Broker per gli ESP: `openj5-core.local` (mDNS di Avahi con
+  `allow-interfaces=wlan0` → risponde `192.168.1.108`, mai gli indirizzi dei
+  bridge Docker `172.17.x.x`), oppure in fallback diretto `192.168.1.108`.
+  Il SAN del certificato broker contiene entrambi i nomi
+  (`bash certs/generate.sh --quiet`).
+- Gli ESP si agganciano alla 2.4 GHz della stessa SSID: il router "spinge"
+  verso le 5 GHz solo i client dual-band, quindi loro non vengono
+  deautenticati (verificato: telemetria continua, nessun reconnect).
+
+### 12.2 Checklist di boot (~90 s dopo il power-on)
+
+Cosa deve risalire da solo, in ordine:
+
+| # | Componente | Stato atteso | Verifica |
+|---|-----------|--------------|----------|
+| 1 | NetworkManager, profilo `Piano24` | `autoconnect=yes`, `band=a`, `activated` su wlan0 | `nmcli -t -f NAME,DEVICE,STATE con show --active` → `Piano24:wlan0:activated` |
+| 2 | IP del Pi | `192.168.1.108` presente | `hostname -I` |
+| 3 | Avahi mDNS | `active`, `allow-interfaces=wlan0` | `getent hosts openj5-core.local` → `192.168.1.108` |
+| 4 | Docker + stack | container `Up (healthy)` | `cd ~/src/openj5/firmware/node1_robot_core/docker && docker compose ps` |
+| 5 | API robot-core | `{"status":"ok",...}` | `curl -fk https://localhost:8080/health` |
+| 6 | Unità AP + dnsmasq | `inactive` e `disabled` (in attesa dongle) | `systemctl is-active openj5-ap-if openj5-hostapd openj5-nat openj5-channel-sync.timer dnsmasq` |
+| 7 | Nodo ESP | telemetria presente sul broker | blocco seguente |
+
+End-to-end: un messaggio deve arrivare entro ~10 s (se il nodo è acceso):
+
+```bash
+timeout 10 docker exec openj5-mosquitto mosquitto_sub -h 127.0.0.1 -p 8883 --cafile /mosquitto/certs/ca.crt --cert /mosquitto/certs/node1.crt --key /mosquitto/certs/node1.key -t "openj5/#" -C 1
+```
+
+### 12.3 Rimedi
+
+| Sintoma | Causa | Rimedio |
+|---------|-------|---------|
+| wlan0 non connesso dopo il boot | profilo non attivato (gara NM/dhcp o autoconnect perso) | `sudo nmcli con up Piano24`; poi `nmcli -f connection.autoconnect con show Piano24` deve dire `yes` |
+| Disconnessioni ogni ~9 s, SSH a scatti, log `Preferred List Available` + `CTRL-EVENT-DISCONNECTED ... reason=2` (`journalctl -u wpa_supplicant`) | band-steering del router su 2.4 GHz (§11) | tenere l uplink su 5 GHz: `sudo nmcli con mod Piano24 802-11-wireless.band a` (stato attuale) — oppure, con il dongle, spegnere lo steering sul router |
+| `openj5-core.local` non risolve o risolve su `172.17.0.1` | Avahi pubblica tutti gli indirizzi del Pi, bridge Docker compresi | `allow-interfaces=wlan0` in `/etc/avahi/avahi-daemon.conf` + `sudo systemctl restart avahi-daemon` |
+| ESP connesso alla WiFi ma niente telemetria | host broker errato in `sdkconfig.local`, oppure SAN senza `openj5-core.local` | `CONFIG_OPENJ5_MQTT_HOST="openj5-core.local"` + `pio run -t upload`; per il SAN: `bash certs/generate.sh --quiet` e `docker compose restart mosquitto` |
+| `ap0` perde `192.168.4.1` poco dopo la creazione (solo hotspot) | gara: NetworkManager si riprende l interfaccia entro ~600 ms e cancella indirizzi non assegnati da lui | già risolto in `setup_hotspot.sh` (ordine `nmcli dev set $AP_IF managed no` → `ip addr replace`): rieseguire l installer |
+
+**Ripristino hotspot (quando arriva il dongle USB):**
+
+```bash
+AP_IF=wlan1 bash scripts/deploy/setup_hotspot.sh
+```
+
+poi lato ESP: SSID `openj5` + `CONFIG_OPENJ5_MQTT_HOST="openj5-core"` in
+`sdkconfig.local` e riflash (§11). Con la radio dedicata l uplink resta libero
+su 5 GHz e non servono il sync di canale né il vincolo sul canale del router.
 
 ## 13. Troubleshooting
 

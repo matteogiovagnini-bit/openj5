@@ -169,6 +169,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   /etc/hosts overrides `address=` for the Pi's own hostname
 
 ### Changed
+- **Network mode: ESP nodes join the home WiFi (transitory)** — with the
+  home router's band steering non-disableable and no USB WiFi dongle yet, the
+  single-radio AP (`ap0`) could not survive on 2.4 GHz (deauth loop, 99 in
+  15 min): all `openj5-*` hotspot units + `dnsmasq` are now `disabled` and the
+  Pi uplink is pinned to **5 GHz** (`Piano24`, `band=a`, autoconnect), where
+  the router wants dual-band clients anyway (deauths → 0). The broker is
+  dialled as `openj5-core.local` (Avahi, `allow-interfaces=wlan0` so the mDNS
+  answer is `192.168.1.108` and never the Docker bridges) with
+  `IP:192.168.1.108` as fallback; end-to-end verified (ESP32-S3: WiFi →
+  mDNS → mTLS handshake → telemetry on `openj5/v1/balance/tele`).
+  Docs: DEPLOYMENT.md §11 status + §12.1-§12.3 (boot checklist, verification
+  commands, remedies incl. NM race / steering-loop symptoms /
+  `nmcli con up Piano24`, AP restore with `AP_IF=wlan1` when the dongle
+  arrives); BENCH_BALANCE §6 step 0 and `sdkconfig.local.example` annotated.
 - **ADR-016**: Node 1 reference OS switched from Ubuntu Server to Raspberry Pi OS
   Lite 64-bit (Bookworm), primary storage NVMe on USB3 (headless-only, desktop
   variant excluded); README, ARCHITECTURE diagrams and GOALS updated accordingly

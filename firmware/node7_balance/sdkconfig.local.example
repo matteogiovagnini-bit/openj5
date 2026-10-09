@@ -10,6 +10,12 @@
 # docs/deployment/DEPLOYMENT.md section 11) instead of the home WiFi, so the
 # SSID/password are configured in exactly ONE place - scripts/deploy/
 # setup_hotspot.sh on the Pi. 2.4 GHz only (ESP32 limitation).
+#
+# TRANSITIONAL (2026-10-09): the hotspot is disabled pending a USB WiFi
+# dongle - the ESPs join the HOME WiFi instead. In that mode set the home
+# SSID/passphrase below and CONFIG_OPENJ5_MQTT_HOST to the Avahi name
+# "openj5-core.local" (fallback IP "192.168.1.108"); the broker cert SAN
+# covers both. See DEPLOYMENT.md section 12.1.
 CONFIG_OPENJ5_WIFI_SSID="openj5"
 CONFIG_OPENJ5_WIFI_PASSWORD="changeme"
 
