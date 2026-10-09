@@ -29,7 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `certs/generate.sh` leaf SAN omitted `openj5-core` (only `localhost`,
   `<cn>`, `openj5.local`): esp-tls verifies `mqtts://openj5-core:8883` against
   it, so every ESP mTLS handshake would have been rejected; the name is now in
-  every leaf SAN (ADR-013)
+  every leaf SAN (ADR-013), and since the bench moved to the home WiFi (see
+  Changed) the SAN also carries `DNS:openj5-core.local`, the Avahi name the
+  ESPs now dial
 - `Command.__post_init__` was declared `@abstractmethod` on a non-ABC dataclass:
   all 9 concrete commands (`MoveHeadCommand`, `EmergencyStopCommand`, ...) were
   uninstantiable (`TypeError`), breaking ~50 SDK call sites including

@@ -154,14 +154,18 @@ gen_leaf() {
         -subj "/C=$COUNTRY/ST=$STATE/L=$LOCALITY/O=$ORG/OU=$ORG_UNIT/CN=$cn" \
         >/dev/null 2>&1
 
-    # Generate SAN file for each leaf (include hostname). openj5-core is the
-    # broker name the ESP nodes use (hotspot dnsmasq answers it with the AP
-    # IP): esp-tls verifies the server certificate against it on
-    # mqtts://openj5-core:8883, so it must be in the SAN or the handshake
-    # fails (ADR-013).
+    # Generate SAN file for each leaf (include hostname). The SAN covers every
+    # name the ESP nodes may use for the broker:
+    #   openj5-core      - hotspot dnsmasq answer (AP mode, 192.168.4.1)
+    #   openj5-core.local- Avahi mDNS on the home LAN (AP mode off; the Pi's
+    #                      DHCP address changes, the .local name follows it)
+    # esp-tls verifies the server certificate against the URI host on
+    # mqtts://<host>:8883, so the name must be in the SAN or the handshake
+    # fails (ADR-013). Connecting by bare IP additionally needs that IP in the
+    # SAN (add `IP:x.x.x.x` here before regenerating).
     local san_file="$CERT_DIR/$name.san"
     cat > "$san_file" <<EOF
-subjectAltName=DNS:localhost,DNS:$cn,DNS:openj5-core,DNS:openj5.local,IP:127.0.0.1
+subjectAltName=DNS:localhost,DNS:$cn,DNS:openj5-core,DNS:openj5-core.local,DNS:openj5.local,IP:127.0.0.1
 EOF
 
     openssl x509 -req \
