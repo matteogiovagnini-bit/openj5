@@ -3,6 +3,15 @@
 ## Status
 Accepted
 
+> **Amendment (2026-10-09, ADR-019).** The port, its shape, placement and the
+> Python↔C++ parity goal in this ADR are unchanged. Only the *real driver* role is
+> superseded: per ADR-019 (all nodes are ESP32-S3; the Pi is brain-only) the
+> Raspberry Pi must not actuate motors, so `L298NDriver` is a **host bench
+> prototype being retired**, not the production Node 6 driver. Production
+> actuation moves to the Node 6 ESP32-S3 firmware. `IMotorDriver` and
+> `MockMotorDriver` remain as the host/Digital-Twin abstraction and as the
+> Python↔C++ parity contract against that firmware.
+
 ## Context
 ADR-005 already established a Hardware Abstraction Layer for every actuator and
 explicitly named `IMotorDriver` in its core interface set (ADR-005). The tracked
@@ -91,12 +100,18 @@ These are the intended Python mirror of a future C++ `motor_logic.hpp`
 
 | Adapter | File | Backend | Role |
 |---------|------|---------|------|
-| `L298NDriver` | `src/hardware/drivers/l298n.py` | Raspberry Pi GPIO (gpiozero/lgpio, imported lazily) | Real bench Node 6; `channel_factory` injectable for tests |
+| `L298NDriver` | `src/hardware/drivers/l298n.py` | Raspberry Pi GPIO (gpiozero/lgpio, imported lazily) | Host bench prototype, **retired by ADR-019** (Pi is brain-only); `channel_factory` injectable for tests |
 | `MockMotorDriver` | `src/hardware/drivers/mock_motor.py` | In-process, no GPIO, no sleeps | CI/tests and the `--mock` bench demo |
 
 Both read `config/bench/tracks.json` (`pwm_frequency_hz`, `ramp_step`,
 `ramp_seconds`, `limits`, `demo`) and implement the same port, so application code
 is backend-agnostic (ADR-010).
+
+> **Amendment (2026-10-09, ADR-019).** `config/bench/tracks.json` and the host
+> `L298NDriver` are **retired** (Pi is brain-only); `MockMotorDriver` no longer
+> reads the bench file and falls back to documented defaults
+> (`load_driver()` with no path). The adapter table and the "Both read ..."
+> statement above are kept as the original decision record.
 
 ## Alternatives Considered
 1. **Leave the contract implicit in `L298NDriver`** - Rejected: no shared port to
@@ -144,6 +159,12 @@ is backend-agnostic (ADR-010).
   `demo`), `scripts/demo/tracks_bench.py` (`--mock`, `--selftest`), and unit tests
   `tests/unit/test_motor_hal.py`, `test_l298n_driver.py`, `test_mock_motor.py`,
   `test_tracks_demo.py`.
+  > **Amendment (2026-10-09, ADR-019).** Of the files above, the host
+  > `src/hardware/drivers/l298n.py`, `config/bench/tracks.json`,
+  > `scripts/demo/tracks_bench.py` and the tests `test_l298n_driver.py` /
+  > `test_tracks_demo.py` are **retired** (Pi is brain-only). Still delivered:
+  > `src/hardware/hal/motor.py`, `MockMotorDriver` (`mock_motor.py`),
+  > `tests/unit/test_motor_hal.py` / `test_mock_motor.py`.
 - Documentation follow-ups (continuous documentation, CODING_STANDARD §8):
   regenerate the HAL class diagram in `docs/architecture/ARCHITECTURE.md`; add
   `IMotorDriver` to `docs/api/API.md`; update `CHANGELOG.md`, `PROJECT_STATUS.md`,
@@ -166,3 +187,4 @@ is backend-agnostic (ADR-010).
 - ADR-010: Digital Twin Native (mock implements the same port)
 - ADR-014: Python Core + C++ Firmware (Python↔C++ parity target)
 - ADR-017: Node 7 Balance Controller (precedent: HAL port in `src/hardware/hal/` + C++ counterpart)
+- ADR-019: All Nodes ESP32-S3, Pi Brain Only (retires the host `L298NDriver`; real driver is Node 6 firmware)

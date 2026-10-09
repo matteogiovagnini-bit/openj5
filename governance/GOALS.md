@@ -65,10 +65,10 @@ Ogni commit/PR passa: Build → Unit Test → Integration Test (sim) → Lint �
 | G1.4 | Robot Core Service (Config, Logging, DB, Scheduler, Plugin Manager) | Service up, REST API risponde, plugin load |
 | G1.5 | REST API + WebSocket Server | OpenAPI spec, Swagger UI, WS real-time |
 | G1.6 | Digital Twin Bridge (Gazebo/Isaac Sim ↔ Robot Core) | Stesso comando SDK muove sim e reale |
-| G1.7 | OTA Manager per 5× ESP32 | OTA push da UI/API funziona su tutti i nodi |
+| G1.7 | OTA Manager per 6× ESP32-S3 | OTA push da UI/API funziona su tutti i nodi |
 | G1.8 | Configuration Service (File + DB + Hot Reload) | Cambio config → hot reload senza restart |
 | G1.9 | Event Bus (Redis Streams / NATS / custom) | Pub/sub typed events, dead letter, replay |
-| G1.10 | State Machine Orchestrator (tutti i nodi) | Tutti i 6 nodi: BOOT→INIT→READY→RUNNING |
+| G1.10 | State Machine Orchestrator (tutti i nodi) | Tutti i 7 nodi: BOOT→INIT→READY→RUNNING |
 
 ### Nodo 2 - ESP32-S3 Head Controller
 | Obiettivo | Descrizione | Done Criteria |
@@ -96,16 +96,16 @@ Ogni commit/PR passa: Build → Unit Test → Integration Test (sim) → Lint �
 |-----------|-------------|---------------|
 | G4.1 | Identico a Nodo 3 (specchio) | Stesso firmware, config mirrored |
 
-### Nodo 5 - ESP32 Torso Controller
+### Nodo 5 - ESP32-S3 Torso Controller
 | Obiettivo | Descrizione | Done Criteria |
 |-----------|-------------|---------------|
-| G5.1 | Firmware base template | Stesso template nodi ESP32 |
+| G5.1 | Firmware base template | Stesso template ESP32-S3 |
 | G5.2 | 4 Servi: Torso Rot, Torso Pitch, Battery Door, Expansion | Movimenti coordinati con braccia/head |
 | G5.3 | LED Strip + Fan Control (PWM) | Pattern LED, fan curve da config |
 | G5.4 | Battery Monitor (INA219/ADC) + Temperature (DS18B20/ADC) | Telemetria pubblicata su Event Bus |
 | G5.5 | Sensori espansione (IMU torso, ToF, prossimità) | Dati su Event Bus |
 
-### Nodo 6 - ESP32 Track Controller
+### Nodo 6 - ESP32-S3 Track Controller
 | Obiettivo | Descrizione | Done Criteria |
 |-----------|-------------|---------------|
 | G6.1 | Firmware base template | Stesso template |
@@ -144,8 +144,8 @@ Ogni commit/PR passa: Build → Unit Test → Integration Test (sim) → Lint �
 ### Elettronica
 | ID | Obiettivo | Metrica |
 |----|-----------|---------|
-| E1 | Schemi KiCad per tutti e 6 i nodi | Schemi completi, ERC/DNC passati |
-| E2 | PCB per Nodi 2-6 (ESP32 + PCA9685 + connettori) | PCB ordinabili, BOM generato |
+| E1 | Schemi KiCad per tutti e 7 i nodi | Schemi completi, ERC/DNC passati |
+| E2 | PCB per Nodi 2-6 (ESP32-S3 + PCA9685 + connettori) | PCB ordinabili, BOM generato |
 | E3 | Cablaggio documentato (pinout, wire gauge, connettori) | Harness diagram + wire list |
 | E4 | Power budget calcolato e verificato | Current draw < budget batteria per 2h+ |
 | E5 | Schema alimentazione (batteria, BMS, 5V/3.3V regolatori) | Schema completo, testato |
@@ -181,7 +181,7 @@ Ogni commit/PR passa: Build → Unit Test → Integration Test (sim) → Lint �
 
 | Must Have | Should Have | Could Have | Won't Have (Anno 1) |
 |-----------|-------------|------------|---------------------|
-| 6 nodi HW funzionanti | Digital Twin Gazebo | Isaac Sim support | LIDAR / SLAM / Nav2 |
+| 7 nodi HW funzionanti | Digital Twin Gazebo | Isaac Sim support | LIDAR / SLAM / Nav2 |
 | Communication Gateway (MQTT) | ROS 2 Bridge | Zenoh / gRPC | Braccia 7 DoF |
 | Event Bus | Plugin Manager (core) | Plugin marketplace | Force/torque sensing |
 | Robot SDK (API complete) | OTA Manager (tutti nodi) | WebRTC teleop | Tactile sensors |

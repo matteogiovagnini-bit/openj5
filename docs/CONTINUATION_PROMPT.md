@@ -1,7 +1,7 @@
 # CONTINUATION_PROMPT — Prompt di Continuità OpenJ5
 
 > Rigenerare a fine di OGNI sessione. Questo prompt permette a qualsiasi IA (OpenCode, ChatGPT, Claude, Gemini, Codex…) di riprendere il progetto immediatamente senza perdere contesto.
-> Generato: 2026-10-07 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core + T-026 firmware Node 7 Balance (2026-09-23) + T-029 parità Python↔firmware Node 7 (2026-10-07, 170 test, 100% coverage)** · prototipo Nodo 6 · design+firmware Node 7 (ADR-017)
+> Generato: 2026-10-09 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core + T-026 firmware Node 7 Balance (2026-09-23) + T-029 parità Python↔firmware Node 7 (2026-10-07) + ADR-019 (2026-10-09: tutti i nodi ESP32-S3, il Pi è solo cervello; 197 test, 100% coverage)** · bring-up motori Node 6 su ESP32-S3 (`firmware/node6_tracks`) · validazione on-device = T-033
 
 ---
 
@@ -18,7 +18,7 @@ PRIMA DI QUALSIASI MODIFICA leggi questi file nel repository:
 3. governance/ARCHITECTURAL_PRINCIPLES.md e CODING_STANDARD.md
 4. docs/PROJECT_MEMORY.md              (memoria permanente: stato e decisioni)
 5. docs/NEXT_TASK.md                   (attività prioritarie con ID T-xxx)
-6. docs/adr/INDEX.md                   (17 ADR: architettura decisa, immutabile)
+6. docs/adr/INDEX.md                   (19 ADR: architettura decisa, immutabile)
 7. PROJECT_STATUS.md, ROADMAP.md, CHANGELOG.md
 8. docs/KNOWLEDGE_BASE.md              (problemi risolti sul campo)
 9. docs/hardware/BENCH_TRACKS.md       (guida banco Nodo 6: cablaggio motori)
@@ -29,7 +29,8 @@ CONTESTO ESSENZIALE:
 - Architettura: esagonale + DDD + event-driven + plugin; 7 nodi distribuiti.
   Nodo 1 = Raspberry Pi 4 8GB (Robot Core Python/FastAPI, broker Mosquitto,
   Redis Streams, PostgreSQL, Gazebo headless, stack Prometheus/Grafana/Loki/OTEL).
-  Nodi 2–6 = ESP32-S3/ESP32 (ESP-IDF C++20): head, braccio dx/sx, torso, cingoli.
+  Nodi 2–6 = **ESP32-S3** (ESP-IDF C++20, ADR-019): head, braccio dx/sx, torso,
+  cingoli; il Pi (Nodo 1) NON attua mai (solo comandi logici MQTT).
   Nodo 7 = ESP32-S3: **Balance Controller** (NEMA17+A4988+MPU6050, corpo livellato
   vs gravità sui cingoli — ADR-017; design + FIRMWARE consegnati, bench pending).
 - Regole non negoziabili: nessun accesso hardware fuori dalla HAL
@@ -47,16 +48,18 @@ STATO ATTUALE (verifica con git log):
   limiti memoria cgroup v2 attivi. Fix reali: ACL anonimo mosquitto, VOLUME
   +containerd, PYTHONPATH, EventBus alias, metriche DomainEvent, promtail bind RO,
   Grafana __FILE, Trixie (vedi KNOWLEDGE_BASE §1-bis).
-- Nodi 2–6 imprevedibili da heartbeat: atteso, il firmware ESP32 non esiste ancora.
-- Nodi 3–6 firmware, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
+- Nodi 2–5 imprevedibili da heartbeat: atteso, il firmware ESP32-S3 non esiste ancora.
+- Nodi 3–5 firmware, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
+- Node 6: firmware di bring-up motori (`firmware/node6_tracks/`, ADR-019) pronto;
+  encoder/PID/odometria/IMU/ToF/bumper = **T-022**, validazione on-device = **T-033**.
 - v0.3.0 in corso: CI attiva (ruff, **pytest+coverage ≥90%**, doc-check, docker
   build, **firmware-host-tests + firmware-node7-build**). **T-003 FATTO
-  2026-09-22**: `tests/unit/` = **170 test** (dal 2026-10-07), 100% coverage
+  2026-09-22**: `tests/unit/` = **197 test** (dal 2026-10-09), 100% coverage
   `src/core/domain/`; 5 bug latenti corretti — SESSION_REPORT 2026-09-22 e
   KNOWLEDGE_BASE §1-quinquies.
 - **T-026 FATTO 2026-09-23**: firmware Node 7 consegnato — schema di cablaggio
   `docs/hardware/BENCH_BALANCE.md`, logica pura in `firmware/common/` (rampa
-  A4988, Madgwick, FSM ADR-009, PID parità sim → **36 check host** via
+  A4988, Madgwick, FSM ADR-009, PID parità sim → **53 check host** via
   `scripts/test/host_firmware.sh`), progetto ESP-IDF `firmware/node7_balance/`
   (task 100 Hz + IMU 200 Hz, comandi logici level/tilt/stow/stop su
   `openj5/v1/balance/cmd`, fail-safe deadman/watchdog/limite ±1244 jsteps,
@@ -65,18 +68,22 @@ STATO ATTUALE (verifica con git log):
   topic v1 + user node7, cert node7, README firmware fantasma). Debito emerso:
   **T-029, chiuso il 2026-10-07** (nuovo debito residuo: **T-030**). Prima
   build CI del firmware verificata verde (CI #21, 2026-09-27).
-- **Nota: working tree contiene modifiche NON committate** (T-029 + doc) —
-  commitare/pushare solo su richiesta esplicita.
-- PROTOTIPO NODO 6 avviato: primo driver HAL reale `src/hardware/drivers/l298n.py`
-  + demo `scripts/demo/tracks_bench.py` + `config/bench/tracks.json` + guida
-  cablaggio `docs/hardware/BENCH_TRACKS.md`. Il primo movimento fisico dei motori
-  (T-025) è il prossimo step sul banco.
+- **Nota: working tree contiene modifiche NON committate** (ADR-019 + firmware
+  Node 6 + doc) — commitare/pushare solo su richiesta esplicita.
+- **ADR-019 (2026-10-09) — tutti i nodi ESP32-S3, il Pi è solo cervello**: il
+  percorso host Pi (`src/hardware/drivers/l298n.py`, `scripts/demo/tracks_bench.py`,
+  `config/bench/tracks.json` e i relativi test) è **ritirato**; il port
+  `IMotorDriver` + `MockMotorDriver` restano come astrazione host/Digital Twin e
+  contratto di parità Python↔C++ (ADR-018). Node 6 attua sul firmware ESP32-S3
+  `firmware/node6_tracks/` (L298N LEDC + comandi MQTT + watchdog/fail-safe + guida
+  `docs/hardware/NODE6_ESP32_WIRING.md`); il primo movimento fisico sul banco è
+  **T-033** (encoder/PID/odometria/IMU/ToF/bumper = T-022).
 - **NODO 7 BALANCE (ADR-017) — design E FIRMWARE consegnati**: Node 7 (ESP32-S3
   dedicato) per il livellamento attivo del corpo vs gravità: NEMA17+A4988
   (STEP/DIR/ENABLE GPIO4/5/6), riduzione cinghia 20T→80T (±35° = ±1244 jsteps),
   IMU MPU6050 sul corpo (I2C GPIO8/9, 0x68), PID 100 Hz **sul nodo**, comandi
   SOLO logici (level/tilt/stow/stop). Consegnato: software Python (HAL, driver
-  bench, simulatore, config, BodyAPI, 8 test) + **firmware ESP-IDF completo
+  bench, simulatore, config, BodyAPI, 11 test) + **firmware ESP-IDF completo
   (T-026 ✅)** con guida cablaggio `docs/hardware/BENCH_BALANCE.md`, host tests
   e build CI. CAD meccanico (T-027): follow-up. Resta il banco reale (primi
   impulsi, Vref, ratifica PID).
@@ -101,8 +108,10 @@ DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
   build reale di `firmware-node7-build` è da verificare; T-007 (node2) bloccato
   da T-014 — il modello CI è già pronto.
 - Grafana ancora con password admin default.
-- Driver L298N/A4988 Python = prototipi banco, NON produzione (produzione =
-  firmware ESP32; Node 7 ora esiste, bench reale pending).
+- Driver HAL Python host = mock/simulazione (`MockMotorDriver`, `MockStepperDriver`);
+  il driver L298N host è stato rimosso (ADR-019). L'A4988 Python resta un prototipo
+  da banco, NON produzione (produzione = firmware ESP32; Node 7 esiste, bench reale
+  pending).
 - PID livellamento (kp=15, ki=1, kd=0.3) e Vref 550 mA validati solo in
   simulazione: ratificare al primo banco con IMU (T-026 bench).
 
@@ -112,8 +121,9 @@ PROSSIME ATTIVITÀ (in ordine, dettagli in docs/NEXT_TASK.md):
 2. Commit/push di T-026 **solo se richiesto** (working tree attualmente sporco).
 3. T-004 integration test REST/WS o T-005 event bus + state machine
    (sbloccati da T-003; saltati su richiesta 2026-09-23) → chiudere v0.3.0 con T-006.
-4. T-025: primo movimento fisico dei motori (saltato su richiesta 2026-09-23) —
-   per il Node 7 il primo bench (`BENCH_BALANCE.md`) segue lo stesso momento.
+4. **T-033**: validazione on-device del Node 6 (ESP32-S3, ruote sollevate) —
+   segue il firmware di bring-up `node6_tracks`; per il Node 7 il primo bench
+   (`BENCH_BALANCE.md`) segue lo stesso momento.
 5. T-030: loop infinito di `set_position_steps` (A4988 Python, preesistente).
 6. T-028: deduplicare le 3 `DomainEvent`.
 7. Verifica containers secondari ros2-bridge/gazebo + cambio password Grafana.
@@ -132,9 +142,13 @@ REGOLE OPERATIVE DI OGNI SESSIONE:
 - Non commitare mai senza richiesta esplicita dell'utente.
 
 INIZIA da: verificare `git log` che lo stato collimi con queste docs (working
-tree = T-029 non committato), controllare la run CI `firmware-node7-build`,
-poi proporre: commit/push di T-029 su richiesta, oppure T-004/T-005
-(integration test per v0.3.0) o T-030 (loop A4988) secondo priorità.
+tree = ADR-019 + firmware Node 6 + doc non committati), controllare la run CI
+`firmware-node7-build`, poi proporre: commit/push su richiesta, la validazione
+on-device del Node 6 (T-033), oppure T-004/T-005 (integration test per v0.3.0).
+
+Nota: il firmware `node6_tracks` NON ha ancora un job di build in CI
+(`firmware-node6-build` da creare: oggi `.github/workflows/ci.yml` ha solo
+`firmware-host-tests` e `firmware-node7-build`).
 ```
 
 ---

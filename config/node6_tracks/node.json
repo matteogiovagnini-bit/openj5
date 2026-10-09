@@ -3,7 +3,7 @@
     "id": "node6",
     "name": "track_controller",
     "type": "tracks",
-    "hardware": "esp32_devkit_v1",
+    "hardware": "esp32s3_devkit",
     "firmware": "openj5-node6-tracks",
     "version": "1.0.0"
   },
@@ -31,17 +31,24 @@
     "config": {
       "l298n": {
         "left_motor": {
-          "ena_pin": 18,
-          "in1_pin": 19,
-          "in2_pin": 21
+          "ena_pin": 4,
+          "in1_pin": 5,
+          "in2_pin": 6
         },
         "right_motor": {
-          "enb_pin": 23,
-          "in3_pin": 22,
-          "in4_pin": 5
+          "enb_pin": 7,
+          "in3_pin": 15,
+          "in4_pin": 16
         },
         "pwm_frequency_hz": 1000,
-        "pwm_resolution_bits": 10
+        "pwm_resolution_bits": 10,
+        "ramp_step": 0.1,
+        "ramp_seconds": 0.05,
+        "default_velocity": 0.3,
+        "limits": {
+          "min_velocity": -1.0,
+          "max_velocity": 1.0
+        }
       }
     }
   },
@@ -51,8 +58,8 @@
       "type": "dc_geared",
       "encoder": {
         "type": "quadrature",
-        "pin_a": 34,
-        "pin_b": 35,
+        "pin_a": 8,
+        "pin_b": 9,
         "ppr": 1024,
         "inverted": false
       },
@@ -75,8 +82,8 @@
       "type": "dc_geared",
       "encoder": {
         "type": "quadrature",
-        "pin_a": 36,
-        "pin_b": 39,
+        "pin_a": 10,
+        "pin_b": 11,
         "ppr": 1024,
         "inverted": true
       },
@@ -107,7 +114,7 @@
   "imu": {
     "type": "mpu6050",
     "i2c_bus": 1,
-    "address": 0x68,
+    "address": 104,
     "sample_rate_hz": 200,
     "fusion": "madgwick"
   },
@@ -115,24 +122,24 @@
     "front": {
       "type": "vl53l0x",
       "i2c_bus": 1,
-      "address": 0x29,
-      "xshut_pin": 13
+      "address": 41,
+      "xshut_pin": 12
     },
     "rear": {
       "type": "vl53l0x",
       "i2c_bus": 1,
-      "address": 0x30,
-      "xshut_pin": 14
+      "address": 48,
+      "xshut_pin": 13
     }
   },
   "collision": {
     "front_bumpers": {
-      "pins": [27, 26],
+      "pins": [14, 17],
       "type": "ir",
       "threshold": 100
     },
     "rear_bumpers": {
-      "pins": [25, 33],
+      "pins": [18, 21],
       "type": "ir",
       "threshold": 100
     }

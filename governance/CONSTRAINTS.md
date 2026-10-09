@@ -11,8 +11,7 @@ Vincoli fisici, tecnici, economici e organizzativi che limitano le scelte di pro
 | Componente | Vincolo | Implicazioni |
 |------------|---------|--------------|
 | **Nodo 1** | Raspberry Pi 4 8GB, Ubuntu Server 22.04/24.04 LTS, ARM64 | Python 3.11+ performante solo con async; modelli AI quantizzati; Docker obbligatorio |
-| **Nodi 2–4** | ESP32-S3 (PSRAM consigliato), ESP-IDF 5.2+ | RAM/flash limitate: driver modulari, no librerie pesanti, C++20 |
-| **Nodi 5–6** | ESP32 classico | Ancora più limitato di S3: firmware minimale |
+| **Nodi 2–7** | ESP32-S3 (PSRAM consigliato), ESP-IDF 5.2+ (ADR-019: un solo MCU family) | RAM/flash limitate: driver modulari, no librerie pesanti, C++20 |
 | **Servi** | PCA9685 + servi hobby standard (no serial bus servo in Anno 1) | Alimentazione separata dai logic; budget PWM 16 canali/nodo |
 | **Motori** | L298N + 2 DC motori con encoder (prima versione) | Driver inefficiente (drop tensione): power budget critico |
 | **Rete** | WiFi 2.4 GHz per gli ESP32, Ethernet per RPi | Latenza/banda variabili: QoS MQTT, messaggi compatti, retry |

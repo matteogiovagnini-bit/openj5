@@ -58,16 +58,17 @@ config/
 │   ├── pca9685.yaml
 │   ├── kinematics.yaml
 │   └── motion_primitives.yaml
-├── node5_torso/               # ESP32 Torso
+├── node5_torso/               # ESP32-S3 Torso
 │   ├── node.yaml
 │   ├── servos.yaml            # 4 Servos: Torso Rot, Pitch, Battery Door, Expansion
 │   ├── pca9685.yaml
 │   ├── leds.yaml              # LED Strip + Fan PWM
 │   ├── battery.yaml           # INA219, Voltage/Current/Temp thresholds
 │   └── sensors.yaml           # IMU, ToF, Proximity
-└── node6_tracks/              # ESP32 Tracks
-    └── node.json              # node/network, motor_driver (L298N), motors+encoders,
-                               # odometry, imu, tof, collision, motion_primitives, safety
+└── node6_tracks/              # ESP32-S3 Tracks (ADR-019)
+    └── node.json              # node/network, motor_driver (L298N, ESP32-S3 pins),
+                               # motors+encoders, odometry, imu, tof, collision,
+                               # motion_primitives, safety
 
 # Node 7: Balance Controller (ADR-017, ESP32-S3)
 ├── node7_balance/            # ESP32-S3 Balance Controller
@@ -100,7 +101,7 @@ All configuration files have accompanying JSON Schema for validation.
     "nodes": {
       "type": "object",
       "patternProperties": {
-        "^node[1-6]$": {
+        "^node[1-7]$": {
           "type": "object",
           "required": ["cmd", "evt", "telemetry", "state"],
           "properties": {
@@ -493,38 +494,48 @@ primitives:
 Node 6 keeps its configuration in a **single JSON file**,
 `config/node6_tracks/node.json` (same layout as the other nodes). There is no
 `config/node6_tracks/motors.yaml`: earlier revisions of this document referenced
-that path, which never existed in the repository. The file carries `node`/
-`network` identity, `motor_driver` (L298N pins + PWM), `motors` (two DC geared
-motors with encoders, gear ratio and PID), `odometry`, `imu`, `tof`, `collision`,
-`motion_primitives` and `safety`. Illustrative excerpt (the file itself is JSON;
-shown here in the documented shape):
+that path, which never existed in the repository. Per **ADR-019** the node is an
+**ESP32-S3** and all pin values below are the approved ESP32-S3 map (ADR-019 §3),
+mirrored in `firmware/node6_tracks/main/Kconfig.projbuild`. The file carries
+`node`/`network` identity, `motor_driver` (L298N pins + PWM + ramp),
+`motors` (two DC geared motors with encoders, gear ratio and PID), `odometry`,
+`imu`, `tof`, `collision`, `motion_primitives` and `safety`. Illustrative excerpt
+(the file itself is JSON; shown here in the documented shape) — only the L298N
+motor path is wired in the firmware today, the encoder/IMU/ToF/bumper keys are
+reserved for T-022:
 
 ```yaml
 motor_driver:
-  type: "l298n"  # Options: l298n, tb6612, bts7960, odrive
+  type: "l298n"  # Options: l298n, tb6612, bts7960, odrive (on-node selection)
   config:
     l298n:
       left_motor:
-        ena_pin: 18
-        in1_pin: 19
-        in2_pin: 21
+        ena_pin: 4     # ESP32-S3 (ADR-019 §3)
+        in1_pin: 5
+        in2_pin: 6
       right_motor:
-        enb_pin: 23
-        in3_pin: 22
-        in4_pin: 5
+        enb_pin: 7
+        in3_pin: 15
+        in4_pin: 16
       pwm_frequency_hz: 1000
       pwm_resolution_bits: 10
+      ramp_step: 0.1
+      ramp_seconds: 0.05
+      default_velocity: 0.3
+      limits:
+        min_velocity: -1.0
+        max_velocity: 1.0
 
 motors:
   - id: "left"
     type: "dc_geared"
     encoder:
       type: "quadrature"
-      pin_a: 34
-      pin_b: 35
+      pin_a: 8    # ESP32-S3
+      pin_b: 9
       ppr: 1024  # Pulses Per Revolution
       inverted: false
-    gear_ratio: 30:1
+    gear_ratio: 30
     wheel_diameter_mm: 80
     wheel_base_mm: 200
     max_rpm: 200
@@ -541,11 +552,11 @@ motors:
     type: "dc_geared"
     encoder:
       type: "quadrature"
-      pin_a: 36
-      pin_b: 39
+      pin_a: 10    # ESP32-S3
+      pin_b: 11
       ppr: 1024
       inverted: true
-    gear_ratio: 30:1
+    gear_ratio: 30
     wheel_diameter_mm: 80
     wheel_base_mm: 200
     max_rpm: 200
@@ -636,40 +647,38 @@ primitives:
 
 ---
 
-### Node 6 bench prototype (`config/bench/tracks.json`, ADR-018)
+### Node 6 bench / host adapters (ADR-019)
 
-The host bring-up of Node 6 (two DC gear motors via an L298N driven by Raspberry
-Pi GPIO, ADR-005/ADR-018) uses its own config, separate from the ESP32
-`node.json`. This is the file read by `L298NDriver` / `MockMotorDriver` and by
-`scripts/demo/tracks_bench.py`:
+Per ADR-019 there is **no Raspberry-Pi bench config anymore**: the Pi is brain
+only. The retired `config/bench/tracks.json` (read by the removed host
+`L298NDriver` and `scripts/demo/tracks_bench.py`) no longer exists in the
+repository. Node 6 actuation config lives in `config/node6_tracks/node.json`
+(above), mirrored by `firmware/node6_tracks/main/Kconfig.projbuild`.
+
+On the host the `MockMotorDriver` (Digital Twin, ADR-010/ADR-019) is the only
+`IMotorDriver` adapter. `load_driver()` with no path uses documented defaults
+(limits ±1.0, `ramp_step` 0.1, `ramp_seconds` 0.05, motors `left`/`right`);
+passing an explicit JSON path reads `limits`, `ramp_step`, `ramp_seconds` and
+`motors` (the same keys the retired bench file used, so any compatible file
+still works):
 
 ```json
 {
-  "driver": "l298n",
-  "motors": {
-    "left":  { "enable_gpio": 18, "in_a_gpio": 23, "in_b_gpio": 24 },
-    "right": { "enable_gpio": 13, "in_a_gpio": 22, "in_b_gpio": 27 }
-  },
-  "limits": { "max_velocity": 1.0, "min_velocity": -1.0 },
-  "pwm_frequency_hz": 1000,
-  "ramp_seconds": 0.05,
+  "limits": { "min_velocity": -1.0, "max_velocity": 1.0 },
   "ramp_step": 0.1,
-  "demo": { "speed": 0.5, "min_speed": 0.2, "max_speed": 1.0, "speed_step": 0.1 }
+  "ramp_seconds": 0.05,
+  "motors": { "left": {}, "right": {} }
 }
 ```
 
 | Key | Meaning |
 |-----|---------|
-| `driver` | selected adapter (`l298n`); validated at load time |
-| `motors.<name>.{enable_gpio,in_a_gpio,in_b_gpio}` | BCM GPIO for the PWM enable and the two direction pins per side (zero magic numbers) |
 | `limits.min_velocity` / `max_velocity` | clamp bounds for the normalized signed velocity |
-| `pwm_frequency_hz` | PWM frequency (Hz) on the enable pins — config-driven (1000) |
-| `ramp_seconds` / `ramp_step` | total ramp duration and per-step velocity increment (`L298NDriver` sleeps `ramp_seconds / len(schedule)` per ramp step) |
-| `demo.speed` | default demo velocity (`--speed` overrides it) |
-| `demo.min_speed` / `max_speed` / `speed_step` | interactive `+`/`-` speed bounds and step |
+| `ramp_step` / `ramp_seconds` | per-step velocity increment and total ramp duration (the mock applies the schedule analytically, no sleeps) |
+| `motors.<name>` | motor channel identifiers, in config order |
 
-> Pin note: these are **Raspberry Pi BCM GPIO** numbers for the bench. The ESP32
-> Node 6 frame pins in `node.json` are a different map (`ena_pin`/`in1_pin`/…).
+> Pin note: the firmware pin map is the **ESP32-S3** map in `node.json` /
+> `Kconfig.projbuild` (ADR-019 §3); the host mock never touches GPIO.
 
 ---
 

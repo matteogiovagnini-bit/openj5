@@ -10,60 +10,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **T-025 Fase 1 — DC motor HAL port (`IMotorDriver`)**: new pure port in
+- **Node 6 Tracks firmware (ADR-019, T-022)**: new ESP-IDF/PlatformIO project
+  `firmware/node6_tracks/` (env `node6`, board `esp32-s3-devkitc-1`) driving the
+  two L298N track motors **from the ESP32-S3** (LEDC PWM 1000 Hz / 10 bit).
+  MQTT logical commands on `openj5/v1/tracks/cmd`
+  (`forward`/`backward`/`spin_left`/`spin_right`/`stop`, signed normalized
+  velocity `[-1, +1]`, default 0.3), ack/telemetry/state topics, a 1000 ms
+  command watchdog → short-brake, system E-stop on
+  `openj5/v1/system/emergency_stop`, and coils released at boot; Kconfig ↔
+  `config/node6_tracks/node.json`
+- **C++ motor HAL (T-032)**: `firmware/common/include/hal/motor_driver.hpp`
+  (`IMotorDriver` port, same contract as `src/hardware/hal/motor.py`) plus the
+  pure helpers `firmware/common/include/hal/motor_logic.hpp`
+  (`clamp_velocity`/`motor_levels`/`ramp_schedule`, 1:1 mirror of the Python
+  side) and the ESP32-S3 driver
+  `firmware/common/drivers/l298n_driver.{hpp,cpp}`; 17 new host checks in
+  `firmware/common/test/host_test.cpp` (suite now at **53 checks**)
+- **T-025 Fase 1 — DC motor HAL port (`IMotorDriver`)**: pure port in
   `src/hardware/hal/motor.py` (`motor_names`, `initialize`, `set_velocity`,
   `get_velocity`, `stop_all`, `brake_all`, `shutdown`; signed normalized velocity
   in `[-1, +1]`) plus shared pure helpers `clamp_velocity`, `motor_levels`
   (`MotorLevels`) and `ramp_schedule`, re-exported from
-  `src/hardware/hal/__init__.py`. Applications/tests can now depend on the
-  abstraction instead of `L298NDriver` (ADR-005, ADR-018)
+  `src/hardware/hal/__init__.py`. Applications/tests depend on the abstraction,
+  not on a concrete driver (ADR-005, ADR-018)
 - **`MockMotorDriver`** (`src/hardware/drivers/mock_motor.py`): CI-safe,
   no-GPIO implementation of the same port; applies ramps analytically (no
-  sleeps) and reads `config/bench/tracks.json`, so the mock and the real driver
-  share one configuration (Digital Twin, ADR-010). Registered in
+  sleeps) and works standalone from documented defaults (limits ±1.0,
+  `ramp_step` 0.1, `ramp_seconds` 0.05, motors `left`/`right`) or from an
+  explicit JSON path (Digital Twin, ADR-010/ADR-019). Registered in
   `config/common/hal.json` → `motor_driver.implementations.mock`
-- **Non-interactive bench demo**: `scripts/demo/tracks_bench.py` gains
-  `--selftest` (scripted forward/stop/backward/stop/spin-left/spin-right/stop
-  sequence, SSH-safe, never touches a tty) and `--mock`, plus `--seconds` and
-  `--speed` overrides; always brakes and releases on exit
-- **Config-driven PWM and ramp** for the Node 6 bench:
-  `config/bench/tracks.json` adds `pwm_frequency_hz` (1000), `ramp_step` (0.1)
-  and a `demo` section (`speed`, `min_speed`, `max_speed`, `speed_step`) — no
-  inline constants in the driver or demo
+- **Wiring guide `docs/hardware/NODE6_ESP32_WIRING.md`**: ESP32-S3 ↔ L298N pin
+  table, Mermaid wiring diagram, electrical notes, the encoder/I2C/ToF/bumper
+  pins reserved for T-022, and the bring-up procedure
 
 ### Changed
-- `src/hardware/drivers/l298n.py` refactored: `gpiozero`/`lgpio` are imported
-  lazily, so the module imports and is unit-testable without a GPIO library;
-  the per-motor channel factory (`channel_factory`) is injectable for tests;
-  `pwm_frequency_hz` and the ramp (`ramp_step`/`ramp_seconds`) now come from
-  `config/bench/tracks.json`; `L298NDriver` implements `IMotorDriver`
+- `docs/hardware/BENCH_TRACKS.md` rewritten around the Node 6 ESP32-S3
+  (ADR-019): the previous Raspberry Pi GPIO/gpiozero bench procedure is retired
 
-### Fixed
-- `L298NDriver.shutdown()` is now idempotent (safe to call twice, per the
-  `IMotorDriver` contract): a second call is a no-op instead of touching closed
-  `gpiozero` devices
-- `l298n.load_driver` default config path resolved with `parents[2]`
-  (`src/hardware/…` → wrong root) so running the driver/demo without `--config`
-  pointed at a nonexistent file; corrected to `parents[3]`
-  (`config/bench/tracks.json`)
+### Removed
+- **Host Raspberry Pi motor path retired (ADR-019)**: `src/hardware/drivers/l298n.py`,
+  `scripts/demo/tracks_bench.py`, `config/bench/tracks.json` and the related
+  tests (`tests/unit/test_l298n_driver.py`, `tests/unit/test_tracks_demo.py`)
+  are removed. The Pi (Node 1) is brain-only and never touches actuation; the
+  real L298N H-bridge is now driven by the Node 6 ESP32-S3 firmware. The host
+  `IMotorDriver` port and `MockMotorDriver` stay as the host/Digital-Twin
+  abstraction and the Python↔C++ parity contract (ADR-018/ADR-019)
 
 ### Tests
-- 4 new unit-test modules — `tests/unit/test_motor_hal.py`,
-  `test_l298n_driver.py`, `test_mock_motor.py`, `test_tracks_demo.py` (**43 new
-  tests**; suite now at **213 tests**, `core.domain` coverage still 100%)
+- `tests/unit/test_motor_hal.py` + `tests/unit/test_mock_motor.py` (**27
+  tests**) cover the host motor port, its pure helpers and the mock; the removed
+  Pi-driver modules (`test_l298n_driver.py`, `test_tracks_demo.py`) go with their
+  code. Suite now at **197 tests**, `core.domain` coverage still 100%
 
 ### Docs
+- **ADR-019 — Standardize All Nodes on ESP32-S3 (the Raspberry Pi Is Brain
+  Only)** (`docs/adr/ADR-019-all-nodes-esp32-s3.md`), indexed in
+  `docs/adr/INDEX.md`; it supersedes the ADR-002 MCU table and retires the host
+  Pi motor path. New `docs/hardware/NODE6_ESP32_WIRING.md`; `BENCH_TRACKS.md`,
+  `README.md`, `firmware/README.md`, `PROJECT_STATUS.md`, `docs/NEXT_TASK.md`,
+  `ROADMAP.md`, `docs/architecture/ARCHITECTURE.md`,
+  `docs/configuration/CONFIGURATION.md`, `docs/api/API.md`,
+  `docs/PROJECT_MEMORY.md` and `docs/SESSION_REPORT.md` updated; ADR-002 and
+  ADR-018 annotated (historical records, not rewritten)
 - **ADR-018 — Motor HAL Port (`IMotorDriver`): Contract Shape, Placement and
   Python↔C++ Parity** (`docs/adr/ADR-018-motor-hal-port.md`), indexed in
   `docs/adr/INDEX.md`; HAL class diagram in `docs/architecture/ARCHITECTURE.md`
-  regenerated to the implemented shape; `docs/hardware/BENCH_TRACKS.md`,
-  `docs/api/API.md`, `docs/configuration/CONFIGURATION.md`,
-  `PROJECT_STATUS.md`, `docs/NEXT_TASK.md`, `docs/PROJECT_MEMORY.md` and
-  `docs/SESSION_REPORT.md` updated
+  regenerated to the implemented shape
 
 ### Planned (see ROADMAP.md v0.3.0)
 - Integration tests, simulation parity tests, hardware-in-loop tests
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
+- **T-033**: on-device validation of the Node 6 ESP32-S3 (bench, wheels off the
+  ground)
+- **T-032 remainder**: dedicated Python↔C++ parity test module replaying the
+  host vectors (same approach as `tests/unit/test_stepper_parity.py`)
 
 ### Fixed
 - **T-029 Python↔firmware parity for the Node 7 motion/PID code**: the

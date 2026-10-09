@@ -1,0 +1,34 @@
+# Local overrides for the Node 6 firmware - COPY this file to sdkconfig.local:
+#
+#   cd firmware/node6_tracks && cp sdkconfig.local.example sdkconfig.local
+#
+# sdkconfig.local is gitignored (never committed); THIS example is not, so
+# keep placeholders only. CMakeLists.txt appends it to SDKCONFIG_DEFAULTS
+# only when it exists, then: idf.py reconfigure (or pio run for PlatformIO).
+#
+# Network: the ESP joins the Raspberry Pi's hotspot (single-radio AP+STA,
+# docs/deployment/DEPLOYMENT.md section 11) instead of the home WiFi, so the
+# SSID/password are configured in exactly ONE place - scripts/deploy/
+# setup_hotspot.sh on the Pi. 2.4 GHz only (ESP32 limitation).
+#
+# TRANSITIONAL (2026-10-09): the hotspot is disabled pending a USB WiFi
+# dongle - the ESPs join the HOME WiFi instead. In that mode set the home
+# SSID/passphrase below and CONFIG_OPENJ5_MQTT_HOST to the Avahi name
+# "openj5-core.local" (fallback IP "192.168.1.108"); the broker cert SAN
+# covers both. See DEPLOYMENT.md section 12.1.
+CONFIG_OPENJ5_WIFI_SSID="openj5"
+CONFIG_OPENJ5_WIFI_PASSWORD="changeme"
+
+# Broker hostname: the hotspot's dnsmasq answers `openj5-core` with the Pi's
+# AP IP (192.168.4.1) - keep it as-is unless you know what you are doing.
+CONFIG_OPENJ5_MQTT_HOST="openj5-core"
+
+# Production (mTLS on 8883) needs the certs first - see README.md
+# "Produzione: mTLS (ADR-013)"; the bench default is plain MQTT (TLS off):
+# CONFIG_OPENJ5_MQTT_TLS=y
+
+# The broker's mTLS listener is TLS1.3-only (mosquitto.conf: tls_version
+# tlsv1.3). mbedTLS defaults to TLS1.2-only, and OpenSSL then rejects the
+# ClientHello with "unsupported protocol" before any certificate exchange
+# (broker log: "Client <unknown> ... Protocol error"). Harmless with TLS off.
+CONFIG_MBEDTLS_SSL_PROTO_TLS1_3=y

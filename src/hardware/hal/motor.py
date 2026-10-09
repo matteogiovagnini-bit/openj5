@@ -9,15 +9,14 @@ Interface shape (Python):
     initialize(), set_velocity(motor_id, velocity), get_velocity(motor_id),
     stop_all(), brake_all(), shutdown(), motor_names
 
-Applications and domain code depend on this interface only. The concrete
-drivers live in ``hardware.drivers``: ``l298n`` (real RPi GPIO, bench Node 6)
-and ``mock_motor`` (CI/demo, Digital Twin).
+Applications and domain code depend on this interface only. The only host-side
+implementation is ``hardware.drivers.mock_motor`` (CI/tests, Digital Twin). Per
+ADR-019 the Raspberry Pi is brain-only (Node 1): the real L298N H-bridge is
+driven by the Node 6 ESP32-S3 firmware, which exposes the same contract.
 
-This Python port is the reference contract for now: the C++ counterpart at
-``firmware/common/include/hal/`` (and its parity helpers) will be added with the
-Node 6 firmware, following the pattern of ``hal/stepper.py`` -- whose C++
-``stepper_driver.hpp`` / ``stepper_logic.hpp`` already exist -- but is **not
-present yet**.
+The C++ counterpart lives at ``firmware/common/include/hal/motor_driver.hpp``
+(ADR-018) with its parity helpers ``motor_logic.hpp``; the ESP32-S3 L298N driver
+is ``firmware/common/drivers/l298n_driver.cpp``.
 
 This module is pure: no GPIO, no I/O, importable on any machine.
 """

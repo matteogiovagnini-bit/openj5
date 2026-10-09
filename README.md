@@ -10,7 +10,7 @@
 
 ## 🎯 Visione
 
-OpenJ5 è una **piattaforma robotica professionale open source** ispirata a Johnny 5 (Corto Circuito), progettata per durare 10+ anni senza riscritture architetturali. È completamente stampabile in 3D, parametrica, documentata e basata su architettura distribuita a 6 nodi.
+OpenJ5 è una **piattaforma robotica professionale open source** ispirata a Johnny 5 (Corto Circuito), progettata per durare 10+ anni senza riscritture architetturali. È completamente stampabile in 3D, parametrica, documentata e basata su architettura distribuita a 7 nodi.
 
 > **"Non costruiamo un robot. Costruiamo la piattaforma che rende banale costruire robot."**
 
@@ -20,12 +20,12 @@ OpenJ5 è una **piattaforma robotica professionale open source** ispirata a John
 
 | Nodo | Hardware | Responsabilità |
 |------|----------|----------------|
-| **Nodo 1** | Raspberry Pi 4 8GB | Robot Core: AI, Vision, Speech, Planning, Behavior, MQTT Broker, REST API, Digital Twin, OTA, Plugin Manager |
+| **Nodo 1** | Raspberry Pi 4 8GB | Robot Core / **solo cervello** (ADR-019): AI, Vision, Speech, Planning, Behavior, MQTT Broker, REST API, Digital Twin, OTA, Plugin Manager. **Non attua mai** motori/servi |
 | **Nodo 2** | ESP32-S3 | Head Controller: 6 Servi (Neck Yaw/Pitch/Roll, Eyes H/V, Eyelids), LED, Display, Microfoni, Sensori locali |
 | **Nodo 3** | ESP32-S3 | Right Arm Controller: 6 Servi (Shoulder P/R/Rot, Elbow, Wrist, Gripper) |
 | **Nodo 4** | ESP32-S3 | Left Arm Controller: Identico al destro (mirrored) |
-| **Nodo 5** | ESP32 | Torso Controller: 4 Servi (Torso Rot/Pitch, Battery Door, Expansion), LED, Fan, Battery Monitor, Sensori |
-| **Nodo 6** | ESP32 | Track Controller: 2 Motori DC + Encoder (L298N), IMU, ToF, Sensori anticollisione |
+| **Nodo 5** | ESP32-S3 | Torso Controller: 4 Servi (Torso Rot/Pitch, Battery Door, Expansion), LED, Fan, Battery Monitor, Sensori |
+| **Nodo 6** | ESP32-S3 | Track Controller: 2 Motori DC + Encoder (L298N), IMU, ToF, Sensori anticollisione — firmware `firmware/node6_tracks/` (ADR-019) |
 | **Nodo 7** | ESP32-S3 | Balance Controller (ADR-017): NEMA17 + A4988 (STEP/DIR) + IMU MPU6050 sul corpo — livellamento attivo del corpo vs gravità sui cingoli |
 
 ---
@@ -66,7 +66,7 @@ OpenJ5/
 │   ├── ota/                     # OTA Manager
 │   ├── hardware/
 │   │   ├── hal/                 # Hardware Abstraction Layer (Interfaces)
-│   │   └── drivers/             # Concrete Drivers (PCA9685, L298N, VL53L0X, etc.)
+│   │   └── drivers/             # Concrete host/mock drivers (A4988, mock_motor, mock_stepper; L298N is firmware-only, ADR-019)
 │   └── firmware/                # ESP-IDF firmware per 7 nodi (v. firmware/README.md)
 ├── config/                      # File di configurazione JSON per nodo
 ├── docs/                        # Documentazione completa (obbligatoria per ogni PR)
@@ -117,7 +117,7 @@ OpenJ5/
 ### Prerequisiti
 
 - **Raspberry Pi 4 8GB** con Raspberry Pi OS Lite 64-bit (Bookworm) — ADR-016 — boot da NVMe USB3 consigliato
-- **6× ESP32-S3/ESP32** (DevKit o custom PCB)
+- **6× ESP32-S3** (DevKit o custom PCB) — tutti i nodi attuatori (ADR-019)
 - **Docker** + **Docker Compose**
 - **Python 3.11+** (per SDK e tooling)
 - **FreeCAD 0.21+** (per CAD parametrico)
@@ -140,39 +140,42 @@ docker compose up -d
 curl -fk https://localhost:8080/health
 ```
 
-### Setup Firmware ESP32 (Nodi 2-7)
+### Setup Firmware ESP32-S3 (Nodi 2-7)
 
 ```bash
 # Installa ESP-IDF v5.2+ (https://docs.espressif.com/projects/esp-idf/)
 . $IDF_PATH/export.sh
 
-# Node 7 (unico progetto completo oggi — v. firmware/node7_balance/README.md)
+# Node 7 Balance — progetto completo (T-026): v. firmware/node7_balance/README.md
 cd firmware/node7_balance
-
 # A) VSCode + PlatformIO (consigliata; prima build scarica IDF v5.5, ~1 GB)
 pio run -t upload -t monitor
-
 # B) ESP-IDF classico (idf.py)
-idf.py set-target esp32s3
-idf.py menuconfig  # WiFi/MQTT: opzionale, meglio sdkconfig.local (non committato)
-idf.py build flash monitor
+idf.py set-target esp32s3 && idf.py build flash monitor
 
-# Nodi 2-6: skeleton da completare (T-014) prima di buildare
+# Node 6 Tracks — bring-up motori (ADR-019/T-022): v. firmware/node6_tracks/README.md
+cd ../node6_tracks
+pio run -e node6 -t upload -t monitor   # oppure: idf.py set-target esp32s3 && idf.py build flash monitor
+
+# Nodi 2-5: skeleton da completare (T-014 / T-022) prima di buildare
 ```
 
-### Banco motori (prototipo Nodo 6)
+### Banco motori Nodo 6 (ESP32-S3, ADR-019)
 
 ```bash
-# Cablaggio e sicurezza: docs/hardware/BENCH_TRACKS.md
-sudo apt install -y python3-gpiozero
-python3 scripts/demo/tracks_bench.py   # w/s a/d +/− x q — ruote sollevate!
+# Cablaggio, pin e sicurezza: docs/hardware/NODE6_ESP32_WIRING.md + BENCH_TRACKS.md
+# Il Pi NON guida i motori: il firmware node6_tracks li pilota dall'ESP32-S3,
+#   ricevendo comandi logici MQTT (forward/backward/spin_left/spin_right/stop).
+cd firmware/node6_tracks
+pio run -e node6 -t upload -t monitor   # ruote sollevate per il primo test!
+# Config pin/PWM/rampa: config/node6_tracks/node.json ↔ main/Kconfig.projbuild
 ```
 
 ### Node 7 Balance Controller (ADR-017)
 
 ```bash
 # Design + software Python testabile (HAL IStepperDriver, mock, simulatore)
-python3 -m pytest tests/unit/test_balance_control.py   # 8 test verdi
+python3 -m pytest tests/unit/test_balance_control.py   # 11 test verdi
 python3 scripts/demo/balance_bench.py                  # bench A4988 (t / s / x / p / q)
 # Config: config/node7_balance/node.json · config/bench/balance.json
 
@@ -182,14 +185,14 @@ python3 scripts/demo/balance_bench.py                  # bench A4988 (t / s / x 
 # Firmware ESP-IDF (T-026 ✅): progetto completo + build in CI
 cd firmware/node7_balance && idf.py set-target esp32s3 && idf.py build
 # ...oppure da VSCode: pio run -t upload -t monitor (platformio.ini)
-# Logica pura senza ESP-IDF: scripts/test/host_firmware.sh (36 check)
+# Logica pura senza ESP-IDF: scripts/test/host_firmware.sh (53 check)
 # CAD giunto (T-027): follow-up da ADR-017
 ```
 
 ### Test unitari del core domain (T-003)
 
 ```bash
-# 149 test · 100% coverage su src/core/domain/ (gate CI >= 90%)
+# 197 test · 100% coverage su src/core/domain/ (gate CI >= 90%)
 python3 -m pytest tests/unit -q --cov=core.domain --cov-report=term-missing
 ```
 
@@ -430,7 +433,7 @@ python3 -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90
 
 # Test host della logica firmware pura (g++, nessun ESP-IDF richiesto)
 ./scripts/test/host_firmware.sh
-# -> rampa A4988, filtro Madgwick, PID balance (parità con sim), FSM ADR-009
+# -> clamp/mapping/rampa motori DC, rampa A4988, filtro Madgwick, PID balance (parità con sim), FSM ADR-009
 ```
 
 ---
@@ -481,7 +484,7 @@ Ogni PR **deve** aggiornare:
 
 | Must Have | Should Have | Could Have | Won't Have (Anno 1) |
 |-----------|-------------|------------|---------------------|
-| 6 nodi HW funzionanti | Digital Twin Gazebo | Isaac Sim support | LIDAR / SLAM / Nav2 |
+| 7 nodi HW funzionanti | Digital Twin Gazebo | Isaac Sim support | LIDAR / SLAM / Nav2 |
 | Communication Gateway (MQTT) | ROS 2 Bridge | Zenoh / gRPC | Braccia 7 DoF |
 | Event Bus | Plugin Manager (core) | Plugin marketplace | Force/torque sensing |
 | Robot SDK (API complete) | OTA Manager (tutti nodi) | WebRTC teleop | Tactile sensors |

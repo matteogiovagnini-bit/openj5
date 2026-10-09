@@ -56,6 +56,15 @@ Primo boot storico del Robot Core su hardware fisso (T-018). Sezione alimentata 
 
 ## 1-ter. Problemi Risolti (banco Nodo 6 — motori, 2026-08-26)
 
+> **Nota storica (2026-10-09).** Questa sezione documenta il bring-up prototipale
+> in cui il **Raspberry Pi pilotava direttamente** i motori cingoli (host GPIO,
+> `src/hardware/drivers/l298n.py`, `config/bench/tracks.json`,
+> `scripts/demo/tracks_bench.py`). Per **ADR-019** il Pi è solo cervello e tutta
+> l'attuazione avviene sugli ESP32-S3: quel percorso host è stato **ritirato**.
+> Le lezioni elettriche/cablaggio restano valide e sono riprese da
+> `docs/hardware/BENCH_TRACKS.md` (Nodo 6 ESP32-S3) e
+> `docs/hardware/NODE6_ESP32_WIRING.md`.
+
 Lezioni dal bring-up prototipale L298N + 2 motoriduttori DC 12V + LiPo 3S:
 
 ### Alimentazione e potenza (lezione principale)

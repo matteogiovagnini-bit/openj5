@@ -14,14 +14,13 @@
     "motor_driver": {
       "interface": "IMotorDriver",
       "implementations": {
-        "l298n": "L298NDriver",
         "tb6612": "TB6612Driver",
         "bts7960": "BTS7960Driver",
         "odrive": "ODriveDriver",
         "mock": "MockMotorDriver",
         "gazebo": "GazeboMotorDriver"
       },
-      "default": "l298n"
+      "default": "mock"
     },
     "stepper_driver": {
       "interface": "IStepperDriver",

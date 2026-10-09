@@ -11,7 +11,7 @@ OpenJ5 diventerà **la piattaforma di riferimento mondiale per la robotica embod
 | Differenziatore | Descrizione |
 |----------------|-------------|
 | **Hardware 100% Parametrico** | Tutto il CAD è generato parametricamente in FreeCad. Cambi un parametro (es. altezza torso, lunghezza braccio) e rigeneri tutto: STL, BOM, URDF, cablaggi. |
-| **Architettura a 6 Nodi Distribuiti** | Non un singolo SBC, ma 6 nodi specializzati (1× RPi4 + 5× ESP32) che comunicano via gateway astratto. Scalabile, resiliente, sostituibile nodo per nodo. |
+| **Architettura a 7 Nodi Distribuiti** | Non un singolo SBC, ma 7 nodi specializzati (1× RPi4 + 6× ESP32-S3; ADR-017/019) che comunicano via gateway astratto. Scalabile, resiliente, sostituibile nodo per nodo. |
 | **Hardware Abstraction Layer Totale** | Zero dipendenze da PCA9685, L298N, ESP32, RPi4 nel codice applicativo. Solo interfacce: `IServoDriver`, `IMotorDriver`, `ICameraDriver`, `ICommunicationGateway`. |
 | **Robot SDK ad Alto Livello** | `robot.head.lookAt(x,y,z)`, `robot.rightArm.grab()`, `robot.tracks.moveTo(x,y,theta)`. Mai più topic MQTT o angoli servo nel codice applicativo. |
 | **Digital Twin Nativo** | Stesso SDK, stesse API → Robot Reale **O** Simulatore (Gazebo/Isaac Sim). Switch senza cambiare una riga di codice. |
@@ -19,7 +19,7 @@ OpenJ5 diventerà **la piattaforma di riferimento mondiale per la robotica embod
 | **Configuration-Driven Everything** | Zero hardcoded values. Tutto in JSON/YAML/DB: servo limits, PID, PID, topic names, IP, pinout, calibrazioni. |
 | **Event-Driven Architecture** | Event Bus centrale. `FaceDetected` → `BehaviorEngine` → `MotionPlanner` → `HeadController`. Zero coupling diretto. |
 | **Digital Twin Nativo** | Stesso SDK controlla robot reale e simulatore. Stesso codice, stesso deploy. |
-| **OTA & Fleet Ready** | Ogni ESP32 aggiornabile OTA. Fleet management ready per multi-robot. |
+| **OTA & Fleet Ready** | Ogni ESP32-S3 aggiornabile OTA. Fleet management ready per multi-robot. |
 
 ### Principi Guida (Non Negozabili)
 

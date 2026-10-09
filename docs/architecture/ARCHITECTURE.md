@@ -2,7 +2,7 @@
 
 ## Overview
 
-OpenJ5 follows **Hexagonal Architecture (Ports & Adapters)** with **Domain-Driven Design (DDD)**, **Event-Driven Architecture**, and **Plugin Architecture**. The system is composed of 6 distributed nodes communicating through an abstract Communication Gateway.
+OpenJ5 follows **Hexagonal Architecture (Ports & Adapters)** with **Domain-Driven Design (DDD)**, **Event-Driven Architecture**, and **Plugin Architecture**. The system is composed of 7 distributed nodes (6 original + Node 7 Balance, ADR-017) communicating through an abstract Communication Gateway. Per ADR-019 all actuator/sensor nodes are ESP32-S3 and Node 1 (the Raspberry Pi) is brain only.
 
 ---
 
@@ -16,12 +16,12 @@ C4Context
     Person(developer, "Developer", "Extends platform via Plugins, SDK")
 
     System_Boundary(openj5, "OpenJ5 Platform") {
-        System(node1, "Node 1: Robot Core (RPi4)", "Raspberry Pi OS Lite 64-bit + Docker + MQTT Broker\nAI, Vision, Speech, Planning, Behavior\nConfig, Logging, DB, OTA, Plugin Manager")
+        System(node1, "Node 1: Robot Core (RPi4)", "Raspberry Pi OS Lite 64-bit + Docker + MQTT Broker\nBrain only (ADR-019): AI, Vision, Speech, Planning, Behavior\nConfig, Logging, DB, OTA, Plugin Manager")
         System(node2, "Node 2: Head Controller (ESP32-S3)", "6 Servos, LED, Display, Microphones, Sensors")
         System(node3, "Node 3: Right Arm (ESP32-S3)", "6 Servos: Shoulder P/R/Rot, Elbow, Wrist, Gripper")
         System(node4, "Node 4: Left Arm (ESP32-S3)", "6 Servos: Mirrored Right Arm")
-        System(node5, "Node 5: Torso (ESP32)", "4 Servos, LED, Fan, Battery Monitor, Sensors")
-        System(node6, "Node 6: Tracks (ESP32)", "2 DC Motors + Encoder, IMU, ToF, Collision Sensors")
+        System(node5, "Node 5: Torso (ESP32-S3)", "4 Servos, LED, Fan, Battery Monitor, Sensors")
+        System(node6, "Node 6: Tracks (ESP32-S3)", "2 DC Motors + Encoder, IMU, ToF, Collision Sensors (ADR-019)")
         System(node7, "Node 7: Balance Controller (ESP32-S3)", "NEMA17 + A4988, Body IMU MPU6050, Active Body Leveling (ADR-017)")
         System(sim, "Digital Twin (Gazebo/Isaac Sim)", "Physics Simulation, Visualization")
     }
@@ -129,7 +129,7 @@ C4Component
         Component(sqlite_repo, "SQLite Repository Adapter", "Implements IRepository")
         Component(file_config, "File Config Adapter", "Implements IConfigProvider (JSON/YAML)")
         Component(pca9685_driver, "PCA9685 Driver Adapter", "Implements IServoDriver")
-        Component(l298n_driver, "L298N Driver Adapter", "Implements IMotorDriver")
+        Component(motor_driver, "Motor HAL Adapters", "Implements IMotorDriver: MockMotorDriver on the host; L298NDriver on the Node 6 ESP32-S3 firmware (ADR-019)")
         Component(a4988_driver, "A4988 Driver Adapter", "Implements IStepperDriver")
         Component(vl53l0x_driver, "VL53L0X Driver Adapter", "Implements IDistanceSensor")
         Component(mpu6050_driver, "MPU6050 Driver Adapter", "Implements IIMU")
@@ -182,7 +182,7 @@ C4Component
     Rel(sqlite_repo, repositories, "Implements")
     Rel(file_config, config_svc, "Implements")
     Rel(pca9685_driver, hal, "Implements IServoDriver")
-    Rel(l298n_driver, hal, "Implements IMotorDriver")
+    Rel(motor_driver, hal, "Implements IMotorDriver")
     Rel(vl53l0x_driver, hal, "Implements IDistanceSensor")
     Rel(mpu6050_driver, hal, "Implements IIMU")
 ```
@@ -338,7 +338,7 @@ C4Deployment
         Component(servos_4, "6x Servos", "Mirrored Right Arm")
     }
 
-    Deployment_Node(esp32_5, "ESP32 Node 5: Torso", "ESP-IDF 5.2 FreeRTOS") {
+    Deployment_Node(esp32_5, "ESP32-S3 Node 5: Torso", "ESP-IDF 5.2 FreeRTOS") {
         Component(pca9685_5, "PCA9685 (I2C 0x43)", "16ch PWM")
         Component(servos_5, "4x Servos", "Torso Rot/Pitch, Battery Door, Expansion")
         Component(leds_5, "LED Strip + Fan PWM", "GPIO")
@@ -346,12 +346,17 @@ C4Deployment
         Component(sensors_5, "IMU, ToF, Proximity", "I2C")
     }
 
-    Deployment_Node(esp32_6, "ESP32 Node 6: Tracks", "ESP-IDF 5.2 FreeRTOS") {
-        Component(l298n_6, "L298N Driver", "GPIO PWM + Dir")
+    Deployment_Node(esp32_6, "ESP32-S3 Node 6: Tracks", "ESP-IDF 5.2 FreeRTOS") {
+        Component(l298n_6, "L298N Driver (firmware)", "LEDC PWM 1000 Hz / 10 bit + Dir")
         Component(motors_6, "2x DC Motor + Encoder", "GPIO Interrupts")
         Component(imu_6, "MPU6050/ICM20948", "I2C")
         Component(tof_6, "VL53L0X x2", "I2C (Mux)")
         Component(collision_6, "IR Bumpers", "GPIO")
+    }
+
+    Deployment_Node(esp32_7, "ESP32-S3 Node 7: Balance", "ESP-IDF 5.2 FreeRTOS") {
+        Component(a4988_7, "A4988 (STEP/DIR/ENABLE)", "NEMA17")
+        Component(imu_7, "MPU6050 (body)", "I2C + Madgwick")
     }
 
     Deployment_Node(network, "Network Infrastructure", "WiFi 5/6 + Ethernet") {
@@ -366,12 +371,14 @@ C4Deployment
     Rel(esp32_4, network, "WiFi 2.4GHz (MQTT TLS)")
     Rel(esp32_5, network, "WiFi 2.4GHz (MQTT TLS)")
     Rel(esp32_6, network, "WiFi 2.4GHz (MQTT TLS)")
+    Rel(esp32_7, network, "WiFi 2.4GHz (MQTT TLS)")
 
     Rel(mosquitto, esp32_2, "MQTT over TLS/mTLS")
     Rel(mosquitto, esp32_3, "MQTT over TLS/mTLS")
     Rel(mosquitto, esp32_4, "MQTT over TLS/mTLS")
     Rel(mosquitto, esp32_5, "MQTT over TLS/mTLS")
     Rel(mosquitto, esp32_6, "MQTT over TLS/mTLS")
+    Rel(mosquitto, esp32_7, "MQTT over TLS/mTLS")
 ```
 
 ---
@@ -462,18 +469,12 @@ classDiagram
     }
 
     class L298NDriver {
-        +channel_factory: ChannelFactory
         +pwm_frequency_hz: float
+        +pwm_resolution_bits: int
         +ramp_step: float
         +ramp_seconds: float
-    }
-
-    class L298NMotor {
-        +name: str
-        +set_velocity(velocity: float): None
-        +get_velocity(): float
-        +brake(): None
-        +close(): None
+        +min_velocity: float
+        +max_velocity: float
     }
 
     class MockMotorDriver {
@@ -536,8 +537,6 @@ classDiagram
     IMotorDriver <|-- ODriveDriver
     IMotorDriver <|-- GazeboMotorDriver
 
-    L298NDriver *-- L298NMotor : channels
-
     IStepperDriver <|-- A4988StepperDriver
     IStepperDriver <|-- DRV8825Driver
     IStepperDriver <|-- TMC2209Driver
@@ -556,19 +555,23 @@ classDiagram
     ICameraDriver <|-- GazeboCameraDriver
 ```
 
-> **Motor HAL — implemented shape (ADR-018, T-025 Phase 1).** The diagram above
-> shows the port as actually implemented in Python: signed normalized velocity
+> **Motor HAL — implemented shape (ADR-018, ADR-019, T-025 Phase 1).** The diagram
+> above shows the port as actually implemented: signed normalized velocity
 > (`set_velocity`/`get_velocity`, `[-1, +1]`), `motor_names`, `stop_all` (coast),
 > `brake_all` (hold) and idempotent `shutdown`. The value mapping is factored
 > into the pure helpers `clamp_velocity`, `motor_levels` (`MotorLevels`) and
-> `ramp_schedule` in `src/hardware/hal/motor.py`, shared by the real `L298NDriver`
-> (one `L298NMotor` channel per side) and the CI-safe `MockMotorDriver`. The
-> richer interface sketched in earlier revisions of this section — `setPID`,
+> `ramp_schedule` in `src/hardware/hal/motor.py`, mirrored 1:1 by
+> `firmware/common/include/hal/motor_logic.hpp`. Per ADR-019 the real `L298NDriver`
+> is the **ESP32-S3 firmware** adapter (`firmware/common/drivers/l298n_driver.cpp`,
+> LEDC 1000 Hz / 10 bit); the host `L298NDriver` (and its `L298NMotor` channel) was
+> retired and only the CI-safe `MockMotorDriver` remains on the host as the
+> Digital-Twin adapter. The C++ port (`motor_driver.hpp` + `motor_logic.hpp`,
+> ADR-018) is delivered; the dedicated Python↔C++ parity test is the remainder of
+> T-032. The richer interface sketched in earlier revisions — `setPID`,
 > `enable`/`disable`, `getOdometry` returning `Result` — is the **future
 > production/firmware contract** (encoders, PID, odometry belong to the Node 6
-> ESP32 firmware and a dedicated encoder/controller port), **not** the bench HAL
-> port; it is intentionally out of scope here (ADR-018 §2). The C++ counterpart
-> (`motor_driver.hpp` + `motor_logic.hpp`) is tracked as T-032.
+> ESP32 firmware and a dedicated encoder/controller port), **not** this port; it
+> is intentionally out of scope (ADR-018 §2).
 
 ---
 
@@ -599,7 +602,7 @@ flowchart TD
     FLEET -->|mTLS| MQTT_TLS
     TELEOP -->|WSS + JWT| API_JWT
 
-    MQTT_TLS -.->|Encrypted| ESP32_NODES[("All 5 ESP32 Nodes")]
+    MQTT_TLS -.->|Encrypted| ESP32_NODES[("All 6 ESP32-S3 Nodes")]
     API_JWT -.->|Encrypted| ROBOT_CORE[("Robot Core (RPi4)")]
     OTA_SIGN -.->|Signed Firmware| ESP32_NODES
 ```
@@ -628,6 +631,7 @@ flowchart TD
 | ADR-016 | Raspberry Pi OS Lite 64-bit (Bookworm) + NVMe-over-USB3 for Node 1 | Accepted | 2026-08-25 |
 | ADR-017 | Node 7 Balance Controller (NEMA17 + A4988 + MPU6050) | Accepted | 2026-09-21 |
 | ADR-018 | Motor HAL Port (`IMotorDriver`): Contract Shape, Placement and Python↔C++ Parity | Accepted | 2026-10-09 |
+| ADR-019 | Standardize All Nodes on ESP32-S3 (the Raspberry Pi Is Brain Only) | Accepted | 2026-10-09 |
 
 ---
 

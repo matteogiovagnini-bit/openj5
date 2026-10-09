@@ -4,6 +4,55 @@
 
 ---
 
+## Sessione: 2026-10-09 (2) — ADR-019: tutti i nodi ESP32-S3, Pi solo cervello (allineamento docs)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-10-09 |
+| Versione progetto | v0.2.0+ (Robot Core operativo su RPi4); v0.3.0 in corso |
+| Obiettivo | Recepire la decisione **Level C** dell'owner (tutti i nodi attuatori su ESP32-S3; il Pi è solo cervello) e allineare la documentazione, ritirando il percorso motori host del Pi in favore del firmware Node 6 ESP32-S3 |
+
+### Decisioni
+1. **ADR-019 (Accepted, 2026-10-09)**: un solo MCU family, **ESP32-S3** su ogni nodo attuatore; il Raspberry Pi (Node 1) è **solo cervello** e non tocca mai GPIO/I2C/PWM per attuare — invia solo comandi logici via MQTT. Supera la *MCU table* di ADR-002 (mai modificato nel testo: annotato).
+2. **Ritiro del percorso motori host**: `src/hardware/drivers/l298n.py`, `scripts/demo/tracks_bench.py`, `config/bench/tracks.json` e i test `test_l298n_driver.py`/`test_tracks_demo.py` sono rimossi. La produzione Node 6 è il firmware ESP32-S3 (`firmware/node6_tracks/`).
+3. **Il port resta**: `IMotorDriver` (`src/hardware/hal/motor.py`) + `MockMotorDriver` restano come astrazione host/Digital Twin e come **contratto di parità Python↔C++** (ADR-005/010/018).
+4. **Pin map Node 6 approvata** (ADR-019 §3): ENA=4/IN1=5/IN2=6, ENB=7/IN3=15/IN4=16, encoder L 8/9 · R 10/11, I2C 1/2, ToF XSHUT 12/13, bumper 14,17/18,21; LEDC 1000 Hz/10 bit. Sostituisce i pin classic-ESP32 (con GPIO 22-25/33-37/43-44 vietati su S3).
+5. **Nessuna modifica al codice** in questa attività documentale: le divergenze trovate sono state segnalate, non corrette.
+
+### Attività completate
+1. **ADR-019** creato (`docs/adr/ADR-019-all-nodes-esp32-s3.md`) e aggiunto a `docs/adr/INDEX.md`.
+2. **README.md**: 6→7 nodi; Node 1 brain-only; Node 5/6 ESP32-S3; prerequisito 6× ESP32-S3; sezione setup firmware (Node 7 + Node 6 `pio run -e node6`); bench senza `tracks_bench.py`; conteggi 8→11 moduli, 36→53 check, 149→197 test.
+3. **PROJECT_STATUS.md**: header, riga unit-test 197/11 moduli, tabella firmware, sezione Node 6, righe ADR, metriche, What's Included/Next.
+4. **docs/NEXT_TASK.md**: header; annotazioni T-019/T-025; **T-022** e **T-032** portati a 🟡 **Parziale**; **T-033** nuovo (validazione on-device Node 6, ruote sollevate).
+5. **CHANGELOG.md** `[Unreleased]`: Added firmware Node 6 + HAL C++ + host `IMotorDriver`/`MockMotorDriver` + `NODE6_ESP32_WIRING.md`; Changed BENCH_TRACKS; **Removed** percorso motori host Pi; Tests 197; ADR-018 + ADR-019.
+6. **ARCHITECTURE.md**: 6→7 nodi; Component/Deployment/HAL class diagram aggiornati (Node 5/6 S3, Node 7, `motor_driver`); security "All 6 ESP32-S3 Nodes"; ADR index.
+7. **CONFIGURATION.md / API.md / ROADMAP.md / CONTINUATION_PROMPT.md**: pin e topic Node 6 S3; topic pattern `^node[1-7]$`; API motori = L298NDriver firmware + MockMotorDriver host; 19 ADR; 197 test / 53 check.
+8. **Hardware**: `docs/hardware/NODE6_ESP32_WIRING.md` creato; `docs/hardware/BENCH_TRACKS.md` riscritto su ESP32-S3.
+9. **firmware/README.md**: header ADR-019 + "Stato reale (2026-10-09)" + struttura (motor HAL, L298NDriver) + sezione build Node 6 + host 53 check.
+10. **Annotazioni storiche (non riscritture)**: ADR-002 (MCU table), ADR-018 (adapter table + Implementation Notes), KNOWLEDGE_BASE §1-ter. PROJECT_MEMORY (§2/§3/§4/§8/§10) e SESSION_REPORT aggiornati.
+
+### Divergenze trovate (non corrette: fuori perimetro, segnalate)
+- `firmware/node6_tracks/README.md` dichiarava un job CI `firmware-node6-build` **inesistente** (`.github/workflows/ci.yml` ha solo `firmware-host-tests` + `firmware-node7-build`) e una falsa sincronia config → corretto nella doc.
+- `firmware/node2_head/src/main.cpp` esiste ma include `head_controller.hpp` **assente** (nessuna dir `include/`) → Node 2 non compilabile; `firmware/README.md` lo dava per "solo CMakeLists" → corretto nella doc.
+- Le vecchie voci 213/36/170/149 test negli altri documenti non riflettevano lo stato reale → allineate a 197/53 (misurati).
+
+### Debito emerso / confermato
+- **T-033** (nuovo): validazione on-device Node 6 (`node6_tracks`, ruote sollevate) — chiude il filo T-025/T-022.
+- **T-032 Parziale**: HAL C++ consegnato; manca il modulo di parità Python↔C++ dedicato (stile `test_stepper_parity.py`).
+- **T-022 Parziale**: bring-up motori Node 6 consegnato; encoder/PID/odometria/IMU/ToF/bumper/motion primitives e Nodi 4/5 restano.
+
+### Lezioni
+Una decisione di livello C (hardware/architettura) si propaga in ~15 documenti: se non si aggiornano tutti insieme, la documentazione mente in modi diversi. Le fonti di verità misurate (`pytest`, `host_firmware.sh`, `git status`) sono l'unico modo per non ripetere i vecchi conteggi gonfiati; preservare la cronologia (annotare, non riscrivere) mantiene tracciabile *perché* una scelta è cambiata.
+
+### Comandi di verifica
+```bash
+.venv/bin/python -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90   # 197, 100%
+./scripts/test/host_firmware.sh                                                   # 53 check
+./scripts/check_docs.sh                                                           # doc-check OK
+```
+
+---
+
 ## Sessione: 2026-10-09 — T-025 Fase 1 Motori cingoli Node 6 (port HAL + self-test)
 
 | Campo | Valore |

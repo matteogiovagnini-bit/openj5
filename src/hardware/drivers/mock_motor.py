@@ -1,15 +1,21 @@
 """
 OpenJ5 Mock DC Motor Driver - in-process, no GPIO (CI/tests safe).
 
-Implements the same ``IMotorDriver`` HAL port (ADR-005) as the L298N bench
-driver, but without touching GPIO: it keeps the last commanded velocity per
-channel and applies the ramp analytically via the pure helpers in
-``hardware.hal.motor`` (no sleeps), so unit tests and the ``--mock`` demo run on
-any Mac/CI machine. This is the Digital Twin of the L298N driver: the same API,
-different adapter.
+Implements the ``IMotorDriver`` HAL port (ADR-005) without touching GPIO: it
+keeps the last commanded velocity per channel and applies the ramp analytically
+via the pure helpers in ``hardware.hal.motor`` (no sleeps), so unit tests run
+on any Mac/CI machine.
 
-``load_driver()`` reads ``config/bench/tracks.json`` by default, so the mock and
-the real driver share the same configuration (zero duplicated defaults).
+Per ADR-019 the Raspberry Pi is brain-only (Node 1): the real L298N H-bridge is
+driven by the Node 6 ESP32-S3 firmware, never by the Pi. On the host this mock
+is the ``IMotorDriver`` implementation (Digital Twin): the same API the
+firmware exposes (``firmware/common/include/hal/motor_driver.hpp``), a different
+adapter.
+
+``load_driver()`` with no path returns a documented default (limits +/-1.0,
+``ramp_step 0.1``, ``ramp_seconds 0.05``, motors ``left``/``right``), exactly
+like ``mock_stepper.load_driver``; pass a path to read ``limits``/``ramp_step``/
+``ramp_seconds``/``motors`` from JSON.
 """
 from __future__ import annotations
 
@@ -52,14 +58,14 @@ class MockMotorChannel:
 
 
 class MockMotorDriver(IMotorDriver):
-    """Deterministic DC motor simulation mirroring the L298N ramp behavior."""
+    """Deterministic DC motor simulation mirroring the H-bridge ramp behavior."""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """Build the mock from a normalized config dict (see ``load_driver``).
 
         The ``cfg.get(..., default)`` fallbacks exist only for direct use in
-        tests; ``load_driver()`` always passes the parsed JSON, so the config is
-        the single source of values on the bench/demo paths.
+        tests; ``load_driver()`` always passes an explicit config dict, so the
+        defaults are documented in exactly one place.
         """
         cfg = config or {}
         self.min_velocity = float(cfg.get("min_velocity", -1.0))
@@ -92,7 +98,7 @@ class MockMotorDriver(IMotorDriver):
         self.last_schedule[motor_id] = schedule
 
     def get_levels(self, motor_id: str) -> MotorLevels:
-        """Hardware levels the real L298N would apply for the current velocity."""
+        """Hardware levels the real H-bridge would apply at the current velocity."""
         return motor_levels(self.motors[motor_id].get_velocity())
 
     def get_velocity(self, motor_id: str) -> float:
@@ -113,26 +119,32 @@ class MockMotorDriver(IMotorDriver):
 
 
 def load_driver(config_path: str | Path | None = None) -> MockMotorDriver:
-    """Build the mock from the tracks JSON (default: ``config/bench/tracks.json``).
+    """Build the mock from a JSON config, or from the documented defaults.
 
-    Same contract as ``l298n.load_driver``: the config is the only source of
-    values, so the mock and the real bench driver stay in sync.
+    No path -> documented default (limits +/-1.0, ``ramp_step 0.1``,
+    ``ramp_seconds 0.05``, motors ``left``/``right``), so the Digital Twin works
+    standalone without reading any bench file. With a path, the JSON must carry
+    ``limits`` (``min_velocity``/``max_velocity``), ``ramp_step``,
+    ``ramp_seconds`` and ``motors``.
     """
-    path = (
-        Path(config_path)
-        if config_path is not None
-        else Path(__file__).resolve().parents[3] / "config" / "bench" / "tracks.json"
-    )
-    cfg = json.loads(path.read_text())
-    limits = cfg["limits"]
-    driver = MockMotorDriver(
-        {
+    if config_path is None:
+        cfg: dict[str, Any] = {
+            "min_velocity": -1.0,
+            "max_velocity": 1.0,
+            "ramp_step": 0.1,
+            "ramp_seconds": 0.05,
+            "motors": ["left", "right"],
+        }
+    else:
+        raw = json.loads(Path(config_path).read_text())
+        limits = raw["limits"]
+        cfg = {
             "min_velocity": float(limits["min_velocity"]),
             "max_velocity": float(limits["max_velocity"]),
-            "ramp_step": float(cfg["ramp_step"]),
-            "ramp_seconds": float(cfg["ramp_seconds"]),
-            "motors": list(cfg["motors"]),
+            "ramp_step": float(raw["ramp_step"]),
+            "ramp_seconds": float(raw["ramp_seconds"]),
+            "motors": list(raw["motors"]),
         }
-    )
+    driver = MockMotorDriver(cfg)
     driver.initialize()
     return driver

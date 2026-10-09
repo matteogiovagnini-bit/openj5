@@ -12,6 +12,7 @@ idf_component_register(
         "imu/madgwick.cpp"
         "statemachine/state_machine.cpp"
         "drivers/a4988_driver.cpp"
+        "drivers/l298n_driver.cpp"
         "drivers/mpu6050_driver.cpp"
         "comms/wifi_station.cpp"
         "comms/mqtt_client.cpp"

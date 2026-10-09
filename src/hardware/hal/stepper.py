@@ -3,7 +3,7 @@ OpenJ5 Core HAL - IStepperDriver (Port)
 
 Pure interface for stepper motor drivers, per ADR-005 / ADR-017.
 
-A stepper is neither a servo (PCA9685) nor a DC motor (L298N):
+A stepper is neither a servo (PCA9685) nor an H-bridge DC motor:
 it is driven by a STEP/DIR driver (A4988, DRV8825, TMC2209, ...) and its
 position is the number of microsteps counted from home. Applications and
 domain code depend on this interface only; a concrete driver (A4988 over

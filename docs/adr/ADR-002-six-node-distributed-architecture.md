@@ -26,6 +26,11 @@ Distribute across **6 specialized nodes** communicating via **Message Bus (MQTT)
 | **Node 5** | ESP32 | Torso Controller: 4 servos (Torso Rot, Pitch, Battery Door, Expansion), LED Strip, Fan, Battery Monitor (INA219), Temp (DS18B20), IMU, ToF, Proximity | Soft real-time (10-50ms) |
 | **Node 6** | ESP32 | Track Controller: 2x DC Motor (L298N→TB6612/BTS7960/ODrive), Encoders, IMU, 2x ToF, Collision Sensors | Hard real-time (1-5ms motor loop) |
 
+> **Note (2026-10-09, ADR-019).** This MCU table is **historical**: the mixed
+> ESP32 / ESP32-S3 fleet is superseded by ADR-019 (all actuator nodes are
+> **ESP32-S3**; the Raspberry Pi is brain-only). ADR-002 is immutable and remains
+> valid everywhere else; only its MCU column is superseded.
+
 **Communication:**
 - All nodes ↔ Node 1 via MQTT over TLS/mTLS
 - **Logical commands only** (e.g., `look_at`, `wave`, `move_forward`) - **NO servo angles**

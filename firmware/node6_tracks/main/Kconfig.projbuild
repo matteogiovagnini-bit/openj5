@@ -1,0 +1,160 @@
+menu "OpenJ5 Node 6 Tracks Controller"
+
+    comment "Values MUST stay in sync with config/node6_tracks/node.json"
+    comment "(ADR-019 approved ESP32-S3 pin map; parity test T-032)"
+
+    # ------------------------------------------------------------------- L298N --
+    config OPENJ5_PIN_ENA
+        int "L298N ENA GPIO (left PWM, LEDC)"
+        default 4
+
+    config OPENJ5_PIN_IN1
+        int "L298N IN1 GPIO (left direction)"
+        default 5
+
+    config OPENJ5_PIN_IN2
+        int "L298N IN2 GPIO (left direction)"
+        default 6
+
+    config OPENJ5_PIN_ENB
+        int "L298N ENB GPIO (right PWM, LEDC)"
+        default 7
+
+    config OPENJ5_PIN_IN3
+        int "L298N IN3 GPIO (right direction)"
+        default 15
+
+    config OPENJ5_PIN_IN4
+        int "L298N IN4 GPIO (right direction)"
+        default 16
+
+    config OPENJ5_PWM_FREQ_HZ
+        int "LEDC PWM frequency (Hz)"
+        default 1000
+
+    config OPENJ5_PWM_RESOLUTION_BITS
+        int "LEDC PWM resolution (bit)"
+        default 10
+
+    config OPENJ5_RAMP_STEP
+        string "Velocity ramp step (normalized)"
+        default "0.1"
+
+    config OPENJ5_RAMP_SECONDS
+        string "Velocity ramp duration (s, 0 = apply immediately)"
+        default "0.05"
+
+    config OPENJ5_MIN_VELOCITY
+        string "Minimum normalized velocity (signed)"
+        default "-1.0"
+
+    config OPENJ5_MAX_VELOCITY
+        string "Maximum normalized velocity (signed)"
+        default "1.0"
+
+    config OPENJ5_DEFAULT_VELOCITY
+        string "Default command velocity when the payload omits it"
+        default "0.3"
+
+    # --------------------------------------------- Encoders (reserved, T-022) --
+    config OPENJ5_ENC_LEFT_A
+        int "Left encoder A GPIO (reserved, encoder PID at T-022)"
+        default 8
+
+    config OPENJ5_ENC_LEFT_B
+        int "Left encoder B GPIO (reserved, encoder PID at T-022)"
+        default 9
+
+    config OPENJ5_ENC_RIGHT_A
+        int "Right encoder A GPIO (reserved, encoder PID at T-022)"
+        default 10
+
+    config OPENJ5_ENC_RIGHT_B
+        int "Right encoder B GPIO (reserved, encoder PID at T-022)"
+        default 11
+
+    # -------------------------------------------- Shared I2C (IMU + ToF, T-022) --
+    config OPENJ5_I2C_SDA
+        int "I2C SDA GPIO (MPU6050 + VL53L0X, reserved)"
+        default 1
+
+    config OPENJ5_I2C_SCL
+        int "I2C SCL GPIO (MPU6050 + VL53L0X, reserved)"
+        default 2
+
+    config OPENJ5_TOF_XSHUT_FRONT
+        int "Front ToF XSHUT GPIO (reserved, T-022)"
+        default 12
+
+    config OPENJ5_TOF_XSHUT_REAR
+        int "Rear ToF XSHUT GPIO (reserved, T-022)"
+        default 13
+
+    # ------------------------------------------------- Bumpers (reserved, T-022) --
+    config OPENJ5_BUMPER_FRONT_A
+        int "Front bumper GPIO A (reserved, T-022)"
+        default 14
+
+    config OPENJ5_BUMPER_FRONT_B
+        int "Front bumper GPIO B (reserved, T-022)"
+        default 17
+
+    config OPENJ5_BUMPER_REAR_A
+        int "Rear bumper GPIO A (reserved, T-022)"
+        default 18
+
+    config OPENJ5_BUMPER_REAR_B
+        int "Rear bumper GPIO B (reserved, T-022)"
+        default 21
+
+    # ------------------------------------------------------------------ Safety --
+    config OPENJ5_WATCHDOG_TIMEOUT_MS
+        int "Command freshness deadline (ms) -> fail-safe brake"
+        default 1000
+
+    config OPENJ5_TELEMETRY_PERIOD_MS
+        int "Telemetry publish period (ms)"
+        default 1000
+
+    config OPENJ5_CONTROL_HZ
+        int "Motor control/ramp loop rate (Hz)"
+        default 50
+
+    # ------------------------------------------------------------------- Net ---
+    config OPENJ5_WIFI_SSID
+        string "WiFi SSID (not committed - set locally)"
+        default ""
+
+    config OPENJ5_WIFI_PASSWORD
+        string "WiFi password (not committed - set locally)"
+        default ""
+
+    config OPENJ5_MQTT_HOST
+        string "MQTT broker host"
+        default "openj5-core"
+
+    config OPENJ5_MQTT_PORT
+        int "MQTT broker port (production: 8883 mTLS)"
+        default 8883
+
+    config OPENJ5_MQTT_TLS
+        bool "MQTT mTLS with embedded certs (ADR-013, production)"
+        default n
+        help
+            Requires ca.crt, node6.crt, node6.key in main/certs/ (see the
+            README). Without it the node still connects to a plain listener
+            for bench bring-up only.
+
+    config OPENJ5_MQTT_CLIENT_ID
+        string "MQTT client id"
+        default "openj5-node6-tracks"
+
+    config OPENJ5_MQTT_KEEPALIVE
+        int "MQTT keepalive (s)"
+        default 60
+
+    config OPENJ5_TOPIC_PREFIX
+        string "MQTT topic prefix (cmd/state/evt/telemetry)"
+        default "openj5/v1/tracks"
+
+endmenu

@@ -12,7 +12,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <stdexcept>
+#include <vector>
 
+#include "hal/motor_logic.hpp"
 #include "hal/stepper_logic.hpp"
 #include "imu/madgwick.hpp"
 #include "statemachine/state_machine.hpp"
@@ -81,6 +84,70 @@ static void test_motion() {
     check(toggle_interval_us(4.0, 5.0) == 0, "below min freq = hold");
     check(toggle_interval_us(5.0, 5.0) > 0, "at min freq pulses resume");
     check(clamp(5.0, 0.0, 1.0) == 1.0 && clamp(-5.0, 0.0, 1.0) == 0.0, "clamp");
+}
+
+static void test_motor_logic() {
+    using namespace openj5::motor;
+
+    // clamp_velocity: pass-through, both clamps, exact boundaries.
+    check(clamp_velocity(0.5, -1.0, 1.0) == 0.5, "clamp passes through");
+    check(clamp_velocity(5.0, -1.0, 1.0) == 1.0, "clamp above max");
+    check(clamp_velocity(-5.0, -1.0, 1.0) == -1.0, "clamp below min");
+    check(clamp_velocity(1.0, -1.0, 1.0) == 1.0, "clamp keeps +boundary");
+    check(clamp_velocity(-1.0, -1.0, 1.0) == -1.0, "clamp keeps -boundary");
+    // Parity with src/hardware/hal/motor.py: inverted limits are a config
+    // error (Python ValueError), never guessed.
+    bool threw = false;
+    try {
+        (void)clamp_velocity(0.0, 1.0, -1.0);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    check(threw, "inverted velocity limits rejected");
+
+    // motor_levels: forward / reverse / rest / duty clamp.
+    MotorLevels fwd = motor_levels(0.5);
+    check(fwd.forward && !fwd.reverse && near(fwd.duty, 0.5, 1e-12),
+          "levels: +0.5 -> forward duty 0.5");
+    MotorLevels rev = motor_levels(-0.25);
+    check(!rev.forward && rev.reverse && near(rev.duty, 0.25, 1e-12),
+          "levels: -0.25 -> reverse duty 0.25");
+    MotorLevels rest = motor_levels(0.0);
+    check(!rest.forward && !rest.reverse && rest.duty == 0.0,
+          "levels: 0 -> both low duty 0");
+    check(motor_levels(3.0).duty == 1.0 && motor_levels(-3.0).duty == 1.0,
+          "levels: duty clamped to 1");
+
+    // ramp_schedule: ascent, descent, non-divisor landing, single step, empty.
+    std::vector<double> up = ramp_schedule(0.0, 0.5, 0.1);
+    check(up.size() == 5 && near(up[0], 0.1, 1e-12) && near(up[4], 0.5, 1e-12),
+          "ramp: 0.0 -> 0.5 step 0.1 = [0.1..0.5]");
+    std::vector<double> down = ramp_schedule(0.5, -0.2, 0.3);
+    check(down.size() == 3 && near(down[0], 0.2, 1e-12) &&
+              near(down[1], -0.1, 1e-12) && near(down[2], -0.2, 1e-12),
+          "ramp: descent 0.5 -> -0.2 step 0.3 = [0.2,-0.1,-0.2]");
+    std::vector<double> odd = ramp_schedule(0.0, 0.55, 0.1);
+    check(odd.size() == 6 && odd.back() == 0.55,
+          "ramp: non-divisor lands exactly on target");
+    std::vector<double> one = ramp_schedule(0.4, 0.5, 0.3);
+    check(one.size() == 1 && near(one[0], 0.5, 1e-12),
+          "ramp: target within one step = single value");
+    check(ramp_schedule(0.5, 0.5, 0.1).empty(),
+          "ramp: current == target = empty");
+    threw = false;
+    try {
+        (void)ramp_schedule(0.0, 0.5, 0.0);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    check(threw, "ramp: non-positive step rejected");
+    threw = false;
+    try {
+        (void)ramp_schedule(0.0, 0.5, -0.1);
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    check(threw, "ramp: negative step rejected");
 }
 
 static void test_madgwick() {
@@ -202,6 +269,7 @@ static void test_balance_pid() {
 
 int main() {
     test_motion();
+    test_motor_logic();
     test_madgwick();
     test_state_machine();
     test_balance_pid();

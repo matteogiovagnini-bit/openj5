@@ -1,16 +1,18 @@
 # OpenJ5 Firmware — ESP-IDF (C++20)
 
-Firmware dei nodi ESP32 secondo **ADR-014** (ESP-IDF v5.2+, C++20,
-`-Wall -Wextra -Wpedantic -Werror`) e **ADR-017** (Node 7 Balance).
+Firmware dei nodi ESP32-S3 secondo **ADR-014** (ESP-IDF v5.2+, C++20,
+`-Wall -Wextra -Wpedantic -Werror`), **ADR-017** (Node 7 Balance) e **ADR-019**
+(tutti i nodi ESP32-S3; il Raspberry Pi è solo cervello).
 
-## Stato reale (2026-09-23)
+## Stato reale (2026-10-09)
 
 | Progetto | Target | Stato |
 |----------|--------|-------|
 | `node7_balance/` | ESP32-S3 | ✅ completo — buildato in CI (`firmware-node7-build`) |
-| `node2_head/` | ESP32-S3 | 🔴 solo `CMakeLists.txt`, non compilabile → **T-014** (sblocca T-007) |
-| `node3_right_arm` … `node6_tracks` | ESP32-S3/ESP32 | ⬜ non iniziati (T-014, T-022) |
-| `node1_robot_core/` | — | non è firmware: contiene Docker/Python del Nodo 1 (il Nodo 1 è il Raspberry Pi) |
+| `node6_tracks/` | ESP32-S3 | 🟡 bring-up motori (ADR-019 / T-022): L298N + comandi MQTT + watchdog/fail-safe; build ESP-IDF **non ancora in CI**, validazione on-device = **T-033** |
+| `node2_head/` | ESP32-S3 | 🔴 `src/main.cpp` esiste ma include `head_controller.hpp`, che manca → non compilabile → **T-014** (sblocca T-007) |
+| `node3` … `node5` | ESP32-S3 | ⬜ non iniziati (T-014, T-022); le rispettive cartelle non esistono ancora |
+| `node1_robot_core/` | — | non è firmware: contiene Docker/Python del Nodo 1 (il Nodo 1 è il Raspberry Pi, solo cervello) |
 
 ## Struttura
 
@@ -19,15 +21,16 @@ firmware/
 ├── common/                 # Componente ESP-IDF condiviso (REQUIRES reale)
 │   ├── CMakeLists.txt      # elenca SOLO file esistenti (v. nota sotto)
 │   ├── include/
-│   │   ├── hal/            # stepper_logic (puro) + port IStepperDriver
-│   │   ├── drivers/        # A4988Driver (STEP/DIR/ENABLE), Mpu6050Driver
+│   │   ├── hal/            # stepper_logic + stepper_driver (port); motor_logic + motor_driver (port, ADR-018/019)
+│   │   ├── drivers/        # A4988Driver, Mpu6050Driver, L298NDriver (ESP32-S3, ADR-019)
 │   │   ├── imu/            # Madgwick 9 assi (puro)
 │   │   ├── statemachine/   # FSM ADR-009 (tabella, pura)
 │   │   └── comms/          # WifiStation, MqttClient (esp-mqtt, mTLS opzionale)
 │   ├── drivers/  imu/  statemachine/  comms/   # .cpp corrispondenti
 │   └── test/host_test.cpp  # unit test host (g++, nessun ESP-IDF)
 ├── node7_balance/          # ✅ progetto ESP-IDF completo (vedi il suo README)
-├── node2_head/             # skeleton (T-014)
+├── node6_tracks/           # 🟡 bring-up motori ESP32-S3 (ADR-019, vedi il suo README)
+├── node2_head/             # skeleton (src/main.cpp con header mancante, T-014)
 └── node1_robot_core/       # Robot Core (Docker/Python sul Pi, non firmware)
 ```
 
@@ -39,7 +42,7 @@ firmware/
 
 ## Build
 
-### Node 7 (unico progetto buildabile oggi)
+### Node 7 (progetto completo)
 
 **A — VSCode + PlatformIO (consigliata)** — v. `node7_balance/README.md`
 §"Procedimento di caricamento":
@@ -64,10 +67,22 @@ Le due versioni di IDF (5.5 via PlatformIO, 5.2.2 via idf.py/CI) devono
 restare entrambe supportate: vincolo annotato in `platformio.ini` e verificato
 da `tests/unit/test_node7_config_sync.py`.
 
+### Node 6 Tracks (bring-up motori, ADR-019)
+
+Progetto ESP-IDF/PlatformIO completo per il bring-up motori (env `node6`);
+dettagli in `node6_tracks/README.md`. **La build non è ancora in CI** (T-033
+copre la validazione on-device).
+
+```bash
+cd firmware/node6_tracks
+pio run -e node6 -t upload -t monitor   # PlatformIO (IDF v5.5)
+# oppure: idf.py set-target esp32s3 && idf.py build flash monitor
+```
+
 ### Logica pura su host (senza ESP-IDF)
 
 ```bash
-scripts/test/host_firmware.sh   # g++/clang: rampa, Madgwick, PID, FSM — 36 check
+scripts/test/host_firmware.sh   # g++/clang: rampa motori DC, rampa, Madgwick, PID, FSM — 53 check
 ```
 
 ### CI (`.github/workflows/ci.yml`)

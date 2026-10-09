@@ -55,6 +55,7 @@ Any specific implementation details, migration paths, or follow-up tasks.
 | [ADR-016](ADR-016-pios-lite-nvme-node1.md) | Raspberry Pi OS Lite 64-bit (Bookworm) as Node 1 Reference OS, NVMe-over-USB3 Storage | Accepted | 2026-08-25 |
 | [ADR-017](ADR-017-node7-balance-controller.md) | Node 7 Balance Controller (Self-Leveling Body: NEMA17 + A4988 + MPU6050) — extends ADR-002 to 7 nodes, adds IStepperDriver to the HAL | Accepted | 2026-09-21 |
 | [ADR-018](ADR-018-motor-hal-port.md) | Motor HAL Port (IMotorDriver): Contract Shape, Placement and Python↔C++ Parity | Accepted | 2026-10-09 |
+| [ADR-019](ADR-019-all-nodes-esp32-s3.md) | Standardize All Nodes on ESP32-S3 (the Raspberry Pi Is Brain Only) | Accepted | 2026-10-09 |
 
 ## Governance
 

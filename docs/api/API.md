@@ -441,12 +441,14 @@ class Odometry:
 
 ---
 
-## Motor HAL Port (`IMotorDriver`) — Node 6 bench (ADR-018)
+## Motor HAL Port (`IMotorDriver`) — Node 6 tracks (ADR-018/ADR-019)
 
 `IMotorDriver` is the **hardware abstraction port** for DC motors
 (`src/hardware/hal/motor.py`, ADR-005/ADR-018). Application code uses the SDK
-facade (`robot.tracks`, above); this port is what the concrete bench/firmware
-drivers implement, so the same logic runs on real GPIO and on the mock.
+facade (`robot.tracks`, above); this port is what the concrete drivers implement,
+so the same logic runs on the ESP32-S3 firmware and on the host mock. The C++
+counterpart is `firmware/common/include/hal/motor_driver.hpp` with the pure
+helpers in `motor_logic.hpp` (ADR-018).
 
 ```python
 class IMotorDriver(ABC):
@@ -470,31 +472,38 @@ Pure helpers (shared by every adapter, unit-testable with no hardware):
 | `motor_levels(velocity) -> MotorLevels(forward, reverse, duty)` | maps a signed velocity to direction GPIO levels + PWM duty |
 | `ramp_schedule(current, target, step) -> list[float]` | intermediate ramp values landing exactly on target; raises `ValueError` on `step <= 0` |
 
-Adapters: `L298NDriver` / `L298NMotor` (`src/hardware/drivers/l298n.py`, real
-Raspberry Pi GPIO, `gpiozero`/`lgpio` imported lazily) and `MockMotorDriver`
-(`src/hardware/drivers/mock_motor.py`, no GPIO, no sleeps — CI/Digital Twin,
-ADR-010). Both read `config/bench/tracks.json`.
+Adapters: `L298NDriver` (`firmware/common/drivers/l298n_driver.cpp`, **ESP32-S3**
+Node 6 firmware, LEDC 1000 Hz / 10 bit, ADR-019) and `MockMotorDriver`
+(`src/hardware/drivers/mock_motor.py`, no GPIO, no sleeps — host CI/Digital Twin,
+ADR-010). The host Python `L298NDriver`/`L298NMotor` and
+`config/bench/tracks.json` were **retired by ADR-019** (the Pi is brain-only);
+`MockMotorDriver.load_driver()` now uses documented defaults or an explicit JSON
+path.
 
-> **Scope note.** This is the open-loop bench port. PID, encoder feedback and
-> odometry are the **future production/firmware** contract for the Node 6 ESP32
-> and a dedicated encoder/controller port — not part of `IMotorDriver`
-> (ADR-018 §2, T-032).
+> **Scope note.** This is the open-loop port. PID, encoder feedback and odometry
+> are the **future production/firmware** contract for the Node 6 ESP32 and a
+> dedicated encoder/controller port — not part of `IMotorDriver` (ADR-018 §2,
+> T-032).
 
-### Bench demo (`scripts/demo/tracks_bench.py`)
+### Node 6 firmware bring-up (ADR-019)
 
-```bash
-# Self-test: scripted, non-interactive, SSH-safe (no tty). On the Pi -> real GPIO
-python3 scripts/demo/tracks_bench.py --selftest
-python3 scripts/demo/tracks_bench.py --selftest --seconds 0.5 --speed 0.5
+The host bench demo (`scripts/demo/tracks_bench.py`, `--selftest`/`--mock`) was
+removed with the host Pi motor path. The track motors are now driven by the
+`firmware/node6_tracks/` ESP32-S3 project, which accepts logical MQTT commands on
+`openj5/v1/tracks/cmd`:
 
-# Mock: validate command -> ramp -> levels with no hardware (any Mac / CI)
-python3 scripts/demo/tracks_bench.py --selftest --mock
-```
+| Payload | Effect |
+|---------|--------|
+| `{"cmd":"forward","velocity":0.3}` | both motors forward |
+| `{"cmd":"backward","velocity":0.3}` | both motors backward |
+| `{"cmd":"spin_left","velocity":0.3}` | left reverse, right forward |
+| `{"cmd":"spin_right","velocity":0.3}` | left forward, right reverse |
+| `{"cmd":"stop"}` | immediate short-brake (priority) |
 
-`--seconds` is the duration of each phase (default `1.0`), `--speed` overrides the
-config `demo.speed`. Sequence: `forward → stop → backward → stop → spin-left →
-spin-right → stop`; it always ends with `brake_all()` + `shutdown()`. Run with the
-wheels off the ground (see `docs/hardware/BENCH_TRACKS.md`).
+`velocity` is normalized in `[-1, +1]` (default `0.3`). A 1000 ms command
+watchdog and `openj5/v1/system/emergency_stop` force a short-brake. Flash/build:
+`cd firmware/node6_tracks && pio run -e node6 -t upload -t monitor` (wheels off
+the ground — see `docs/hardware/NODE6_ESP32_WIRING.md` / `BENCH_TRACKS.md`).
 
 ---
 

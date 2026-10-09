@@ -1,8 +1,8 @@
 """Pure unit tests for the ``hardware.hal.motor`` port helpers (T-025 Fase 1).
 
-No GPIO, no I/O: these are the pure math functions shared by the real L298N
-driver and its Digital Twin mock, so they must be exercised independently of
-any channel factory.
+No GPIO, no I/O: these are the pure math functions shared by the Node 6
+ESP32-S3 firmware driver and its Digital Twin mock (ADR-019), so they must be
+exercised independently of any channel factory.
 """
 from __future__ import annotations
 
