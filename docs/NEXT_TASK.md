@@ -1,7 +1,7 @@
 # NEXT_TASK — Prossime Attività per Priorità
 
 > Aggiornare a ogni sessione. Formato: ID, Titolo, Descrizione, Priorità, Dipendenze, Stima, Stato.
-> Ultimo aggiornamento: 2026-10-09 (ADR-019: tutti i nodi ESP32-S3, il Pi è solo cervello; bring-up motori Node 6 sul firmware ESP32-S3 `node6_tracks`; percorso host Pi ritirato; suite Python a 197 test. Nuovo debito T-033 = validazione on-device del Node 6)
+> Ultimo aggiornamento: 2026-10-09 (ADR-019: tutti i nodi ESP32-S3, il Pi è solo cervello; bring-up motori Node 6 sul firmware ESP32-S3 `node6_tracks`; percorso host Pi ritirato; suite Python a 197 test. Nuovo debito T-033 = validazione on-device del Node 6. **Doc update: Node 6 NON ha IMU** — solo differential drive base con encoder, 2× ToF, bumper)
 
 ---
 
@@ -45,7 +45,7 @@
 |----|--------|-------------|----------|------------|-------|-------|
 | T-020 | OTA client ESP32 completo | Download HTTPS + verifica signature + rollback (completare lato dispositivo di ADR-011) | Bassa | T-014 | 3g | ⬜ Da fare |
 | T-021 | Rinnovo automatico certificati mTLS | Script/procedura di rotazione CA e certificati nodi | Bassa | — | 1g | ⬜ Da fare |
-| T-022 | Firmware Node 4/5/6 | Mirror braccio SX; torso con BMS INA219/DS18B20; cingoli con PID+odometria+IMU. **Progresso 2026-10-09 (ADR-019)**: il Node 6 è ora ESP32-S3 con **bring-up motori consegnato** (`firmware/node6_tracks/`: `L298NDriver` LEDC + comandi MQTT + watchdog/fail-safe; guida `NODE6_ESP32_WIRING.md`/`BENCH_TRACKS.md`; v. T-033 per la validazione on-device). **Restano** su Node 6: encoder/PID/odometria, IMU/ToF/bumper e motion primitives; e i nodi 4/5 interi | Bassa | T-014 | 8g | 🟡 Parziale 2026-10-09 |
+| T-022 | Firmware Node 4/5/6 | Mirror braccio SX; torso con BMS INA219/DS18B20; cingoli con PID+odometria+IMU. **Progresso 2026-10-09 (ADR-019)**: il Node 6 è ora ESP32-S3 con **bring-up motori consegnato** (`firmware/node6_tracks/`: `L298NDriver` LEDC + comandi MQTT + watchdog/fail-safe; guida `NODE6_ESP32_WIRING.md`/`BENCH_TRACKS.md`; v. T-033 per la validazione on-device). **Restano** su Node 6: encoder/PID/odometria, **2× ToF**/bumper e motion primitives; e i nodi 4/5 interi | Bassa | T-014 | 8g | 🟡 Parziale 2026-10-09 |
 | T-032 | Firmware HAL motor C++ + parità Python↔C++ | Portare il port motor e gli helper puri in C++ (`firmware/common/include/hal/motor_driver.hpp` + `motor_logic.hpp`: `clamp_velocity`/`motor_levels`/`ramp_schedule`), mirror di `src/hardware/hal/motor.py`, con test di parità Python↔C++ sui vettori host (stesso approccio di T-026/T-029 per lo stepper). **Progresso 2026-10-09 (ADR-019)**: consegnati `motor_driver.hpp`, `motor_logic.hpp` e il driver ESP32-S3 `L298NDriver` (`firmware/common/drivers/l298n_driver.{hpp,cpp}`); 17 host check in `host_test.cpp` (`test_motor_logic`, suite firmware host a 53); i test Python `tests/unit/test_motor_hal.py` coprono gli stessi vettori. **Resta**: modulo di parità dedicato Python↔C++ che replica i vettori host (come `tests/unit/test_stepper_parity.py`) | Bassa | T-022 | ~1g | 🟡 Parziale 2026-10-09 |
 | T-023 | Avvio CAD parametrico FreeCAD | Spreadsheet `openj5_params` + prime parti testa secondo ADR-012 | Bassa | — | 5g | ⬜ Da fare |
 | T-027 | Meccanica giunto body pitch (ADR-017) | CAD/meccanica del livellatore: mozzo NEMA17, pulegge cinghia dentata **20T→80T** (1:4), piastra corpo oscillante ±35°, battute meccaniche + sensori. Riduzione e numeri già fissati in `config/node7_balance/node.json` | Bassa | T-023 | 4g | ⬜ Da fare |

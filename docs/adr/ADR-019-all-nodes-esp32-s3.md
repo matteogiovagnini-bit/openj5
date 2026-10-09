@@ -45,7 +45,7 @@ superseded by this ADR).
 | **Node 3** | **ESP32-S3** | Right arm: 6 servos |
 | **Node 4** | **ESP32-S3** | Left arm: 6 servos (mirrored) |
 | **Node 5** | **ESP32-S3** | Torso: 4 servos, LED strip, fan, battery monitor (INA219), temp (DS18B20), IMU, ToF, proximity |
-| **Node 6** | **ESP32-S3** | Tracks: 2x DC motor, encoders, IMU, 2x ToF, collision sensors |
+| **Node 6** | **ESP32-S3** | Tracks: 2x DC motor, encoders, 2x ToF (T-022), Collision Sensors (T-022) |
 | **Node 7** | **ESP32-S3** | Balance Controller (ADR-017) |
 
 ### 2. Actuation boundary: Pi = brain, ESP32-S3 = actuation

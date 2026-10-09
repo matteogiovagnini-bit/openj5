@@ -76,7 +76,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Test motori host | ✅ Done | `tests/unit/test_motor_hal.py`, `test_mock_motor.py` (27 test); il firmware C++ è coperto da `host_test.cpp` |
 | Guida cablaggio | ✅ Done | `docs/hardware/NODE6_ESP32_WIRING.md` (ESP32-S3↔L298N) + `docs/hardware/BENCH_TRACKS.md` (banco) |
 | Percorso Pi rimosso | ✅ Done | `src/hardware/drivers/l298n.py`, `scripts/demo/tracks_bench.py`, `config/bench/tracks.json` e i 2 moduli di test del driver Pi **eliminati** (ADR-019) |
-| Encoder/PID/odometria/IMU/ToF/bumper | ⬜ Da fare | **T-022** (pin già in config/Kconfig, non ancora usati dal firmware) |
+| Encoder/PID/odometria/**2× ToF**/bumper | ⬜ Da fare | **T-022** (pin già in config/Kconfig, non ancora usati dal firmware) |
 | Primo movimento fisico su ESP32-S3 | 🟡 Parziale | Bring-up motori pronto (codice+config+parità); **resta la validazione on-device** (ruote sollevate) — T-033 |
 
 ### 🟡 Prototipo Nodo 7 (design, ADR-017)

@@ -73,15 +73,7 @@ menu "OpenJ5 Node 6 Tracks Controller"
         int "Right encoder B GPIO (reserved, encoder PID at T-022)"
         default 11
 
-    # -------------------------------------------- Shared I2C (IMU + ToF, T-022) --
-    config OPENJ5_I2C_SDA
-        int "I2C SDA GPIO (MPU6050 + VL53L0X, reserved)"
-        default 1
-
-    config OPENJ5_I2C_SCL
-        int "I2C SCL GPIO (MPU6050 + VL53L0X, reserved)"
-        default 2
-
+    # ---------------------------------------------------- ToF XSHUT (T-022) --
     config OPENJ5_TOF_XSHUT_FRONT
         int "Front ToF XSHUT GPIO (reserved, T-022)"
         default 12

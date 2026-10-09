@@ -22,9 +22,11 @@
 | Fusibile inline 5 A (consigliato) sul + batteria | Protezione cortocircuiti |
 | Cavetti dupont + portafusibili | Segnali e massa |
 
-> Encoder, IMU, ToF e bumper citati in §5 sono **previsti dalla mappa pin** ma
+> Encoder, ToF e bumper citati in §5 sono **previsti dalla mappa pin** ma
 > **non ancora implementati nel firmware** (T-022): i pin sono già in config/Kconfig,
 > il cablaggio è documentato qui per completezza.
+> **Nota: Node 6 NON ha IMU** (solo differential drive base). Il bus I2C (GPIO 1/2)
+> è riservato ai 2× ToF VL53L0X; l'IMU non è cablata su questo nodo.
 
 ---
 
@@ -143,7 +145,7 @@ flowchart LR
 | ENB / IN3 / IN4 (dx) | 7 / 15 / 16 | ✅ implementato (bring-up motori) |
 | Encoder sx A / B | 8 / 9 | ⛔ T-022 (non implementato) |
 | Encoder dx A / B | 10 / 11 | ⛔ T-022 (non implementato) |
-| I2C SDA / SCL (IMU + ToF) | 1 / 2 | ⛔ T-022 (non implementato) |
+| I2C SDA / SCL (2× ToF) | 1 / 2 | ⛔ T-022 (non implementato) |
 | ToF XSHUT ant. / post. | 12 / 13 | ⛔ T-022 (non implementato) |
 | Bumper ant. | 14 / 17 | ⛔ T-022 (non implementato) |
 | Bumper post. | 18 / 21 | ⛔ T-022 (non implementato) |
@@ -153,7 +155,7 @@ flowchart LR
 ## 5. Periferiche future (T-022, non ancora nel firmware)
 
 Pin già assegnati in `config/node6_tracks/node.json` e `Kconfig.projbuild`, ma
-**nessun driver li usa ancora**: encoder, PID di velocità, odometria, IMU, ToF e
+**nessun driver li usa ancora**: encoder, PID di velocità, odometria, **2× ToF** e
 bumper sono lavoro di **T-022**.
 
 ### 5.1 Encoder in quadratura (ruote)
@@ -166,17 +168,18 @@ bumper sono lavoro di **T-022**.
 Il destro è configurato `inverted: true` (simmetria meccanica). Servono ingressi
 con interrupt per la lettura in quadratura.
 
-### 5.2 Bus I2C condiviso (IMU + ToF)
+### 5.2 Bus I2C (2× ToF — NO IMU su Node 6)
 
 | Segnale | GPIO |
 |---------|------|
 | SDA | 1 |
 | SCL | 2 |
 
-- **MPU6050** (IMU): indirizzo I2C **0x68** (`address: 104`), fusione Madgwick,
-  200 Hz.
 - **VL53L0X** (2× ToF): indirizzi **0x29** (`address: 41`, anteriore) e **0x30**
   (`address: 48`, posteriore), separati via pin XSHUT.
+- **Nota**: Node 6 **non ha IMU** (solo differential drive base). Il bus I2C serve
+  esclusivamente i due ToF. L'IMU per l'odometria fusion è gestita a livello
+  superiore (Node 1) oppure su Node 7 (Balance, ADR-017).
 
 ### 5.3 ToF XSHUT e bumper
 

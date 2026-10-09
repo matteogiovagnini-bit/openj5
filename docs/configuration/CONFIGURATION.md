@@ -67,7 +67,7 @@ config/
 │   └── sensors.yaml           # IMU, ToF, Proximity
 └── node6_tracks/              # ESP32-S3 Tracks (ADR-019)
     └── node.json              # node/network, motor_driver (L298N, ESP32-S3 pins),
-                               # motors+encoders, odometry, imu, tof, collision,
+                               # motors+encoders, odometry, **2x ToF**, collision,
                                # motion_primitives, safety
 
 # Node 7: Balance Controller (ADR-017, ESP32-S3)
@@ -501,7 +501,7 @@ mirrored in `firmware/node6_tracks/main/Kconfig.projbuild`. The file carries
 `motors` (two DC geared motors with encoders, gear ratio and PID), `odometry`,
 `imu`, `tof`, `collision`, `motion_primitives` and `safety`. Illustrative excerpt
 (the file itself is JSON; shown here in the documented shape) — only the L298N
-motor path is wired in the firmware today, the encoder/IMU/ToF/bumper keys are
+motor path is wired in the firmware today, the encoder/**2x ToF**/bumper keys are
 reserved for T-022:
 
 ```yaml
@@ -616,7 +616,7 @@ primitives:
         type: "float"
         unit: "radians"
         default: 0.0  # 0 = continuous
-    implementation: "velocity_control_with_imu_fusion"
+    implementation: "velocity_control_with_odometry"
 
   - name: "arc"
     description: "Move in an arc (different wheel velocities)"

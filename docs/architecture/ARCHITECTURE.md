@@ -21,7 +21,7 @@ C4Context
         System(node3, "Node 3: Right Arm (ESP32-S3)", "6 Servos: Shoulder P/R/Rot, Elbow, Wrist, Gripper")
         System(node4, "Node 4: Left Arm (ESP32-S3)", "6 Servos: Mirrored Right Arm")
         System(node5, "Node 5: Torso (ESP32-S3)", "4 Servos, LED, Fan, Battery Monitor, Sensors")
-        System(node6, "Node 6: Tracks (ESP32-S3)", "2 DC Motors + Encoder, IMU, ToF, Collision Sensors (ADR-019)")
+        System(node6, "Node 6: Tracks (ESP32-S3)", "2 DC Motors + Encoder, 2x ToF, Collision Sensors (ADR-019)")
         System(node7, "Node 7: Balance Controller (ESP32-S3)", "NEMA17 + A4988, Body IMU MPU6050, Active Body Leveling (ADR-017)")
         System(sim, "Digital Twin (Gazebo/Isaac Sim)", "Physics Simulation, Visualization")
     }
@@ -349,7 +349,6 @@ C4Deployment
     Deployment_Node(esp32_6, "ESP32-S3 Node 6: Tracks", "ESP-IDF 5.2 FreeRTOS") {
         Component(l298n_6, "L298N Driver (firmware)", "LEDC PWM 1000 Hz / 10 bit + Dir")
         Component(motors_6, "2x DC Motor + Encoder", "GPIO Interrupts")
-        Component(imu_6, "MPU6050/ICM20948", "I2C")
         Component(tof_6, "VL53L0X x2", "I2C (Mux)")
         Component(collision_6, "IR Bumpers", "GPIO")
     }
