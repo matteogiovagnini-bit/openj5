@@ -1,17 +1,23 @@
 /**
  * OpenJ5 pure motion math for STEP/DIR steppers (no I/O, host-testable).
  *
- * Corrected semantics versus the Python reference
- * src/hardware/hal/stepper.py::trapezoid_velocity: that one is stateless and
- * therefore only produces a braking curve - from standstill it jumps straight
+ * Provenance: this header started as a fix for the original Python reference
+ * src/hardware/hal/stepper.py::trapezoid_velocity, which was stateless and
+ * therefore only produced a braking curve - from standstill it jumped straight
  * to sqrt(2*a*d) (measured: 1410 steps/s on a full sweep instead of ramping
- * at +800 steps/s2) and its `+ accel * dt` term can never bind. On a real
+ * at +800 steps/s2) and its `+ accel * dt` term could never bind. On a real
  * motor that means missed steps.
  *
  * The C++ driver tracks velocity state and applies BOTH bounds each tick:
  *   v_tgt = sign * min(vmax, brake_bound(remaining))   // never too fast to stop
  *   v_now = slew(v_now, v_tgt, accel, dt)              // ramp up/down limited
- * Python must be aligned in T-029.
+ * Keeping `v_now_` across ticks is exactly why this is driver state rather
+ * than a stateless helper.
+ *
+ * Since T-029 the Python reference is aligned: `slew`, `brake_bound` and
+ * `position_velocity_target` are mirrored 1:1 in src/hardware/hal/stepper.py
+ * and `trapezoid_velocity(v_now, steps_remaining, vmax, accel, dt)` feeds the
+ * previous tick's velocity back exactly like the C++ driver.
  */
 #pragma once
 

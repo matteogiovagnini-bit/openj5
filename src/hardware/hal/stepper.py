@@ -20,6 +20,7 @@ firmware/common/include/hal/ for the ESP-IDF firmware (ADR-014).
 """
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -90,19 +91,69 @@ class IStepperDriver(ABC):
         """Release every resource; leaves the shaft free. Safe to call twice."""
 
 
-def trapezoid_velocity(steps_remaining: float, vmax: float, accel: float, dt: float) -> float:
-    """Acceleration-limited velocity (steps/s) toward a target (pure, no I/O).
+def slew(v_now: float, v_tgt: float, accel: float, dt: float) -> float:
+    """Slew limit: move ``v_now`` toward ``v_tgt`` by at most ``accel * dt``.
 
-    Returns the signed velocity that ramps up to ``vmax`` then down as
-    ``steps_remaining`` shrinks. Shared by the A4988 bench driver and the mock
-    so the simulated motion matches the real ramp. Unit-testable without GPIO.
-    A vmax of 0 means 'hold' (velocity 0).
+    Mirror of ``openj5::motion::slew`` in
+    ``firmware/common/include/hal/stepper_logic.hpp`` (same body): this is what
+    ramps the axis up from rest and brakes it when reversing.
     """
-    if steps_remaining == 0:
+    dv = accel * dt
+    if v_tgt > v_now + dv:
+        return v_now + dv
+    if v_tgt < v_now - dv:
+        return v_now - dv
+    return v_tgt
+
+
+def brake_bound(steps_remaining: float, accel: float) -> float:
+    """Maximum speed from which ``accel`` can still stop within the distance.
+
+    ``sqrt(2 * accel * |steps_remaining|)``, 0 at the target. Mirror of
+    ``openj5::motion::brake_bound`` in
+    ``firmware/common/include/hal/stepper_logic.hpp``.
+    """
+    d = abs(steps_remaining)
+    return math.sqrt(2.0 * accel * d)
+
+
+def position_velocity_target(steps_remaining: float, vmax: float, accel: float) -> float:
+    """Position-move velocity target for this control tick (then slew-limited).
+
+    0 exactly on target, otherwise ``sign * min(vmax, brake_bound(...))``.
+    Mirror of ``openj5::motion::position_velocity_target`` in
+    ``firmware/common/include/hal/stepper_logic.hpp``.
+    """
+    if steps_remaining == 0.0:
         return 0.0
-    direction = 1.0 if steps_remaining > 0 else -1.0
-    distance = abs(steps_remaining)
-    v_cap = (2 * accel * distance) ** 0.5
-    cruise_v = min(vmax, v_cap)
-    v = min(cruise_v, v_cap + accel * dt)
-    return direction * v
+    sign = 1.0 if steps_remaining > 0.0 else -1.0
+    v_cap = brake_bound(steps_remaining, accel)
+    return sign * (vmax if vmax < v_cap else v_cap)
+
+
+def trapezoid_velocity(
+    v_now: float, steps_remaining: float, vmax: float, accel: float, dt: float
+) -> float:
+    """Acceleration-limited velocity (steps/s) for one control tick (pure, no I/O).
+
+    Mirror of ``openj5::motion::*`` in
+    ``firmware/common/include/hal/stepper_logic.hpp``: the returned velocity is
+
+        slew(v_now, position_velocity_target(steps_remaining, vmax, accel), accel, dt)
+
+    so the caller feeds back the previous tick's value as ``v_now``: the axis
+    ramps up from rest at ``accel * dt`` per tick, cruises at ``vmax`` and
+    brakes within the remaining steps (never jumps straight to
+    ``sqrt(2 * accel * distance)``). Shared by the A4988 bench driver and the
+    mock so the simulated motion matches the real ramp. Unit-testable without
+    GPIO. A ``vmax`` of 0 means 'hold' (target velocity 0, slew-braked).
+
+    Documented, deliberate divergences from the C++ reference:
+
+    - ``toggle_interval_us`` and ``clamp`` of ``stepper_logic.hpp`` are NOT
+      ported: ``toggle_interval_us`` is an implementation detail (C++ periodic
+      timer vs gpiozero PWM pulse train) and ``clamp`` is not needed here.
+    - Mid-move re-targeting is not expressible through the Python blocking
+      ``set_position_steps`` API: pre-existing divergence, not new debt.
+    """
+    return slew(v_now, position_velocity_target(steps_remaining, vmax, accel), accel, dt)

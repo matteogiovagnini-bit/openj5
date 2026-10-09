@@ -57,11 +57,107 @@ def test_mock_stepper_reaches_target():
 def test_trapezoid_velocity_is_bounded():
     from hardware.hal import trapezoid_velocity
 
-    v = trapezoid_velocity(800.0, 1600.0, 800.0, 0.02)
-    assert 0.0 < v <= 1600.0
-    vneg = trapezoid_velocity(-800.0, 1600.0, 800.0, 0.02)
-    assert -1600.0 <= vneg < 0.0
-    assert trapezoid_velocity(0.0, 1600.0, 800.0, 0.02) == 0.0
+    # From rest the profile RAMPS: slew moves by at most accel*dt per tick
+    # (firmware/common/include/hal/stepper_logic.hpp:31-40) instead of jumping
+    # straight to sqrt(2*a*d) like the old stateless version (~1410 steps/s,
+    # stepper_logic.hpp:4-9).
+    v = trapezoid_velocity(0.0, 800.0, 1600.0, 800.0, 0.02)
+    assert v == 800.0 * 0.02  # 16.0 steps/s on the first tick
+    vneg = trapezoid_velocity(0.0, -800.0, 1600.0, 800.0, 0.02)
+    assert vneg == -(800.0 * 0.02)  # same accel*dt ramp in the negative direction
+    # At cruise toward a nearer target the slew brakes one accel*dt per tick
+    # (stepper_logic.hpp:31-40), staying bounded by vmax:
+    assert 0.0 < trapezoid_velocity(1600.0, 800.0, 1600.0, 800.0, 0.02) <= 1600.0
+    # Hot axis at the target: one tick decelerates by accel*dt only, so v_now=1600
+    # does NOT drop to 0.0 in a single tick (slew needs many ticks to brake).
+    vbrake = trapezoid_velocity(1600.0, 0.0, 1600.0, 800.0, 0.02)
+    assert vbrake == 1600.0 - 800.0 * 0.02  # 1584.0, not 0.0
+    # At rest exactly on the target the velocity is 0 (stepper_logic.hpp:53-54).
+    assert trapezoid_velocity(0.0, 0.0, 1600.0, 800.0, 0.02) == 0.0
+
+
+def test_pid_first_tick_has_no_derivative_kick():
+    from hardware.drivers.mock_stepper import MockStepperDriver
+    from hardware.sim.leveling import LevelingLoop
+
+    mock = MockStepperDriver({"control_dt_s": 0.01})
+    mock.initialize()
+    loop = LevelingLoop(
+        stepper=mock,
+        control_hz=100,
+        kp=15.0,  # balance_pid.hpp:17 default kp
+        ki=0.0,
+        kd=1.0,  # kd=1 makes a D kick obvious: error/dt = -10/0.01 = -1000
+        track_profile=lambda t: 10.0,  # body pitched +10 deg at joint 0
+    )
+    loop.start()
+    tel = loop.step()
+    # error = target(0) - body(10) = -10 deg, dt = 1/100 = 0.01 s.
+    # balance_pid.hpp:49-51: derivative = first_ ? 0.0 : (error-last_error)/dt
+    # -> command = kp*error = -150.0. WITHOUT the guard it would be
+    # -150 + kd*(error - 0)/dt = -150 - 1000 = -1150.0 (derivative kick).
+    assert tel.command_steps_s == -150.0
+    assert tel.leveling_enabled
+
+
+def test_pid_reenable_has_no_derivative_kick():
+    from hardware.drivers.mock_stepper import MockStepperDriver
+    from hardware.sim.leveling import LevelingLoop
+
+    mock = MockStepperDriver({"control_dt_s": 0.01})
+    mock.initialize()
+    track = {"pitch": 0.0}
+    loop = LevelingLoop(
+        stepper=mock,
+        control_hz=100,
+        kp=15.0,
+        ki=0.0,
+        kd=1.0,
+        track_profile=lambda t: track["pitch"],
+    )
+    loop.start()
+    assert loop.step().command_steps_s == 0.0  # flat track: zero error
+    loop.stop()
+    # Parked: the track tilts while disabled. Disabled ticks keep state but
+    # output 0 and re-arm the first_ guard (balance_pid.hpp:39-43).
+    track["pitch"] = 10.0
+    disabled = loop.step()
+    assert disabled.command_steps_s == 0.0
+    assert not disabled.leveling_enabled
+    # Tilt further right before re-enabling (no disabled tick in between).
+    track["pitch"] = 20.0
+    loop.start()
+    reenabled = loop.step()
+    # error = 0 - 20 = -20 deg: command = kp*error = -300.0, derivative = 0
+    # because start()/reset re-armed first_ (balance_pid.hpp:30-34, :41).
+    # Without it: start() left last_error=0 -> D = kd*(-20)/0.01 = -2000
+    # -> command = -2300.0.
+    assert reenabled.command_steps_s == -300.0
+
+
+def test_pid_output_clamped_to_motor_limits():
+    from hardware.drivers.mock_stepper import MockStepperDriver
+    from hardware.sim.leveling import LevelingLoop
+
+    # balance_pid.hpp:20-21: output_min/max = +/-1600 (host_test.cpp:182-183
+    # "output clamped to motor limit" with a huge error).
+    for track_pitch, expected in ((200.0, -1600.0), (-200.0, 1600.0)):
+        mock = MockStepperDriver({"control_dt_s": 0.01})
+        mock.initialize()
+        loop = LevelingLoop(
+            stepper=mock,
+            control_hz=100,
+            kp=15.0,
+            ki=0.0,
+            kd=1.0,
+            track_profile=lambda t, p=track_pitch: p,
+        )
+        loop.start()
+        tel = loop.step()
+        # Raw kp*error = 15 * -/+200 = -/+3000 steps/s, clamped to the limits.
+        assert tel.command_steps_s == expected
+        assert loop.output_min_steps_s == -1600.0
+        assert loop.output_max_steps_s == 1600.0
 
 
 def test_leveling_loop_converges_on_flat_bench():

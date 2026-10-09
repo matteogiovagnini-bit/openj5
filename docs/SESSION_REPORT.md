@@ -4,6 +4,48 @@
 
 ---
 
+## Sessione: 2026-10-07 — T-029 Parità Python↔firmware (profilo trapezoidale + PID)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-10-07 |
+| Versione progetto | v0.2.0+ (Robot Core operativo su RPi4); v0.3.0 in corso |
+| Obiettivo | T-029: allineare il profilo trapezoidale e il PID Python di livello al firmware Node 7 (debito aperto in T-026, 2026-09-23) |
+
+### Decisioni
+1. **Specchio 1:1, niente reinvenzione**: le tre funzioni pure C++ (`slew`, `brake_bound`, `position_velocity_target` di `firmware/common/include/hal/stepper_logic.hpp`) sono state replicate in `src/hardware/hal/stepper.py` con lo stesso corpo; `trapezoid_velocity` riscritta a 5 argomenti `(v_now, steps_remaining, vmax, accel, dt)` = `slew(v_now, position_velocity_target(...), accel, dt)`.
+2. **Lo stato vive nel chiamante**: la funzione resta pura e testabile (nessun GPIO, regola "logica di moto ≠ I/O" invariata); il valore `v_now` è locale al loop di `a4988.py` e `mock_stepper.py` — stessa architettura del driver C++ (`v_now_` membro del driver, non della logica).
+3. **Guardia `first_` specchio del firmware**: `sim/leveling.py` non calcola il D al primo tick (`balance_pid.hpp:49`), con reset `first_=True` anche al ri-abilitamento del loop; aggiunto il clamp output ±1600 steps/s che il C++ aveva e il Python no.
+4. **Nessun ADR nuovo, nessun diagramma**: confermati ADR-005 (HAL), ADR-014 (warning/errori firmware), ADR-017 (Node 7 Balance). Nessuna modifica C++ nel change set (host test invariati).
+
+### Attività completate
+1. **`src/hardware/hal/stepper.py`**: aggiunte `slew`, `brake_bound`, `position_velocity_target` (mirror documentati, con riferimento all'header C++); `trapezoid_velocity` riscritta con firma a 5 argomenti e docstring che dichiara le divergenze deliberate (`toggle_interval_us`/`clamp` non portati, re-targeting a metà mossa non esprimibile via API bloccante).
+2. **`src/hardware/drivers/a4988.py` / `mock_stepper.py`**: stato `v_now` locale nel loop di `set_position_steps` (prima: nessuna retroazione → da fermo il motore riceveva un colpo a **1410 steps/s** al primo tick).
+3. **`src/hardware/sim/leveling.py`**: guardia `first_` (niente derivative kick al primo tick) + clamp output ±1600 steps/s.
+4. **Test**: `tests/unit/test_balance_control.py` riscritto/esteso (8 → **11 test**); nuovo `tests/unit/test_stepper_parity.py` (**9 test** di parità Python↔firmware sui vettori di `firmware/common/test/host_test.cpp`).
+5. **Gate**: `ruff check` pulito; `pytest tests/unit` → **170 test passanti, coverage `core.domain` 100%** (gate ≥90); `host_firmware.sh` invariato (nessuna modifica C++). Nota: il commento stale in `firmware/common/include/hal/stepper_logic.hpp:4-14` ("Python must be aligned in T-029") è già stato aggiornato nel working tree a "Since T-029 the Python reference is aligned".
+6. **Docs**: NEXT_TASK (T-029 ✅ + nuovo **T-030**), CHANGELOG (Fixed + Added), KNOWLEDGE_BASE (righe T-029 chiuse), PROJECT_STATUS (conteggi test), PROJECT_MEMORY (§8/§10), SESSION_REPORT (questo).
+
+### Debito emerso
+- **T-030 (nuovo, preesistente — non introdotto da T-029)**: il loop di `A4988StepperDriver.set_position_steps` (`src/hardware/drivers/a4988.py:120`) confronta un float con `while abs(target - pos) > 0` e **non termina mai**: la posizione integrata non coincide mai esattamente col target. Il C++ risolve con la soglia `position_snap_steps` (`firmware/common/drivers/a4988_driver.cpp:112`, snap ≤2 step). Verificato dal diff: la riga `while` è preesistente (context line). Il `MockStepperDriver` non è affetto; impatto reale: il demo `scripts/demo/balance_bench.py` resterebbe appeso su una mossa. Media / 0.5g / dipende da T-029 ✅.
+
+### Lezioni
+Una "funzione pura" che calcola un profilo di velocità **senza ricevere la velocità corrente** non è un profilo: è una curva di frenata. Il sintomo (colpo a 1410 steps/s da fermo) era misurabile solo sapendo cosa fa il firmware: i test di parità sui vettori dell'host test C++ sono il presidio giusto — una docstring che dice "mirror of X" va resa eseguibile.
+
+### Prossimi passi consigliati
+1. T-030 (loop infinito A4988 Python) — blocca il bench `balance_bench.py`.
+2. T-014 (Node 2 compilabile → sblocca T-007), poi T-004/T-005 (integration test per v0.3.0) o T-025 (bench motori).
+
+### Comandi di verifica
+```bash
+.venv/bin/python -m pytest tests/unit -q --cov=core.domain --cov-fail-under=90   # 170, 100%
+.venv/bin/ruff check src/ firmware/node1_robot_core/docker/src/ tests/
+./scripts/check_docs.sh
+scripts/test/host_firmware.sh
+```
+
+---
+
 ## Sessione: 2026-09-23 — T-026 Firmware Node 7 Balance (ADR-017)
 
 | Campo | Valore |

@@ -1,7 +1,7 @@
 # CONTINUATION_PROMPT — Prompt di Continuità OpenJ5
 
 > Rigenerare a fine di OGNI sessione. Questo prompt permette a qualsiasi IA (OpenCode, ChatGPT, Claude, Gemini, Codex…) di riprendere il progetto immediatamente senza perdere contesto.
-> Generato: 2026-09-23 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core (149 test, 100% coverage)** + **T-026 firmware Node 7 Balance consegnato (2026-09-23)** · prototipo Nodo 6 · design+firmware Node 7 (ADR-017)
+> Generato: 2026-10-07 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core + T-026 firmware Node 7 Balance (2026-09-23) + T-029 parità Python↔firmware Node 7 (2026-10-07, 170 test, 100% coverage)** · prototipo Nodo 6 · design+firmware Node 7 (ADR-017)
 
 ---
 
@@ -51,8 +51,9 @@ STATO ATTUALE (verifica con git log):
 - Nodi 3–6 firmware, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 - v0.3.0 in corso: CI attiva (ruff, **pytest+coverage ≥90%**, doc-check, docker
   build, **firmware-host-tests + firmware-node7-build**). **T-003 FATTO
-  2026-09-22**: `tests/unit/` = 149 test, 100% coverage `src/core/domain/`;
-  5 bug latenti corretti — SESSION_REPORT 2026-09-22 e KNOWLEDGE_BASE §1-quinquies.
+  2026-09-22**: `tests/unit/` = **170 test** (dal 2026-10-07), 100% coverage
+  `src/core/domain/`; 5 bug latenti corretti — SESSION_REPORT 2026-09-22 e
+  KNOWLEDGE_BASE §1-quinquies.
 - **T-026 FATTO 2026-09-23**: firmware Node 7 consegnato — schema di cablaggio
   `docs/hardware/BENCH_BALANCE.md`, logica pura in `firmware/common/` (rampa
   A4988, Madgwick, FSM ADR-009, PID parità sim → **36 check host** via
@@ -62,8 +63,9 @@ STATO ATTUALE (verifica con git log):
   bobine off al boot, mTLS opzionale), test parità config (8 test → **156
   totali**), fix latenti (limiti ±4445→±1244 = erano ±125°, ACL mosquitto su
   topic v1 + user node7, cert node7, README firmware fantasma). Debito emerso:
-  **T-029**. Prima build CI del firmware ancora da verificare su GitHub Actions.
-- **Nota: working tree contiene modifiche NON committate** (T-026 + T-003 doc) —
+  **T-029, chiuso il 2026-10-07** (nuovo debito residuo: **T-030**). Prima
+  build CI del firmware verificata verde (CI #21, 2026-09-27).
+- **Nota: working tree contiene modifiche NON committate** (T-029 + doc) —
   commitare/pushare solo su richiesta esplicita.
 - PROTOTIPO NODO 6 avviato: primo driver HAL reale `src/hardware/drivers/l298n.py`
   + demo `scripts/demo/tracks_bench.py` + `config/bench/tracks.json` + guida
@@ -83,8 +85,14 @@ DEBITO NOTO (vedi docs/PROJECT_MEMORY.md §10):
 - Unit test core domain OK (T-003); mancano integration test T-004 (REST/WS),
   T-005 (event bus + state machine), T-006 (simulation parity) per chiudere v0.3.0
   — T-004/T-005 **saltati su richiesta** 2026-09-23.
-- **T-029** (nuovo): `trapezoid_velocity` Python è stateless (nessun ramp-up,
-  da fermo salta a vmax) e il PID Python fa derivative kick — allineare al C++.
+- ~~**T-029**~~ **CHIUSO 2026-10-07**: `trapezoid_velocity` ora è a 5
+  argomenti con stato `v_now` nel chiamante (mirror di `slew`/`brake_bound`/
+  `position_velocity_target`), PID Python con guardia `first_` + clamp ±1600;
+  9 test di parità in `tests/unit/test_stepper_parity.py`.
+- **T-030 (nuovo, preesistente)**: `A4988StepperDriver.set_position_steps`
+  (`src/hardware/drivers/a4988.py:120`) confronta float con
+  `while abs(target - pos) > 0` e **non termina mai** (il C++ usa la soglia
+  `position_snap_steps`) — da correggere prima del bench `balance_bench.py`.
 - **T-028**: 3 copie duplicate di `DomainEvent` (core/domain, eventbus host,
   bundle robot_core) con serializzazione divergente.
 - Formatter ruff non adottato (T-016); buses SDK non cablati (T-010);
@@ -106,7 +114,7 @@ PROSSIME ATTIVITÀ (in ordine, dettagli in docs/NEXT_TASK.md):
    (sbloccati da T-003; saltati su richiesta 2026-09-23) → chiudere v0.3.0 con T-006.
 4. T-025: primo movimento fisico dei motori (saltato su richiesta 2026-09-23) —
    per il Node 7 il primo bench (`BENCH_BALANCE.md`) segue lo stesso momento.
-5. T-029: allineare profilo trapezoidale/PID Python al firmware.
+5. T-030: loop infinito di `set_position_steps` (A4988 Python, preesistente).
 6. T-028: deduplicare le 3 `DomainEvent`.
 7. Verifica containers secondari ros2-bridge/gazebo + cambio password Grafana.
 8. T-014 firmware Node 2/3 compilabili (sblocca T-007) → T-027 CAD giunto
@@ -124,9 +132,9 @@ REGOLE OPERATIVE DI OGNI SESSIONE:
 - Non commitare mai senza richiesta esplicita dell'utente.
 
 INIZIA da: verificare `git log` che lo stato collimi con queste docs (working
-tree = T-026 non committato), controllare la run CI `firmware-node7-build`,
-poi proporre: commit/push di T-026 su richiesta, oppure T-004/T-005
-(integration test per v0.3.0) o T-029 (parità Python) secondo priorità.
+tree = T-029 non committato), controllare la run CI `firmware-node7-build`,
+poi proporre: commit/push di T-029 su richiesta, oppure T-004/T-005
+(integration test per v0.3.0) o T-030 (loop A4988) secondo priorità.
 ```
 
 ---

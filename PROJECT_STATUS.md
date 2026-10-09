@@ -2,8 +2,8 @@
 
 ## Repository: `PRJ_OpenJ5`
 
-> **Last updated:** 2026-09-23
-> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (149 test, 100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build)**
+> **Last updated:** 2026-10-07
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build); T-029 parità Python↔firmware Node 7 completata il 2026-10-07 (170 test, 100% coverage)**
 
 ---
 
@@ -16,8 +16,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 ### 🟢 Software Architecture
 | Component | Status | Coverage | Notes |
 |-----------|--------|----------|-------|
-| Domain Model (value objects, events, commands, entities, services) | ✅ Done | 100% | All value objects, events, CQRS bus, entities, repositories, kinematics service — **verified by `tests/unit/` (149 tests, T-003)** |
-| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 7 modules + conftest; **158 tests total** (149 domain + 9 config-sync); CI gate ≥90% (`python-tests` job) |
+| Domain Model (value objects, events, commands, entities, services) | ✅ Done | 100% | All value objects, events, CQRS bus, entities, repositories, kinematics service — **verified by `tests/unit/` (141 test raccolti nei 6 moduli domain, T-003)** |
+| Unit test suite (`tests/unit/`, core.domain) | ✅ Done | 100% | pytest + pytest-cov; 9 moduli + conftest; **170 test totali** (141 domain + 11 balance + 9 config-sync + 9 stepper parity, dal 2026-10-07); CI gate ≥90% (`python-tests` job) |
 | Plugin Architecture | ✅ Done | 90% | PluginManager, PluginRegistry, Sandbox, dependency resolution |
 | Communication Gateway | ✅ Done | 85% | MQTT, MultiProtocol, mTLS |
 | Event Bus (Redis Streams) | ✅ Done | 85% | Streams, consumer groups, DLQ, replay |
@@ -81,7 +81,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Config Node 7 | ✅ Done | `config/node7_balance/node.json`, entry stepper_driver in hal.json, topics node7 |
 | SDK | ✅ Done | `BodyAPI` + `robot.body.level()/tilt()/stow()/stop()` |
 | Orchestratore | ✅ Done | node7 in statemachine/health/digital_twin/models |
-| Test | ✅ Done | `tests/unit/test_balance_control.py` — 8 test verdi (Python 3.11, ruff clean) |
+| Test | ✅ Done | `tests/unit/test_balance_control.py` — 11 test verdi (Python 3.11, ruff clean) |
+| Test di parità firmware | ✅ Done | `tests/unit/test_stepper_parity.py` — 9 test Python↔`host_test.cpp` (T-029, 2026-10-07) |
 | Firmware ESP-IDF | ✅ Done | T-026 (2026-09-23) — `firmware/node7_balance/` completo, logica host-testata (36 check), build in CI; validazione su hardware = prossimo step bench |
 | Guida cablaggio | ✅ Done | `docs/hardware/BENCH_BALANCE.md` (pin, alimentazione, Vref, safety, bring-up) |
 | Config parity test | ✅ Done | `tests/unit/test_node7_config_sync.py` — Kconfig ↔ node.json ↔ docs |
@@ -127,7 +128,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Metric | Target | Current |
 |--------|--------|---------|
 | Python files | - | 35+ |
-| Unit tests (core.domain) | ≥90% coverage | 158 tests, **100% coverage** (149 domain + 9 config-sync) |
+| Unit tests (core.domain) | ≥90% coverage | 170 tests, **100% coverage** (141 domain + 11 balance + 9 config-sync + 9 stepper parity) |
 | Firmware C++ files | - | 21 (10 .cpp + 11 .hpp: `firmware/common` + `node7_balance`) |
 | Config files (JSON/YAML) | - | 12+ |
 | Docker services | - | 10 |
@@ -151,9 +152,10 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 - Complete infrastructure configs (MQTT, Prometheus, Grafana, Loki, OTEL)
 - PostgreSQL schema with migrations
 - Full documentation suite
-- Unit test suite for the core domain (T-003): 149 tests, 100% line coverage, CI coverage gate ≥90%
+- Unit test suite for the core domain (T-003, evoluto): 170 unit tests (141 in `core.domain` + balance/config/parity), 100% line coverage, CI coverage gate ≥90%
 - Node 7 Balance Controller design (ADR-017): HAL IStepperDriver, A4988 bench driver + mock, leveling-loop simulator, BodyAPI SDK, configs + topics, unit tests
 - Node 7 Balance firmware (T-026): wiring guide `BENCH_BALANCE.md`, pure logic in `firmware/common/` (host-tested), complete ESP-IDF project `firmware/node7_balance/` with CI build (`firmware-host-tests` + `firmware-node7-build`), config parity test Kconfig↔node.json, flashing via VSCode+PlatformIO (`platformio.ini`) or `idf.py`
+- Python↔firmware motion parity (T-029, 2026-10-07): `slew`/`brake_bound`/`position_velocity_target` mirrored in `src/hardware/hal/stepper.py`, stateful `trapezoid_velocity` (caller-owned `v_now`), no-D-kick leveling PID + ±1600 clamp, `tests/unit/test_stepper_parity.py` (9 tests)
 
 ### What's Next (v0.3.0)
 - Integration tests (REST/WS, event bus + state machine)

@@ -47,17 +47,20 @@ class MockStepperDriver(IStepperDriver):
         """Acceleration-limited move to an absolute position (no I/O, instant)."""
         self._enabled = True
         target = float(steps)
+        v_now = 0.0  # velocity state is local to this blocking move
         while abs(target - self._position_steps) > 0.0:
             remaining = target - self._position_steps
-            v = trapezoid_velocity(
-                remaining, self.max_speed_steps_s, self.max_accel_steps_s2, self._dt
+            v_now = trapezoid_velocity(
+                v_now, remaining, self.max_speed_steps_s, self.max_accel_steps_s2, self._dt
             )
-            advance = v * self._dt
+            advance = v_now * self._dt
             if abs(advance) >= abs(remaining):
                 self._position_steps = target
                 break
             self._position_steps += advance
-        self._velocity_steps_s = 0.0
+        # At target: like a4988_driver.cpp:112-119 (v_tgt = 0, slew brakes to 0).
+        v_now = 0.0
+        self._velocity_steps_s = v_now
 
     def set_velocity_steps_s(self, steps_s: float) -> None:
         self._velocity_steps_s = max(

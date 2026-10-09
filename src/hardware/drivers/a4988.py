@@ -116,15 +116,18 @@ class A4988StepperDriver(IStepperDriver):
         target = int(steps)
         if not self._axis.enabled:
             self._axis.enable()
+        v_now = 0.0  # velocity state is local to this blocking move
         while abs(target - self._position_steps) > 0:
             remaining = target - self._position_steps
-            v = trapezoid_velocity(
-                remaining, self.max_speed_steps_s, self.max_accel_steps_s2, self._control_dt
+            v_now = trapezoid_velocity(
+                v_now, remaining, self.max_speed_steps_s, self.max_accel_steps_s2, self._control_dt
             )
-            self._axis.set_velocity(v)
-            self._position_steps += v * self._control_dt
+            self._axis.set_velocity(v_now)
+            self._position_steps += v_now * self._control_dt
             time.sleep(self._control_dt)
-        self._axis.set_velocity(0.0)
+        # At target: like a4988_driver.cpp:112-119 (v_tgt = 0, slew brakes to 0).
+        v_now = 0.0
+        self._axis.set_velocity(v_now)
         self._position_steps = float(target)
 
     def set_velocity_steps_s(self, steps_s: float) -> None:

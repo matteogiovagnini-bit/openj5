@@ -51,6 +51,10 @@ class LevelingLoop:
     kd: float = 0.0
     integral_min: float = -4000.0
     integral_max: float = 4000.0
+    # Output clamp, mirror of BalancePidParams (firmware node7_balance
+    # main/balance_pid.hpp:20-21): the drivers already assume +/-1600.
+    output_min_steps_s: float = -1600.0
+    output_max_steps_s: float = 1600.0
 
     track_profile: Callable[[float], float] = field(
         default=lambda t: 0.0, repr=False
@@ -61,6 +65,7 @@ class LevelingLoop:
         self._residual_deg = 0.0
         self._integral = 0.0
         self._last_error = 0.0
+        self._first = True
         self._t = 0.0
 
     @property
@@ -71,6 +76,7 @@ class LevelingLoop:
         self._enabled = True
         self._integral = 0.0
         self._last_error = 0.0
+        self._first = True  # mirror BalancePid::reset() (balance_pid.hpp:30-34)
 
     def stop(self) -> None:
         self._enabled = False
@@ -91,16 +97,27 @@ class LevelingLoop:
 
         command = 0.0
         if self._enabled:
+            # Clamp BEFORE incrementing, same order as balance_pid.hpp:45-47.
             self._integral = max(self.integral_min, min(self.integral_max, self._integral))
             self._integral += error * dt
+            # No D on the first tick after (re)enable: mirror balance_pid.hpp:49-51
+            # (derivative -> first_ = False -> last_error = error, in that order).
+            derivative = 0.0 if self._first else (error - self._last_error) / dt
+            self._first = False
+            self._last_error = error
             command = (
                 self.kp * error
                 + self.ki * self._integral
-                + self.kd * (error - self._last_error) / dt
+                + self.kd * derivative
             )
+            # Output clamp to the motor limits: mirror balance_pid.hpp:54-55.
+            command = max(self.output_min_steps_s, min(self.output_max_steps_s, command))
             if abs(error) < self.deadband_deg:
                 command = 0.0
-        self._last_error = error
+        else:
+            # Disabled keeps state but outputs 0: mirror balance_pid.hpp:39-43.
+            self._last_error = error
+            self._first = True
 
         self.stepper.set_velocity_steps_s(command)
         self.stepper.step(dt)  # forwards the simulation by one control tick

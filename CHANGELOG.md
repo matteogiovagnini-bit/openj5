@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (tracked in `docs/NEXT_TASK.md` — will be listed here only once actually merged)
 
 ### Fixed
+- **T-029 Python↔firmware parity for the Node 7 motion/PID code**: the
+  `trapezoid_velocity` helper (`src/hardware/hal/stepper.py`) was *stateless* —
+  with no velocity feedback a move from rest jumped straight to
+  `sqrt(2*accel*d)` (measured 1410 steps/s on the first tick) because the
+  `+accel*dt` term could never bind; `sim/leveling.py` also applied a
+  derivative kick on the first tick (`last_error=0`) where the firmware
+  deliberately does not (`BalancePid::first_`). Python now mirrors
+  `firmware/common/include/hal/stepper_logic.hpp` 1:1: pure
+  `slew`/`brake_bound`/`position_velocity_target` helpers,
+  `trapezoid_velocity(v_now, steps_remaining, vmax, accel, dt)` with the
+  caller owning the velocity state (`a4988.py`, `mock_stepper.py`), and the
+  leveling PID gets the `first_` guard (reset on re-enable too) plus the
+  ±1600 steps/s output clamp the C++ had and the Python lacked
 - `docker-compose.yml`: Docker programs published ports (`ports:`) only for
   containers attached to a non-internal network — mosquitto sat on
   `robot-internal` (`internal: true`) alone, so `1883/8883/9001` had no DNAT
@@ -111,6 +124,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at the `sdkconfig.defaults`/board-JSON 8 MB)
 
 ### Added
+- **T-029 firmware-parity tests**: `tests/unit/test_stepper_parity.py`
+  (9 tests replaying the vectors of `firmware/common/test/host_test.cpp`
+  against the Python helpers) + rewritten/extended
+  `tests/unit/test_balance_control.py`; suite now at **170 tests,
+  100% line coverage of `core.domain`** (gate: `--cov-fail-under=90`)
 - **T-003 unit test suite for `src/core/domain/`**: `tests/unit/conftest.py`
   + 6 test modules (value objects, events, commands, entities, services,
   repositories) — 149 tests, **100% line coverage of `core.domain`**
