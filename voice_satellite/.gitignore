@@ -1,0 +1,11 @@
+# voice_satellite — esclusioni locali
+#
+# Gli APK sono installer di terze parti (~155 MB) e non appartengono alla storia
+# del repository: reinstallabili da F-Droid (Termux / Termux:API / Termux:Boot) e
+# dalla release ufficiale di Home Assistant Companion.
+assets/apks/
+
+# Artefatti/registrazioni temporanee di test (rigenerabili)
+# I campioni audio di riferimento restano versionati; qui si escludono solo i
+# duplicati/registrazioni pesanti eventualmente rigenerate in locale.
+*.tmp

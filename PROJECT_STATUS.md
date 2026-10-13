@@ -3,7 +3,7 @@
 ## Repository: `PRJ_OpenJ5`
 
 > **Last updated:** 2026-10-09
-> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build); T-029 parità Python↔firmware Node 7 completata il 2026-10-07; **ADR-019 (2026-10-09): tutti i nodi ESP32-S3, il Pi è solo cervello** — bring-up motori del Node 6 portato sul firmware ESP32-S3 (`firmware/node6_tracks/`), ritirato il percorso host Pi (`l298n.py`/bench); suite Python a **197 test, 100% coverage** (i 2 moduli di test del driver Pi rimossi con il codice)**
+> **Status:** 🟡 In Development (v0.2.0 → v0.3.0) — **Robot Core operativo su hardware reale dal 2026-08-26; design Node 7 Balance (ADR-017) consegnato il 2026-09-21; T-003 unit test core domain completati il 2026-09-22 (100% coverage); T-026 firmware Node 7 Balance consegnato il 2026-09-23 (ESP-IDF, build locale PlatformIO verde, CI build); T-029 parità Python↔firmware Node 7 completata il 2026-10-07; **ADR-019 (2026-10-09): tutti i nodi ESP32-S3, il Pi è solo cervello** — bring-up motori del Node 6 portato sul firmware ESP32-S3 (`firmware/node6_tracks/`), ritirato il percorso host Pi (`l298n.py`/bench); suite Python a **197 test, 100% coverage** (i 2 moduli di test del driver Pi rimossi con il codice); **ADR-020 (2026-10-13): satellite vocale Note 10 realizzato e operativo** (HA Core in proot + Wyoming Piper/faster-whisper + app HA Companion con wake word on-device; materiale in `voice_satellite/`)**
 
 ---
 
@@ -62,6 +62,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | ADR-017 | ✅ Accepted | Node 7 Balance Controller: NEMA17 + A4988 + MPU6050, body leveled vs gravity |
 | ADR-018 (New) | ✅ Accepted | Motor HAL Port (`IMotorDriver`): contract shape, placement in `src/hardware/hal/`, Python↔C++ parity target (2026-10-09) |
 | ADR-019 (New) | ✅ Accepted | **All nodes ESP32-S3; the Raspberry Pi is brain only** — supersedes ADR-002 MCU table; retires the host Pi motor path; Node 6 actuation on the ESP32-S3 (2026-10-09) |
+| ADR-020 (New) | ✅ Accepted | **Note 10 voice satellite** as the OpenJ5 voice interface: Home Assistant Core (proot) + Wyoming Piper/faster-whisper + HA Companion on-device wake word; external accessory, not a node (2026-10-13) |
 
 ### 🟡 Node 6 (Tracks) — ESP32-S3 + firmware bring-up motori (ADR-019)
 | Component | Status | Notes |
@@ -98,6 +99,18 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Config parity test | ✅ Done | `tests/unit/test_node7_config_sync.py` — Kconfig ↔ node.json ↔ docs |
 | CAD/meccanica (cinghia/pulegge) | To do | T-027 — follow-up |
 
+### 🟢 Satellite Vocale (accessorio esterno, ADR-020)
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Wake word on-device | ✅ Done | App HA Companion 2026.8.4 come assistente Android predefinito; microWakeWord "Okay Nabu" on-device (solo EN); batteria whitelisted via `dumpsys deviceidle` |
+| STT locale (IT) | ✅ Done | `wyoming-faster-whisper` (`small`, `it`, TCP 10300) — patch PyAV 19 richiesta |
+| TTS locale (IT) | ✅ Done | `wyoming-piper` (`it_IT-serena-medium`, TCP 10200) |
+| Home Assistant Core | ✅ Done | HA 2026.10.1 in container proot (`python:3.14-slim`); integrazioni Wyoming + pipeline "Assistente Locale" (`01m4tje8tnx44erdd0v45fqtm1`, `tts_language: it_IT`) |
+| Test end-to-end | ✅ Done | wake word → STT → intent → TTS, verificato foreground e background (2026-10-13) |
+| Comandi robot via voce (T-034) | To do | intent HA → MQTT `openj5/v1/...` → Node 1 → nodi |
+| LLM conversazionale (T-035) | To do | Fase 6 — LLM cloud con API key utente (solo LLM in cloud) |
+| Hardening (T-036) | To do | Autostart (Termux:Boot), watchdog, IP statico, backup |
+
 ### 🟡 Documentation
 | Document | Status | Notes |
 |----------|--------|-------|
@@ -109,9 +122,10 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | CHANGELOG.md | ✅ Done | Version history |
 | ROADMAP.md | ✅ Done | Development roadmap |
 | ADR Index + 5 ADRs | ✅ Done | ADR-001 to ADR-005 |
-| ADR Index (completo) | ✅ Done | ADR-001 to ADR-019 — vedi docs/adr/INDEX.md |
+| ADR Index (completo) | ✅ Done | ADR-001 to ADR-020 — vedi docs/adr/INDEX.md |
 | BENCH_TRACKS (hardware) | ✅ Done | Guida banco Nodo 6 su ESP32-S3: cablaggio motori, power, safety (ADR-019) |
 | NODE6_ESP32_WIRING (hardware) | ✅ Done | Schema ESP32-S3↔L298N: tabella pin, diagramma Mermaid, note elettriche, encoder/I2C/ToF/bumper (T-022), bring-up |
+| voice_satellite/ (README + docs) | ✅ Done | ADR-020: architettura satellite vocale Note 10, analisi device, script HA/Wyoming, asset audio |
 | BENCH_BALANCE (hardware) | ✅ Done | Guida banco Nodo 7: pin NEMA17/A4988/MPU6050, alimentazione, Vref, math, safety |
 | Development Constitution | ✅ Done | Level A/B/C governance |
 | VISION / MISSION / GOALS / NON_GOALS | ✅ Done | Project governance |
@@ -144,8 +158,8 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 | Config files (JSON/YAML) | - | 12 |
 | Docker services | - | 10 |
 | Plugins framework | - | 14 interface types |
-| ADRs | - | 19 |
-| Documentation files | - | 26+ |
+| ADRs | - | 20 |
+| Documentation files | - | 27+ |
 
 ## Current Release: v0.2.0 (In Development)
 
@@ -169,6 +183,7 @@ OpenJ5 is an open-source Johnny 5-inspired robot platform with a 7-node distribu
 - Python↔firmware motion parity (T-029, 2026-10-07): `slew`/`brake_bound`/`position_velocity_target` mirrored in `src/hardware/hal/stepper.py`, stateful `trapezoid_velocity` (caller-owned `v_now`), no-D-kick leveling PID + ±1600 clamp, `tests/unit/test_stepper_parity.py` (9 tests)
 - **ADR-019 (2026-10-09) — all nodes ESP32-S3, the Pi is brain-only**: supersedes the ADR-002 MCU table; the Pi never actuates. Host Pi motor path removed (`src/hardware/drivers/l298n.py`, `scripts/demo/tracks_bench.py`, `config/bench/tracks.json`, related tests)
 - **Node 6 Tracks firmware bring-up (ADR-019, T-022)**: `firmware/node6_tracks/` (ESP-IDF/PlatformIO env `node6`) with MQTT logical commands (`forward/backward/spin_left/spin_right/stop`), ESP32-S3 `L298NDriver` (LEDC 1000 Hz/10 bit), command watchdog 1000 ms → short-brake, system E-stop, telemetry/state; wiring guide `NODE6_ESP32_WIRING.md` + `BENCH_TRACKS.md`; C++ motor HAL (`motor_driver.hpp`/`motor_logic.hpp`, T-032) mirroring `src/hardware/hal/motor.py`; 27 new host tests (`test_motor_hal.py`, `test_mock_motor.py`)
+- **Voice satellite (ADR-020, 2026-10-13)**: Samsung Note 10 (headless) as the OpenJ5 voice front-end — Home Assistant Core 2026.10.1 in a `proot` container (`python:3.14-slim`) with Wyoming **faster-whisper** (STT `small`, `it`) and **Piper** (TTS `it_IT-serena-medium`); official HA Companion as the default Android assistant with **on-device microWakeWord "Okay Nabu"**; Assist pipeline "Assistente Locale" verified end-to-end. External accessory, not a node; full material in `voice_satellite/`
 
 ### What's Next (v0.3.0)
 - Integration tests (REST/WS, event bus + state machine)

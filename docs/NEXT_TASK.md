@@ -1,7 +1,7 @@
 # NEXT_TASK — Prossime Attività per Priorità
 
 > Aggiornare a ogni sessione. Formato: ID, Titolo, Descrizione, Priorità, Dipendenze, Stima, Stato.
-> Ultimo aggiornamento: 2026-10-09 (ADR-019: tutti i nodi ESP32-S3, il Pi è solo cervello; bring-up motori Node 6 sul firmware ESP32-S3 `node6_tracks`; percorso host Pi ritirato; suite Python a 197 test. Nuovo debito T-033 = validazione on-device del Node 6. **Doc update: Node 6 NON ha IMU** — solo differential drive base con encoder, 2× ToF, bumper)
+> Ultimo aggiornamento: 2026-10-13 (ADR-020: satellite vocale Note 10 realizzato e operativo — HA Core in proot + Wyoming Piper/Whisper + app HA Companion con wake word on-device; materiale in `voice_satellite/`. Nuovi task T-034…T-037. Precedente: 2026-10-09, ADR-019: tutti i nodi ESP32-S3, il Pi è solo cervello; T-033 = validazione on-device del Node 6)
 
 ---
 
@@ -38,6 +38,15 @@
 | T-025 | Primo movimento fisico dei motori | **Superato/Chiuso da ADR-019 (2026-10-09)**: il percorso “Pi guida i motori” (`scripts/demo/tracks_bench.py` + `src/hardware/drivers/l298n.py` + `config/bench/tracks.json`) è stato **ritirato** — il Pi è solo cervello. La Fase 1 (port `IMotorDriver` + `MockMotorDriver`, 2026-10-09) resta valida come astrazione host/Digital Twin e contratto di parità (`src/hardware/hal/motor.py`, ADR-018). L'attuazione fisica è passata al firmware ESP32-S3: v. **T-022** (bring-up motori `node6_tracks`) e **T-033** (validazione on-device). Non più un task aperto | Alta | — | — | ⛔ Superato/Chiuso da ADR-019 |
 | T-033 | Validazione on-device Node 6 (ESP32-S3) | Flash di `firmware/node6_tracks/` su ESP32-S3 reale e prova a **ruote sollevate**: verifica dei due motori su L298N, dei comandi MQTT (`forward/backward/spin_left/spin_right/stop`), del watchdog comando 1000 ms → short-brake, dell'E-stop di sistema e di telemetria/state. Chiude la fase "primo movimento fisico" del Node 6 (T-022). Richiede hardware | Media | T-022 (bring-up ✅) | 1g | ⬜ Da fare (hardware) |
 | T-018 | Validare deploy su hardware reale | ✅ ESEGUITO 2026-08-26 su RPi4 8GB reale: Pi OS Lite Trixie su NVMe USB3 (boot nativo), boot USB ok, limiti memoria compose attivi via cgroup v2 (robot-core /3GiB in docker stats), stack healthy dopo reboot, robot-core API HTTPS risponde {"status":"ok"}. Fix reali emersi: ACL anonimo mosquitto, VOLUME+containerd, PYTHONPATH, EventBus alias, metrics DomainEvent (vedi KNOWLEDGE_BASE §1-bis). Restano da validare su hardware: ros2-bridge e gazebo containers (dipendono da robot-core, ora sbloccati) | Alta | T-017 | 0.5g | 🟢 Fatto 2026-08-26 — core stack; ros2-bridge/gazebo da confermare |
+
+## Priorità Media — Satellite Vocale Note 10 (ADR-020)
+
+| ID | Titolo | Descrizione | Priorità | Dipendenze | Stima | Stato |
+|----|--------|-------------|----------|------------|-------|-------|
+| T-034 | Contratto voce → comandi robot (MQTT) | Tradurre gli **intent** di Home Assistant in comandi logici MQTT `openj5/v1/<node>/cmd` verso Node 1 (ADR-006/ADR-015) → nodi. Definire i comandi (cingoli `forward/backward/spin_left/spin_right/stop`, body `level/tilt/stow/stop`, testa), topic/payload e il **fail-safe/E-stop**. Il satellite vocale (ADR-020) non attua mai direttamente: è l'HA bridge verso MQTT. | Alta | ADR-020 ✅; firmware T-022/T-033 | 3g | ⬜ Da fare |
+| T-035 | LLM conversazionale cloud (Fase 6) | Motore di conversazione: HA Assist → LLM (OpenAI/Anthropic) con **tool/function calling** verso gli intent robot e la domotica. Richiede una **API key** dell'utente. Vincolo privacy: **solo l'LLM** è in cloud, STT/TTS restano locali (ADR-020). | Media | T-034; API key utente | 2g | ⬜ Da fare |
+| T-036 | Hardening satellite vocale | **Autostart** affidabile (Termux:Boot) di HA + Piper + Whisper; **watchdog/healthcheck**; IP statico o mDNS; **backup** di `/config` HA e di `voice_satellite/`; verifica resistenza a reboot/sospensione; mitigazione batteria/termica. | Media | ADR-020 ✅ | 2g | ⬜ Da fare |
+| T-037 | Wake word/lingua + sessione conversazionale | Valutare una **wake word in italiano** o un modello custom (limite attuale: "Okay Nabu" solo EN); persistenza di **sessione/personalità** (collega a ROADMAP v0.5.0 "conversation AI"); affinamento gestione batteria. | Bassa | T-034 | 3g | ⬜ Da fare |
 
 ## Priorità Bassa — Roadmap v0.4.0+
 

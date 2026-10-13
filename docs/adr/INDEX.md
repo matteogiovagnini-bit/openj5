@@ -56,6 +56,7 @@ Any specific implementation details, migration paths, or follow-up tasks.
 | [ADR-017](ADR-017-node7-balance-controller.md) | Node 7 Balance Controller (Self-Leveling Body: NEMA17 + A4988 + MPU6050) — extends ADR-002 to 7 nodes, adds IStepperDriver to the HAL | Accepted | 2026-09-21 |
 | [ADR-018](ADR-018-motor-hal-port.md) | Motor HAL Port (IMotorDriver): Contract Shape, Placement and Python↔C++ Parity | Accepted | 2026-10-09 |
 | [ADR-019](ADR-019-all-nodes-esp32-s3.md) | Standardize All Nodes on ESP32-S3 (the Raspberry Pi Is Brain Only) | Accepted | 2026-10-09 |
+| [ADR-020](ADR-020-note10-voice-satellite.md) | Note 10 Voice Satellite as the OpenJ5 Voice Interface (Home Assistant + Wyoming + Companion Assistant) | Accepted | 2026-10-13 |
 
 ## Governance
 

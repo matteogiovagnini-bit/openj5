@@ -1,0 +1,5 @@
+com.termux
+com.termux.api
+com.termux.boot
+com.trimble.outdoors.backpackerle.android
+magnifying.magnifiers.glass.zoom.loupe

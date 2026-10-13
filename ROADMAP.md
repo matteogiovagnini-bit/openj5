@@ -111,7 +111,7 @@
 ### Planned
 - [ ] Camera module integration: Raspberry Pi Camera Module 3 / USB camera
 - [ ] Vision Plugin: face detection/tracking, object recognition (TensorFlow Lite), color tracking, motion detection
-- [ ] Speech Plugin: TTS (eSpeak-NG/Piper), STT (Vosk/Whisper), voice commands, emotion detection
+- [ ] Speech Plugin: TTS (eSpeak-NG/Piper), STT (Vosk/Whisper), voice commands, emotion detection — *voice front-end already realized as an external satellite: Note 10 + Home Assistant + Wyoming Piper/faster-whisper, ADR-020 (`voice_satellite/`); the robot-side plugin (T-024) and the voice→MQTT command contract (T-034) remain*
 - [ ] Face tracking behavior: head follows face, eye contact, smooth prediction
 - [ ] Basic conversation AI: intent recognition, context management, personality framework
 

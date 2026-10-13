@@ -1,7 +1,7 @@
 # CONTINUATION_PROMPT — Prompt di Continuità OpenJ5
 
 > Rigenerare a fine di OGNI sessione. Questo prompt permette a qualsiasi IA (OpenCode, ChatGPT, Claude, Gemini, Codex…) di riprendere il progetto immediatamente senza perdere contesto.
-> Generato: 2026-10-09 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core + T-026 firmware Node 7 Balance (2026-09-23) + T-029 parità Python↔firmware Node 7 (2026-10-07) + ADR-019 (2026-10-09: tutti i nodi ESP32-S3, il Pi è solo cervello; 197 test, 100% coverage)** · bring-up motori Node 6 su ESP32-S3 (`firmware/node6_tracks`) · validazione on-device = T-033
+> Generato: 2026-10-13 · Versione progetto: v0.2.0+ (Robot Core OPERATIVO su hardware) · v0.3.0 in corso: **T-003 test core + T-026 firmware Node 7 Balance (2026-09-23) + T-029 parità Python↔firmware Node 7 (2026-10-07) + ADR-019 (2026-10-09: tutti i nodi ESP32-S3, il Pi è solo cervello; 197 test, 100% coverage) + ADR-020 (2026-10-13: satellite vocale Note 10, HA+Wyoming+Companion)** · bring-up motori Node 6 su ESP32-S3 (`firmware/node6_tracks`) · validazione on-device = T-033
 
 ---
 
@@ -18,7 +18,7 @@ PRIMA DI QUALSIASI MODIFICA leggi questi file nel repository:
 3. governance/ARCHITECTURAL_PRINCIPLES.md e CODING_STANDARD.md
 4. docs/PROJECT_MEMORY.md              (memoria permanente: stato e decisioni)
 5. docs/NEXT_TASK.md                   (attività prioritarie con ID T-xxx)
-6. docs/adr/INDEX.md                   (19 ADR: architettura decisa, immutabile)
+6. docs/adr/INDEX.md                   (20 ADR: architettura decisa, immutabile)
 7. PROJECT_STATUS.md, ROADMAP.md, CHANGELOG.md
 8. docs/KNOWLEDGE_BASE.md              (problemi risolti sul campo)
 9. docs/hardware/BENCH_TRACKS.md       (guida banco Nodo 6: cablaggio motori)
@@ -52,6 +52,17 @@ STATO ATTUALE (verifica con git log):
 - Nodi 3–5 firmware, OTA client ESP32, CAD/elettronica: non iniziati (v0.4.0+).
 - Node 6: firmware di bring-up motori (`firmware/node6_tracks/`, ADR-019) pronto;
   encoder/PID/odometria/IMU/ToF/bumper = **T-022**, validazione on-device = **T-033**.
+- **Satellite vocale (ADR-020, 2026-10-13)**: front-end voce **esterno** su Samsung
+  Note 10 headless — Home Assistant Core 2026.10.1 in container `proot`
+  (`python:3.14-slim`) + **wyoming-faster-whisper** (STT `small`, `it`) +
+  **wyoming-piper** (TTS `it_IT-serena-medium`) + app **HA Companion** con wake word
+  **on-device** "Okay Nabu" (solo EN). **Non è un nodo**: parla col robot via
+  HA → **MQTT** (ADR-015). Materiale in `voice_satellite/` (README, architettura,
+  script HA/Wyoming, asset). Follow-up: **T-034** (voce→MQTT), **T-035** (LLM cloud,
+  serve API key), **T-036** (hardening/autostart), **T-037** (wake word/lingua).
+  Limiti: batteria/termica (serve caricatore ≥5 V/2 A), patch faster-whisper/PyAV 19,
+  **non fare `am force-stop`** dell'app Companion. Dettagli: KNOWLEDGE_BASE §6,
+  PROJECT_MEMORY §11.
 - v0.3.0 in corso: CI attiva (ruff, **pytest+coverage ≥90%**, doc-check, docker
   build, **firmware-host-tests + firmware-node7-build**). **T-003 FATTO
   2026-09-22**: `tests/unit/` = **197 test** (dal 2026-10-09), 100% coverage
@@ -68,8 +79,8 @@ STATO ATTUALE (verifica con git log):
   topic v1 + user node7, cert node7, README firmware fantasma). Debito emerso:
   **T-029, chiuso il 2026-10-07** (nuovo debito residuo: **T-030**). Prima
   build CI del firmware verificata verde (CI #21, 2026-09-27).
-- **Nota: working tree contiene modifiche NON committate** (ADR-019 + firmware
-  Node 6 + doc) — commitare/pushare solo su richiesta esplicita.
+- **Stato git**: ADR-019 + firmware Node 6 + **ADR-020 (satellite vocale)** + doc
+  **committati** in questa sessione; push solo su richiesta esplicita.
 - **ADR-019 (2026-10-09) — tutti i nodi ESP32-S3, il Pi è solo cervello**: il
   percorso host Pi (`src/hardware/drivers/l298n.py`, `scripts/demo/tracks_bench.py`,
   `config/bench/tracks.json` e i relativi test) è **ritirato**; il port
@@ -141,10 +152,12 @@ REGOLE OPERATIVE DI OGNI SESSIONE:
   config, roadmap, test, firmware, CAD/elettronica (Design Authority check).
 - Non commitare mai senza richiesta esplicita dell'utente.
 
-INIZIA da: verificare `git log` che lo stato collimi con queste docs (working
-tree = ADR-019 + firmware Node 6 + doc non committati), controllare la run CI
-`firmware-node7-build`, poi proporre: commit/push su richiesta, la validazione
-on-device del Node 6 (T-033), oppure T-004/T-005 (integration test per v0.3.0).
+INIZIA da: verificare `git log` che lo stato collimi con queste docs (ultimo
+batch committato = ADR-019 + firmware Node 6 + ADR-020 satellite vocale + doc),
+controllare la run CI `firmware-node7-build`, poi proporre: la **validazione
+on-device del Node 6 (T-033)**, i **task del satellite vocale** (T-034 voce→MQTT
+richiede il contratto comandi; T-035 LLM cloud richiede API key utente; T-036
+hardening), oppure T-004/T-005 (integration test per v0.3.0).
 
 Nota: il firmware `node6_tracks` NON ha ancora un job di build in CI
 (`firmware-node6-build` da creare: oggi `.github/workflows/ci.yml` ha solo

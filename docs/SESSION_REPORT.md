@@ -4,6 +4,53 @@
 
 ---
 
+## Sessione: 2026-10-13 — ADR-020: satellite vocale Note 10 (import nel progetto OpenJ5)
+
+| Campo | Valore |
+|-------|--------|
+| Data/ora | 2026-10-13 |
+| Versione progetto | v0.2.0+ (Robot Core operativo su RPi4); v0.3.0 in corso |
+| Obiettivo | Importare nel progetto OpenJ5 il **satellite vocale** realizzato su Samsung Note 10 (Fasi 0–5) e consolidarne la conoscenza (ADR, memoria, knowledge base, backlog) |
+
+### Decisioni
+1. **ADR-020 (Accepted, 2026-10-13)**: il Note 10 (SM-N970F, headless) è il **front-end vocale esterno** di OpenJ5 — Home Assistant Core 2026.10.1 in container `proot` (`python:3.14-slim`) + **wyoming-faster-whisper** (STT `small`, `it`) + **wyoming-piper** (TTS `it_IT-serena-medium`) + app **HA Companion** con **wake word on-device "Okay Nabu"**. **Non è un nodo** (ADR-019 resta valido); parla col robot via Home Assistant → **MQTT** (ADR-015).
+2. **Una sola cartella** per tutto il materiale: `voice_satellite/` (README, docs, scripts, reports, assets). La conoscenza è **integrata** nei documenti di progetto, non solo copiata.
+3. **APK esclusi da git** (`.gitignore` locale in `voice_satellite/`): installer di terze parti (~155 MB), reinstallabili. I campioni audio di riferimento restano versionati.
+
+### Attività completate
+1. **`voice_satellite/`** creato con tutto il lavoro (rimosso il vecchio folder `/Volumes/Dati/Matteo/Tablet` ora vuoto).
+2. **ADR-020** (`docs/adr/ADR-020-note10-voice-satellite.md`) + riga in `docs/adr/INDEX.md`.
+3. **docs/PROJECT_MEMORY.md**: data, tabella ADR, §4 hardware, §8 stato, **§11 Satellite Vocale** (nuova), riga di rischio.
+4. **docs/KNOWLEDGE_BASE.md §6**: 12 problemi risolti/lezioni (HA in proot, patch PyAV 19, `wyoming` mancante, `tts_language` esatta, `assist_pipeline/run` = subscription WS, percorso impostazioni native Assist, wake word on-device, whitelist batteria, caveat `am force-stop`, UI automation senza schermo, volume via `cmd media_session`, alimentazione/termica).
+5. **docs/NEXT_TASK.md**: header + nuovi task **T-034…T-037** (voce→MQTT, LLM cloud, hardening, wake word/lingua).
+6. **PROJECT_STATUS.md**: sezione componente "Satellite Vocale", riga doc, conteggio **ADR 19→20**, release notes.
+7. **CHANGELOG.md** `[Unreleased]`: Added (satellite), Docs (ADR-020), Planned (T-034…T-037); **ROADMAP.md** nota a v0.5.0 (Speech Plugin).
+8. **Sessione spostata** in `/Volumes/Dati/Matteo/openj5` (working directory del progetto).
+
+### Divergenze/limiti (documentati, non nascosti)
+- **Wake word solo in inglese** ("Okay Nabu"); STT/TTS restano in italiano.
+- **Batteria**: salute ≈79%, in lenta scarica con USB debole → serve **caricatore a muro ≥5 V/2 A**; il device è un **punto singolo di guasto**.
+- **`faster-whisper`** richiede **patch manuale** per PyAV 19 (`metadata_errors`) — da riapplicare a ogni reinstallazione.
+- **`am force-stop`** dell'app Companion resetta l'assistente predefinito a Google e spegne la wake word.
+
+### Debito emerso / Next
+- **T-034**: contratto comandi voce→robot (intent HA → MQTT `openj5/v1/...` → Node 1 → nodi).
+- **T-035**: LLM conversazionale cloud (**richiede API key utente**; solo l'LLM esce dal device).
+- **T-036**: hardening (autostart Termux:Boot, watchdog, IP statico, backup).
+- **T-037**: opzioni wake word/lingua + sessione/personalità.
+
+### Lezioni
+Un front-end vocale completo si ottiene **assemblando componenti maturi** (HA + Wyoming + app ufficiale) invece di scrivere un'app Android custom: meno superficie, più privacy (wake word e STT/TTS on-device). La regola "documentazione = parte del codice" ha guidato l'import: il satellite è diventato un **accessorio di progetto** con ADR, task e sezione di memoria, non un archivio parallelo.
+
+### Comandi di verifica
+```bash
+.venv/bin/ruff check src/ firmware/node1_robot_core/docker/src/ tests/   # All checks passed
+.venv/bin/pytest tests/unit -q --cov=core.domain --cov-fail-under=90    # 197, 100%
+./scripts/check_docs.sh                                                  # doc-check OK
+```
+
+---
+
 ## Sessione: 2026-10-09 (2) — ADR-019: tutti i nodi ESP32-S3, Pi solo cervello (allineamento docs)
 
 | Campo | Valore |

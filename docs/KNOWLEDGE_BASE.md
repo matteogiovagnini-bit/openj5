@@ -235,3 +235,87 @@ R: Sì come transport opzionale tramite bridge/gateway plugin. NON come event bu
 
 **D: Perché il mio commit non è "completo"?**
 R: Manca uno step del Definition of Done (CODING_STANDARD §8): test, doc, changelog, project status, memoria.
+
+---
+
+## 6. Problemi Risolti — Satellite vocale Note 10 (ADR-020, 2026-10-13)
+
+Contesto: Home Assistant Core + Wyoming (Piper/faster-whisper) in un container **proot**
+su Android (Samsung Note 10, schermo rotto, headless), front-end vocale = app **HA
+Companion** con wake word on-device. Materiale completo: `voice_satellite/`
+(README, `docs/voice_assistant_architecture.md`, script, asset).
+
+### 6.1 Home Assistant in `proot-distro` su Android
+- Container OCI **`python:3.14-slim`** (Debian 13, Python **3.14.8**): HA 2026.10 richiede
+  Python ≥ **3.14.2**. Il venv HA è `/opt/ha`; avvio:
+  `proot-distro login ha -- /bin/bash -lc 'mkdir -p /config && exec /opt/ha/bin/hass --config /config'`.
+- Combinazione verificata: `proot-distro` 5.10.0 → HA **2026.10.1** online su
+  `http://192.168.1.107:8123`.
+- Il log di `hass` è fortemente bufferizzato/inaffidabile: fidarsi di HTTP/WS e di `logcat`
+  per la pipeline, non del log su file.
+
+### 6.2 `faster-whisper` + PyAV 19 (patch obbligatoria)
+- `faster-whisper` importa `av.error.metadata_errors`, **rimosso in PyAV 19** → STT rotto.
+- Patch: `voice_satellite/scripts/patch_whisper.sh` (da **riapplicare** se si reinstalla
+  `faster-whisper`). Un upgrade di PyAV può ricreare il problema silenziosamente.
+
+### 6.3 `wyoming` mancava nel venv HA → risposta vuota
+- Sintomo: integrazione Wyoming aggiunta ma l'assistente rispondeva "vuoto".
+- Causa: pacchetto **`wyoming` assente nel venv di HA** (non basta nei servizi Piper/Whisper).
+- Fix: `pip install wyoming==1.10.2` **nel venv HA** (`/opt/ha/bin/pip`).
+
+### 6.4 La lingua TTS deve combaciare esattamente
+- `wyoming-piper` espone le lingue **esattamente** come configurate sulla voce
+  (`it_IT`). La pipeline Assist deve usare **`tts_language: it_IT`**; un valore
+  "normalizzato" (`it`) fa fallire la selezione della voce.
+
+### 6.5 `assist_pipeline/run` è una **subscription** WebSocket
+- Non è request/response: il primo messaggio è l'ack, poi arrivano gli **eventi** della
+  pipeline. Client di riferimento: `voice_satellite/scripts/ws_run.py` e `ws_run_audio.py`
+  (endpoint `ws://127.0.0.1:8123/api/websocket`, autenticazione con long-lived token,
+  `pipeline: 01m4tje8tnx44erdd0v45fqtm1`).
+
+### 6.6 Raggiungere le impostazioni native Assist (schermo rotto, UI non ovvia)
+- `SettingsActivity` dell'app Companion **non è esportata**: non si apre con `am start`.
+- Percorso reale: plancia → sidebar **Impostazioni** (web) → **"App complementare"** →
+  nella schermata nativa scorrere **molto in basso**, fino alla categoria **"Assist"**
+  (dopo Notifiche) → **"Assist per Android"**. Da lì si imposta HA come assistente
+  predefinito e si abilita la wake word.
+
+### 6.7 Wake word on-device ("Okay Nabu")
+- Modello **microWakeWord** `wakeword/okay_nabu.tflite`; il rilevamento avviene **sul
+  device** (nessun audio inviato fuori). Richiede che HA sia l'**assistente predefinito**.
+- Servizio attivo: `io.homeassistant.companion.android/.assist.service.AssistVoiceInteractionService`.
+- **Il modello è solo in inglese**: la parola di attivazione è "Okay Nabu"; STT e TTS
+  restano in italiano.
+
+### 6.8 Whitelist batteria (esecuzione in background)
+- Senza whitelist Android sospende il servizio e la wake word muore.
+- Fix adb:
+  `adb shell dumpsys deviceidle whitelist +io.homeassistant.companion.android`
+  (e `+com.termux`).
+
+### 6.9 ⛔ NON fare `am force-stop` dell'app Companion
+- `am force-stop io.homeassistant.companion.android` **resetta l'assistente predefinito a
+  Google** e **spegne la wake word**.
+- Ripristino: reimpostare HA come assistente predefinito **e** riaccendere lo switch wake
+  word (procedura §6.6/§6.7).
+
+### 6.10 Pilotare la UI Android senza vedere lo schermo
+- Nessuna visione d'immagine: ispezionare con `adb shell uiautomator dump` e agire con
+  `adb shell input tap/text/swipe`. Supporto visivo: `scrcpy`.
+- **Volume**: `adb shell media volume` **non esiste**; usare
+  `adb shell cmd media_session volume --stream 3 --set 15`.
+
+### 6.11 Verifica end-to-end senza parlare
+- Per collaudare in modo ripetibile si generano WAV con Piper (IT per i comandi;
+  EN `en_US-lessac-medium` per la wake word), si copiano in `/sdcard/Download/` e li si
+  riproduce con `termux-media-player play`. Campioni in `voice_satellite/assets/audio/`.
+- Conferma nei log: `adb logcat | grep assist_pipeline` →
+  `wake_word_phrase=Okay Nabu ... pipeline=01m4tje8tnx44erdd0v45fqtm1`.
+
+### 6.12 Lezione alimentazione/termica (come per il banco motori)
+- Dispositivo sempre acceso → serve **caricatore a muro ≥5 V/2 A**. Con USB debole il
+  telefono era in **lenta scarica** (`current now: -68 mA`, `Max charging current: 0`),
+  salute batteria ~79%. Rischio spegnimento → stop di HA e del satellite.
+

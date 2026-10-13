@@ -42,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Wiring guide `docs/hardware/NODE6_ESP32_WIRING.md`**: ESP32-S3 ↔ L298N pin
   table, Mermaid wiring diagram, electrical notes, the encoder/I2C/ToF/bumper
   pins reserved for T-022, and the bring-up procedure
+- **Voice satellite (ADR-020)**: Samsung Galaxy Note 10 (SM-N970F, headless) as
+  the OpenJ5 voice front-end. **Home Assistant Core 2026.10.1** runs in a
+  `proot-distro` OCI container (`python:3.14-slim`, Debian 13) under Termux,
+  with local speech engines over **Wyoming**: `wyoming-faster-whisper`
+  (STT `small`, `it`, TCP 10300) and `wyoming-piper` (TTS `it_IT-serena-medium`,
+  TCP 10200). The official **HA Companion 2026.8.4** app is the default Android
+  assistant with the **on-device microWakeWord "Okay Nabu"**; Assist pipeline
+  "Assistente Locale" (`tts_language: it_IT`) verified end-to-end (foreground and
+  background). All material (docs, HA/Wyoming client scripts, audio assets,
+  setup log) lives in `voice_satellite/`. External accessory, not a robot node
 
 ### Changed
 - `docs/hardware/BENCH_TRACKS.md` rewritten around the Node 6 ESP32-S3
@@ -76,6 +86,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Python↔C++ Parity** (`docs/adr/ADR-018-motor-hal-port.md`), indexed in
   `docs/adr/INDEX.md`; HAL class diagram in `docs/architecture/ARCHITECTURE.md`
   regenerated to the implemented shape
+- **ADR-020 — Note 10 Voice Satellite as the OpenJ5 Voice Interface**
+  (`docs/adr/ADR-020-note10-voice-satellite.md`), indexed in `docs/adr/INDEX.md`.
+  New `voice_satellite/` folder (README + architecture + device report + scripts
+  + audio assets); `docs/PROJECT_MEMORY.md` (§11), `docs/KNOWLEDGE_BASE.md` (§6),
+  `docs/NEXT_TASK.md`, `PROJECT_STATUS.md` and `ROADMAP.md` updated
 
 ### Planned (see ROADMAP.md v0.3.0)
 - Integration tests, simulation parity tests, hardware-in-loop tests
@@ -84,6 +99,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ground)
 - **T-032 remainder**: dedicated Python↔C++ parity test module replaying the
   host vectors (same approach as `tests/unit/test_stepper_parity.py`)
+- **T-034**: voice → robot command contract (HA intents → MQTT
+  `openj5/v1/...` → Node 1 → nodes)
+- **T-035**: cloud LLM conversation engine (only the LLM leaves the device)
+- **T-036**: voice-satellite hardening (autostart via Termux:Boot, watchdog,
+  static IP, backups)
+- **T-037**: wake-word/language options + conversational session/personality
 
 ### Fixed
 - **T-029 Python↔firmware parity for the Node 7 motion/PID code**: the
